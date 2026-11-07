@@ -54,6 +54,43 @@ class ModelsTests(unittest.TestCase):
     def test_real_repo_in_sync(self):
         self.assertEqual(gen.main(["--check"]), 0)
 
+    def test_crlf_wrong_model_only_model_line_changes(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = pathlib.Path(d)
+            models = write(d / "m.yaml", "builder: sonnet\n")
+            agent = d / "agents" / "builder.md"
+            agent.parent.mkdir()
+            agent.write_bytes(b"---\r\nname: builder\r\nmodel: opus\r\n---\r\nbody\r\n")
+            self.assertEqual(gen.main(["--models", str(models), "--agents-dir", str(d / "agents")]), 0)
+            self.assertEqual(agent.read_bytes(),
+                             b"---\r\nname: builder\r\nmodel: sonnet\r\n---\r\nbody\r\n")
+
+    def test_crlf_correct_model_check_passes_untouched(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = pathlib.Path(d)
+            models = write(d / "m.yaml", "builder: sonnet\n")
+            agent = d / "agents" / "builder.md"
+            agent.parent.mkdir()
+            data = b"---\r\nname: builder\r\nmodel: sonnet\r\n---\r\nbody\r\n"
+            agent.write_bytes(data)
+            self.assertEqual(gen.main(["--check", "--models", str(models),
+                                       "--agents-dir", str(d / "agents")]), 0)
+            self.assertEqual(agent.read_bytes(), data)
+
+    def test_parse_rejects_duplicate_role(self):
+        with self.assertRaisesRegex(ValueError, "duplicate role: builder"):
+            gen.parse_models("builder: sonnet\nbuilder: opus\n")
+
+    def test_agent_without_policy_fails(self):
+        for extra in ([], ["--check"]):
+            with tempfile.TemporaryDirectory() as d:
+                d = pathlib.Path(d)
+                models = write(d / "m.yaml", "builder: sonnet\nghost: opus\n")
+                write(d / "agents" / "builder.md", "---\nname: builder\nmodel: sonnet\n---\n")
+                write(d / "agents" / "stray.md", "---\nname: stray\n---\n")
+                self.assertEqual(gen.main(extra + ["--models", str(models),
+                                                   "--agents-dir", str(d / "agents")]), 1)
+
 
 class LintTests(unittest.TestCase):
     def skill(self, root, name, fm_name=None, desc="Does a thing.", extra="", body="# x\n"):

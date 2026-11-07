@@ -28,6 +28,8 @@ def parse_models(text: str) -> Dict[str, str]:
             raise ValueError(f"line {n}: expected 'role: model'")
         if value not in ALLOWED:
             raise ValueError(f"line {n}: model {value!r} for {role} not in {sorted(ALLOWED)}")
+        if role in models:
+            raise ValueError(f"line {n}: duplicate role: {role}")
         models[role] = value
     return models
 
@@ -66,11 +68,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"{args.models}: {e}", file=sys.stderr)
         return 1
     drifted: List[str] = []
+    agents_dir = pathlib.Path(args.agents_dir)
+    missing = [p.stem for p in sorted(agents_dir.glob("*.md")) if p.stem not in models]
+    if missing:
+        for name in missing:
+            print(f"no model policy for agent {name}", file=sys.stderr)
+        return 1
     for role, model in sorted(models.items()):
-        path = pathlib.Path(args.agents_dir) / f"{role}.md"
+        path = agents_dir / f"{role}.md"
         if not path.is_file():
             continue
-        old = path.read_text()
+        old = path.read_bytes().decode("utf-8")
         new = set_model(old, model)
         if new is None:
             print(f"{path}: no frontmatter", file=sys.stderr)
@@ -78,7 +86,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         if new != old:
             drifted.append(str(path))
             if not args.check:
-                path.write_text(new)
+                path.write_bytes(new.encode("utf-8"))
     if args.check and drifted:
         for p in drifted:
             print(f"{p}: model line drifted from models.yaml", file=sys.stderr)
