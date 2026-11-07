@@ -180,3 +180,34 @@ def shell_commands(command, _depth=0):
                     out.extend(shell_commands(args[j + 1], _depth + 1))
                     break
     return out
+
+
+# ---------------------------------------------------------------------------
+# Project-file helpers shared by the STATE / CLAUDE.md / session hooks
+# ---------------------------------------------------------------------------
+
+def event_cwd(event) -> str:
+    """Project directory: the event's cwd when present, else the process cwd."""
+    cwd = event.get("cwd") if isinstance(event, dict) else None
+    return cwd if isinstance(cwd, str) and cwd else os.getcwd()
+
+
+def resolve_path(event, path) -> str:
+    p = os.path.expanduser(str(path))
+    return p if os.path.isabs(p) else os.path.join(event_cwd(event), p)
+
+
+def read_text(path) -> str:
+    """File contents, or '' when missing or unreadable."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+    except OSError:
+        return ""
+
+
+def count_lines(text: str) -> int:
+    """Lines as an editor shows them: a trailing newline adds no line."""
+    if not text:
+        return 0
+    return len(text.split("\n")) - (1 if text.endswith("\n") else 0)
