@@ -1,0 +1,24 @@
+// {{PROJECT_NAME}} architecture. Source of truth for ARCHITECTURE.svg.
+// Validate and render: python3 scripts/dot_check.py (from the Pavedline plugin) or dot -Tsvg ARCHITECTURE.dot
+digraph architecture {
+  graph [rankdir=LR, fontname="Helvetica", bgcolor="white", pad=0.4, nodesep=0.45, ranksep=0.7,
+         label="{{PROJECT_NAME}} — architecture (fill in at step 6)", labelloc=t, fontsize=18, fontcolor="#0F172A"];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#334155",
+         fillcolor="#FFFFFF", penwidth=1.2];
+  edge  [fontname="Helvetica", fontsize=10, color="#475569", arrowsize=0.7, penwidth=1.2];
+
+  subgraph cluster_clients {
+    label="CLIENTS"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A";
+    web    [label="Web app"];
+  }
+  subgraph cluster_backend {
+    label="BACKEND"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B";
+    api    [label="API"];
+  }
+  subgraph cluster_data {
+    label="DATA"; style="rounded,filled"; fillcolor="#F5F3FF"; color="#C4B5FD"; fontcolor="#4C1D95";
+    db     [label="Database"];
+  }
+  web -> api [label="HTTPS"];
+  api -> db  [label="SQL"];
+}
