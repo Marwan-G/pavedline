@@ -541,15 +541,16 @@ that agents preload are **not** marked `disable-model-invocation`, because that 
 | unclecode/crawl4ai | Apache-2.0 (attribution required) | optional bulk crawl | optional |
 
 Dependencies are declared in `plugin.json`, and `marketplace.json` allow-lists their marketplaces. Observed on a
-clean profile (`scripts/install_test.sh`, Claude Code `CLAUDE_CONFIG_DIR` isolation): a dependency is installed
-automatically **only when its marketplace has already been added**. With only the Pavedline marketplace added,
-`superpowers` and `mattpocock-skills` (marketplace `claude-plugins-official`) and `product-management`
-(`knowledge-work-plugins`) were not installed, and the install printed a warning that Pavedline will not load
-without them. The built-in `anthropic-plugin-directory` is not `claude-plugins-official`. With
-`anthropics/claude-plugins-official` and `anthropics/knowledge-work-plugins` added first, installing
-`pavedline@pavedline` installed all three dependencies automatically. So the README's install section adds both
-dependency marketplaces explicitly before installing. `doctor` checks everything that loaded and prints the exact
-command for anything missing.
+clean profile (`scripts/install_test.sh`, isolated with `CLAUDE_CONFIG_DIR`): with the Pavedline and
+`knowledge-work-plugins` marketplaces added, `product-management` installed automatically and the two
+`claude-plugins-official` dependencies (`superpowers`, `mattpocock-skills`) did not; the install printed a warning that
+Pavedline will not load without them. After also adding `anthropics/claude-plugins-official`, installing
+`pavedline@pavedline` installed all three dependencies automatically. The built-in `anthropic-plugin-directory` is not
+`claude-plugins-official`. A further observation from a live smoke test (2026-11-08): when a declared dependency is
+missing, Claude Code does not load the Pavedline plugin at all, so `/pavedline:start` and `/pavedline:doctor` are
+unavailable and `doctor` cannot diagnose a missing dependency; `claude plugin list` shows the warning. The README
+therefore requires the dependency marketplaces to be added before installing Pavedline, and tells the user to run
+`claude plugin list` if `/pavedline:start` is not found.
 
 ### 12.3 `multi-tenancy` and `db-schema`: the non-negotiable rules
 The base is sickn33's `saas-multi-tenant` skill (MIT, adapted with credit), with Supabase's Postgres best practices

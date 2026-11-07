@@ -31,6 +31,10 @@ Add both dependency marketplaces first: Pavedline's dependencies (`superpowers`,
 `product-management`) install automatically only from marketplaces you have already added. Without them the install
 warns that Pavedline will not load. (Verified on a clean profile with `scripts/install_test.sh`.)
 
+**If `/pavedline:start` is not found:** a missing dependency stops Pavedline from loading at all. Run
+`claude plugin list`, which shows the dependency warning, then add the missing marketplace or plugin with the commands
+above.
+
 `/pavedline:doctor` checks every tool and skill Pavedline needs and prints the exact command for anything missing.
 Adding marketplaces, installing plugins and tools, and running the local cluster are your choices: Pavedline prints
 commands and asks first; it does not install software on its own.

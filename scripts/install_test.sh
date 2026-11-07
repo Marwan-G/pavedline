@@ -33,11 +33,13 @@ claude plugin list --json > "$CFG/list.json"
 python3 - "$CFG/list.json" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))
-items = data if isinstance(data, list) else data.get("plugins", data)
+items = data if isinstance(data, list) else (data.get("plugins") if isinstance(data, dict) else None)
+if not isinstance(items, list):
+    print("FAIL: unexpected 'claude plugin list --json' shape: " + type(data).__name__); sys.exit(1)
 found = {}
 for p in items:
     pid = p.get("id") or p.get("name")
-    found[pid] = p.get("enabled", True)
+    found[pid] = p.get("enabled") is True
 print("installed plugins:", json.dumps(found, sort_keys=True))
 if found.get("pavedline@pavedline") is not True:
     print("FAIL: pavedline@pavedline missing or disabled"); sys.exit(1)
