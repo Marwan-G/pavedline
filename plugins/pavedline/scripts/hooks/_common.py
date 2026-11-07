@@ -42,7 +42,8 @@ def allow() -> NoReturn:
 
 
 def is_env_file(path: str) -> bool:
-    name = os.path.basename(str(path).replace("\\", "/").rstrip("/"))
+    # Case-insensitive: macOS file systems are, so ".ENV" reads the real file.
+    name = os.path.basename(str(path).replace("\\", "/").rstrip("/")).lower()
     if name != ".env" and not name.startswith(".env."):
         return False
     return not name.endswith(ENV_ALLOWED_SUFFIXES)

@@ -98,13 +98,64 @@ class GuardTests(unittest.TestCase):
             with self.subTest(cmd=cmd):
                 self.assertBlocked(run_payload("Bash", {"command": cmd}))
 
+    def test_blocks_bash_any_verb_naming_env(self):
+        for cmd in ("sort .env", "cut -d= -f1 .env", "wc .env", "diff .env x", "tac .env",
+                    "nl .env", "xxd .env", "od .env", "strings .env", "dotenv -f .env",
+                    "git show HEAD:.env", "echo .env", "cat .ENV", "ls .env | cat .env"):
+            with self.subTest(cmd=cmd):
+                self.assertBlocked(run_payload("Bash", {"command": cmd}))
+
+    def test_blocks_bash_nested(self):
+        for cmd in ('bash -c "cat .env"', "sh -c 'cat .env'", 'eval "cat .env"',
+                    "python3 -c \"open('.env').read()\"", "cat `echo .env`",
+                    "cat $(echo .env)", "node -e \"require('fs').readFileSync('.env')\"",
+                    "ls $(cat .env)"):
+            with self.subTest(cmd=cmd):
+                self.assertBlocked(run_payload("Bash", {"command": cmd}))
+
+    def test_case_insensitive_env(self):
+        self.assertBlocked(run_payload("Read", {"file_path": ".ENV"}))
+        self.assertBlocked(run_payload("Read", {"file_path": ".Env.Local"}))
+        self.assertAllowed(run_payload("Read", {"file_path": ".ENV.EXAMPLE"}))
+
+    def test_multiedit(self):
+        self.assertBlocked(run_payload("MultiEdit", {"file_path": ".env", "edits": []}))
+        self.assertBlocked(run_payload("MultiEdit", {"file_path": "a.txt", "edits": [
+            {"old_string": "a", "new_string": "ok"}, {"old_string": "b", "new_string": GHP}]}))
+        self.assertAllowed(run_payload("MultiEdit", {"file_path": "a.txt", "edits": [
+            {"old_string": "a", "new_string": "ok"}]}))
+
+    def test_notebookedit(self):
+        self.assertBlocked(run_payload("NotebookEdit", {"notebook_path": ".env"}))
+        self.assertBlocked(run_payload("NotebookEdit", {"notebook_path": "n.ipynb", "new_source": GHP}))
+        self.assertAllowed(run_payload("NotebookEdit", {"notebook_path": "n.ipynb", "new_source": "x"}))
+
+    def test_grep_tool(self):
+        self.assertBlocked(run_payload("Grep", {"pattern": "KEY", "path": ".env"}))
+        self.assertBlocked(run_payload("Grep", {"pattern": "KEY", "glob": ".env*"}))
+        self.assertBlocked(run_payload("Grep", {"pattern": "KEY", "glob": "*.env"}))
+        self.assertBlocked(run_payload("Grep", {"pattern": "KEY", "glob": "**/.env.local"}))
+        self.assertAllowed(run_payload("Grep", {"pattern": "KEY", "path": "src", "glob": "*.py"}))
+        self.assertAllowed(run_payload("Grep", {"pattern": "KEY", "glob": ".env.example"}))
+
+    def test_hooks_json_matcher_covers_tools(self):
+        cfg = json.loads((ROOT / "plugins/pavedline/hooks/hooks.json").read_text())
+        m = cfg["hooks"]["PreToolUse"][0]["matcher"].split("|")
+        for t in ("Read", "Write", "Edit", "Bash", "MultiEdit", "NotebookEdit", "Grep"):
+            self.assertIn(t, m)
+
     def test_bash_unbalanced_quote_falls_back(self):
         self.assertBlocked(run_payload("Bash", {"command": "cat .env 'oops"}))
 
     def test_allows_bash_normal(self):
         self.assertAllowed(run_fixture("bash_ls"))
         self.assertAllowed(run_fixture("bash_cat_example"))
-        self.assertAllowed(run_payload("Bash", {"command": "echo .env"}))
+        for cmd in ("ls -la .env", "stat .env", "test -f .env", "[ -f .env ]", "rm .env",
+                    "mv .env .env.bak", "touch .env", "git add .env", "git rm .env",
+                    "git mv .env x", "git check-ignore .env", "echo hi > .env",
+                    "ls; cat README.md"):
+            with self.subTest(cmd=cmd):
+                self.assertAllowed(run_payload("Bash", {"command": cmd}))
 
     def test_blocks_write_with_private_key(self):
         self.assertBlocked(
@@ -143,8 +194,8 @@ class CommonTests(unittest.TestCase):
     def test_is_env_file(self):
         import _common
 
-        yes = [".env", ".env.local", "a/b/.env.production", "/abs/.env"]
-        no = [".env.example", ".env.sample", ".env.template", ".envrc", "env", "x.env", "README.md"]
+        yes = [".ENV", ".env", ".env.local", "a/b/.env.production", "/abs/.env"]
+        no = [".env.example", ".ENV.Example", ".env.sample", ".env.template", ".envrc", "env", "x.env", "README.md"]
         for p in yes:
             self.assertTrue(_common.is_env_file(p), p)
         for p in no:
