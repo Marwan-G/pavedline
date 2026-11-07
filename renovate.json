@@ -1,0 +1,85 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "timezone": "UTC",
+  "dependencyDashboard": true,
+  "labels": [
+    "dependencies"
+  ],
+  "packageRules": [
+    {
+      "description": "Group minor and patch updates into one weekly PR",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "weekly minor and patch updates"
+    },
+    {
+      "description": "Automerge patch updates and digest pins of GitHub Actions only",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest"
+      ],
+      "groupName": null,
+      "automerge": true
+    },
+    {
+      "description": "Local-cluster pins are never automerged",
+      "matchFileNames": [
+        "plugins/pavedline/scripts/local-cluster/versions.env"
+      ],
+      "automerge": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "argo-cd Helm chart version in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "ARGOCD_CHART_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://argoproj.github.io/argo-helm",
+      "depNameTemplate": "argo-cd"
+    },
+    {
+      "customType": "regex",
+      "description": "cloudnative-pg Helm chart version in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "CNPG_CHART_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://cloudnative-pg.github.io/charts",
+      "depNameTemplate": "cloudnative-pg"
+    },
+    {
+      "customType": "regex",
+      "description": "kind node image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "KIND_NODE_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

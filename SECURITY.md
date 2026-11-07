@@ -13,3 +13,7 @@ acknowledgement within a few days.
 
 Pavedline ships workflow instructions, hooks and scripts that run inside Claude Code. Reports about
 unsafe hook behavior, secret leakage, or unintended command execution are in scope.
+
+## CI secrets
+
+The only secret CI uses is `RENOVATE_TOKEN`, a fine-grained personal access token scoped to this repository and used only by the scheduled Renovate workflow. Workflows run with read-only `GITHUB_TOKEN` permissions, use `pull_request` (never `pull_request_target`), and pin every third-party action by commit SHA.

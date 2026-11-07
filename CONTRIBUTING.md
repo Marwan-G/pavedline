@@ -20,3 +20,7 @@ Thanks for your interest. Pavedline is a Claude Code plugin marketplace; contrib
 ## License
 
 By contributing you agree that your contributions are licensed under the MIT License.
+
+## Dependency updates
+
+Renovate runs weekly from `.github/workflows/renovate.yml` and needs a repository secret named `RENOVATE_TOKEN` (a fine-grained personal access token limited to this repository: contents, pull requests and workflows read/write). Without it the workflow fails and nothing else is affected. Pins in `plugins/pavedline/scripts/local-cluster/versions.env` are never automerged.
