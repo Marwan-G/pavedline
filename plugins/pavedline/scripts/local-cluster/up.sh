@@ -19,7 +19,7 @@ CTX="kind-pavedline-${PROJECT}"
 REG_NAME="kind-registry"
 
 for tool in docker kind kubectl helm; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "error: $tool is not installed. Run /pavedline:doctor; install only with the user's go." >&2; exit 1; }
+  command -v "$tool" >/dev/null 2>&1 || { echo "error: $tool is not installed. Run /pavedline:doctor; it tells you what it will install and why, then installs it with your permission." >&2; exit 1; }
 done
 if ! docker info >/dev/null 2>&1; then
   echo "error: no container runtime answers. Start Docker or Colima (colima start --cpu 4 --memory 10)." >&2

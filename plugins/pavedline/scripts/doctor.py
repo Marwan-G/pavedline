@@ -3,8 +3,8 @@
 
 Usage: doctor.py
 Prints a table (name, ok/missing, required/optional, fix) and a final summary
-line. Exits 1 if any required check fails. Never installs anything and never
-prints environment variables. Standard library only.
+line. Exits 1 if any required check fails. The script only reports; the doctor skill does the
+installing (after announcing, with the user's permission). Never prints environment variables. Standard library only.
 """
 import json
 import platform as _platform

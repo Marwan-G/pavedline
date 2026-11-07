@@ -77,11 +77,35 @@ class StepZeroContracts(unittest.TestCase):
             t = read(name)
             self.assertNotIn("Never install", t, name)
             self.assertIn("what it will install", t, name)
-            self.assertIn("why", t, name)
+            self.assertIn("which Pavedline step needs it", t, name)
             self.assertIn("exact command", t, name)
             self.assertIn("permission prompt", t, name)
             self.assertIn("sudo", t, name)
             self.assertIn("WAITING.md", t, name)
+        d = read("doctor")
+        self.assertIn("not on its list", d)
+        self.assertIn("paid service, account or spend", d)
+
+    def test_no_install_pattern_is_preapproved(self):
+        import pathlib
+        for f in pathlib.Path(SKILLS).glob("*/SKILL.md"):
+            for line in f.read_text().splitlines():
+                if line.startswith("allowed-tools:"):
+                    for bad in ("brew", "colima", "claude plugin"):
+                        self.assertNotIn(bad, line, str(f))
+
+    def test_old_install_phrases_are_gone(self):
+        import pathlib
+        root = pathlib.Path(SKILLS).parents[2]
+        files = list(pathlib.Path(SKILLS).glob("*/SKILL.md"))
+        files += [root / "README.md"] + list((root / "docs").rglob("*.md"))
+        files += list((root / "plugins/pavedline/scripts/local-cluster").glob("*.sh"))
+        for f in files:
+            if "superpowers" in f.parts:
+                continue
+            t = f.read_text()
+            for old in ("Relay each fix exactly", "without the user's go", "install only with the user's go"):
+                self.assertNotIn(old, t, str(f))
 
     def test_start_privacy_first(self):
         t = read("start")

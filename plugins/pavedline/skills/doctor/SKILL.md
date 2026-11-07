@@ -1,7 +1,7 @@
 ---
 name: doctor
 description: Checks that every tool and plugin Pavedline needs is installed and, for anything missing, tells the user what it will install and why, then installs it. Use at the start of step 0 (before /pavedline:start does anything else), and whenever a command is not found or a dependency seems missing.
-allowed-tools: Bash(python3 *) Bash(brew install *) Bash(colima start*) Bash(claude plugin *)
+allowed-tools: Bash(python3 *)
 ---
 
 # doctor
