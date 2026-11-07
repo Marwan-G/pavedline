@@ -2,11 +2,43 @@
 """Flag changed code whose owning ARCHITECTURE.dot was not updated in the same change."""
 import argparse
 import pathlib
+import re
 import subprocess
 import sys
 from typing import List
 
 OPT_OUT = "diagram unchanged:"
+
+
+def glob_to_regex(glob: str):
+    """fnmatch-like glob where '**' spans any number of path segments."""
+    out, i = "", 0
+    while i < len(glob):
+        if glob.startswith("**/", i):
+            out += "(?:.*/)?"
+            i += 3
+        elif glob.startswith("**", i):
+            out += ".*"
+            i += 2
+        elif glob[i] == "*":
+            out += "[^/]*"
+            i += 1
+        elif glob[i] == "?":
+            out += "[^/]"
+            i += 1
+        else:
+            out += re.escape(glob[i])
+            i += 1
+    return re.compile("^" + out + "$")
+
+
+def parse_globs(text: str) -> List[str]:
+    lines = (ln.strip() for ln in text.splitlines())
+    return [ln for ln in lines if ln and not ln.startswith("#")]
+
+
+def matches_any(path: str, globs: List[str]) -> bool:
+    return any(glob_to_regex(g).match(path) for g in globs)
 
 
 def _owner(path: str, dot_owners: List[str]):
@@ -23,9 +55,11 @@ def _dot_of(owner: str) -> str:
     return "ARCHITECTURE.dot" if owner == "" else f"{owner}/ARCHITECTURE.dot"
 
 
-def drift(changed: List[str], dot_owners: List[str], pr_body: str) -> List[str]:
+def drift(changed: List[str], dot_owners: List[str], pr_body: str,
+          ignore: List[str] = ()) -> List[str]:
     if OPT_OUT in pr_body:
         return []
+    changed = [c for c in changed if not matches_any(c, list(ignore))]
     touched = {}
     for path in changed:
         if path.endswith("ARCHITECTURE.dot"):
@@ -49,7 +83,9 @@ def main(argv=None) -> int:
                              capture_output=True, text=True, check=True).stdout.split()
     owners = [str(pathlib.PurePosixPath(p).parent) for p in tracked]
     body = pathlib.Path(a.pr_body_file).read_text(encoding="utf-8") if a.pr_body_file else ""
-    stale = drift(changed, owners, body)
+    ignore_file = pathlib.Path(".dot-drift-ignore")
+    ignore = parse_globs(ignore_file.read_text(encoding="utf-8")) if ignore_file.is_file() else []
+    stale = drift(changed, owners, body, ignore)
     for o in stale:
         print(f"{o}: code changed but {_dot_of('' if o == '.' else o)} did not "
               f"(update it, or add '{OPT_OUT} <reason>' to the PR body)", file=sys.stderr)

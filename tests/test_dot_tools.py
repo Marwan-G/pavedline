@@ -58,6 +58,23 @@ class RenderCheckTests(unittest.TestCase):
         self.assertEqual(len(dot_check.check([self.dot])), 1)
 
 
+IGNORE = dot_drift.parse_globs("# c\n\n**/*.md\ndocs/**\ntests/**\n**/*.svg\n")
+
+
+class DriftIgnoreTests(unittest.TestCase):
+    def test_docs_only_change_has_no_owner(self):
+        self.assertEqual(dot_drift.drift(["docs/a/b.md", "README.md", "x/y.svg"], ["."], "", IGNORE), [])
+
+    def test_tests_only_change_has_no_owner(self):
+        self.assertEqual(dot_drift.drift(["tests/test_x.py"], ["."], "", IGNORE), [])
+
+    def test_script_change_still_flags_root(self):
+        self.assertEqual(dot_drift.drift(["scripts/x.py", "docs/a.md"], ["."], "", IGNORE), ["."])
+
+    def test_comments_and_blanks_skipped(self):
+        self.assertEqual(IGNORE, ["**/*.md", "docs/**", "tests/**", "**/*.svg"])
+
+
 class DriftTests(unittest.TestCase):
     def test_drift_flags_owner_without_dot_change(self):
         self.assertEqual(dot_drift.drift(["plugins/pavedline/x.py"], ["."], ""), ["."])

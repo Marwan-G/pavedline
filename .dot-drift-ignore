@@ -1,0 +1,7 @@
+# Paths that never need an ARCHITECTURE.dot update (globs; ** spans directories).
+**/*.md
+docs/**
+tests/**
+**/*.svg
+renovate.json
+plugins/pavedline/scripts/local-cluster/versions.env
