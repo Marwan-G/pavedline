@@ -1,0 +1,12 @@
+# Model policy: one `role: model` per line. Allowed values: opus, sonnet.
+# `python3 scripts/gen_agent_models.py` writes these into agents/<role>.md.
+orchestrator: opus
+designer: opus
+researcher: sonnet
+architect: sonnet
+design-verifier: sonnet
+builder: sonnet
+reviewer: sonnet
+adversary: sonnet
+deployer: sonnet
+growth: sonnet
