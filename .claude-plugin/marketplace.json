@@ -1,0 +1,19 @@
+{
+  "name": "pavedline",
+  "owner": {
+    "name": "Marwan Ghubein",
+    "url": "https://www.linkedin.com/in/marwan-ghubein/"
+  },
+  "metadata": {
+    "description": "Pavedline: a GitOps software factory for Claude Code."
+  },
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official", "knowledge-work-plugins"],
+  "plugins": [
+    {
+      "name": "pavedline",
+      "source": "./plugins/pavedline",
+      "description": "Ship a multi-tenant SaaS to production with Claude Code, not a demo.",
+      "version": "0.1.0"
+    }
+  ]
+}
