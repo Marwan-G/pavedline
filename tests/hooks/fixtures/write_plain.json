@@ -1,0 +1,10 @@
+{
+  "session_id": "s1",
+  "cwd": "/work/proj",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "notes.txt",
+    "content": "hello"
+  }
+}

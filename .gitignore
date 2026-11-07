@@ -1,0 +1,6 @@
+.sanitize-denylist.local
+.env.local
+__pycache__/
+*.pyc
+.superpowers/
+.DS_Store

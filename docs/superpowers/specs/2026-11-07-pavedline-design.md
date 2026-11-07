@@ -540,11 +540,17 @@ that agents preload are **not** marked `disable-model-invocation`, because that 
 | microsoft/playwright-mcp | Apache-2.0 | competitor research | shipped in the plugin's `.mcp.json`, pinned |
 | unclecode/crawl4ai | Apache-2.0 (attribution required) | optional bulk crawl | optional |
 
-Dependencies are declared in `plugin.json`, and `marketplace.json` allow-lists their marketplaces. The docs say the
-allow-list **permits** cross-marketplace installs; they do not say the other marketplace is added automatically. So
-the README's install section adds each dependency marketplace explicitly, and v0.1 tests the install on a clean
-profile before claiming more (§17). `doctor` checks everything that loaded and prints the exact command for anything
-missing.
+Dependencies are declared in `plugin.json`, and `marketplace.json` allow-lists their marketplaces. Observed on a
+clean profile (`scripts/install_test.sh`, isolated with `CLAUDE_CONFIG_DIR`): with the Pavedline and
+`knowledge-work-plugins` marketplaces added, `product-management` installed automatically and the two
+`claude-plugins-official` dependencies (`superpowers`, `mattpocock-skills`) did not; the install printed a warning that
+Pavedline will not load without them. After also adding `anthropics/claude-plugins-official`, installing
+`pavedline@pavedline` installed all three dependencies automatically. The built-in `anthropic-plugin-directory` is not
+`claude-plugins-official`. A further observation from a live smoke test (2026-11-08): when a declared dependency is
+missing, Claude Code does not load the Pavedline plugin at all, so `/pavedline:start` and `/pavedline:doctor` are
+unavailable and `doctor` cannot diagnose a missing dependency; `claude plugin list` shows the warning. The README
+therefore requires the dependency marketplaces to be added before installing Pavedline, and tells the user to run
+`claude plugin list` if `/pavedline:start` is not found.
 
 ### 12.3 `multi-tenancy` and `db-schema`: the non-negotiable rules
 The base is sickn33's `saas-multi-tenant` skill (MIT, adapted with credit), with Supabase's Postgres best practices
@@ -664,7 +670,7 @@ Code plugin format, distributed as a marketplace. Solo and team. Observability e
 Every vendor fact carries a date and a source.
 
 **Sanitisation (CI):** a deny-list scan over **all tracked files, docs included** fails on generic patterns (cloud
-resource IDs such as `ocid1.`, private IP literals, key and token formats) and on the author's private identifiers,
+resource IDs such as OCI's `ocid1` prefix, private IP literals, key and token formats) and on the author's private identifiers,
 which live only in a gitignored local extension file. The source material (the author's private production
 workflow) stays outside the repo; it is ported and generalised, never copied.
 

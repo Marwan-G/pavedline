@@ -1,0 +1,166 @@
+name: ci
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
+      - run: python3 -m unittest discover -s tests -t . -v
+
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: python3 scripts/lint_skills.py plugins/pavedline/skills
+      - run: python3 scripts/gen_agent_models.py --check
+      - name: STATE.md template is at most 60 lines (design 9.3 backstop)
+        run: |
+          lines=$(wc -l < plugins/pavedline/templates/STATE.md)
+          echo "STATE.md template: ${lines} lines"
+          test "$lines" -le 60
+
+  sanitize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: python3 scripts/sanitize_scan.py
+
+  diagrams:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
+      - run: python3 scripts/dot_check.py --check
+      - name: Diagram drift (pull requests only)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/body.txt"
+          python3 scripts/dot_drift.py --base "$BASE_SHA" --pr-body-file "$RUNNER_TEMP/body.txt"
+
+  plugin-validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - run: npm i -g @anthropic-ai/claude-code@2.1.319
+      - run: claude plugin validate . --strict
+      - run: claude plugin validate plugins/pavedline --strict
+
+  gitleaks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install gitleaks v8.30.1 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
+          curl --fail --silent --show-error --location -O "$base/gitleaks_8.30.1_linux_x64.tar.gz"
+          # Expected sha256 from $base/gitleaks_8.30.1_checksums.txt
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks_8.30.1_linux_x64.tar.gz" | sha256sum --check --strict
+          tar -xzf gitleaks_8.30.1_linux_x64.tar.gz gitleaks
+      - run: ${{ runner.temp }}/gitleaks dir . --no-banner --redact
+
+  local-cluster:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install kind v0.33.0 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0
+          curl --fail --silent --show-error --location -O "$base/kind-linux-arm64"
+          # Expected sha256 from $base/kind-linux-arm64.sha256sum
+          echo "20022bee6cfcd5086cb7234d218e3454e6090022f2a8f55d1fa7fcf42c3867a2  kind-linux-arm64" | sha256sum --check --strict
+          sudo install -m 0755 kind-linux-arm64 /usr/local/bin/kind
+      - name: Install helm v4.3.1 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --silent --show-error --location -O https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz
+          # Expected sha256 from https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz.sha256sum
+          echo "8cf8f66ecbc252ac8f7f06cca68aba88508ddfde3a6a34feb1678ad1694b4f88  helm-v4.3.1-linux-arm64.tar.gz" | sha256sum --check --strict
+          tar -xzf helm-v4.3.1-linux-arm64.tar.gz linux-arm64/helm
+          sudo install -m 0755 linux-arm64/helm /usr/local/bin/helm
+      - run: plugins/pavedline/scripts/local-cluster/up.sh ci
+      - run: plugins/pavedline/scripts/local-cluster/verify.sh ci
+      - name: Tear down
+        if: always()
+        run: plugins/pavedline/scripts/local-cluster/down.sh ci --all
+
+  pr-body:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Gates line present
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/body.txt"
+          git diff --name-only "$BASE_SHA...HEAD" > "$RUNNER_TEMP/changed.txt"
+          python3 scripts/pr_checks.py --body-file "$RUNNER_TEMP/body.txt" \
+            --head-ref "$HEAD_REF" --changed-files-file "$RUNNER_TEMP/changed.txt"

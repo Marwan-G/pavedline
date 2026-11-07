@@ -20,14 +20,41 @@ local Kubernetes → cloud staging → production. Website, blog, web app and mo
 ## Install
 
 ```
+/plugin marketplace add anthropics/claude-plugins-official
 /plugin marketplace add anthropics/knowledge-work-plugins
-/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill
 /plugin marketplace add Marwan-G/pavedline
 /plugin install pavedline@pavedline
 /pavedline:start
 ```
 
-`/pavedline:doctor` checks every tool and skill Pavedline needs and prints the exact command for anything missing.
+Add both dependency marketplaces first: Pavedline's dependencies (`superpowers`, `mattpocock-skills`,
+`product-management`) install automatically only from marketplaces you have already added. Without them the install
+warns that Pavedline will not load. (Verified on a clean profile with `scripts/install_test.sh`.)
+
+**If `/pavedline:start` is not found:** a missing dependency stops Pavedline from loading at all. Run
+`claude plugin list`, which shows the dependency warning, then add the missing marketplace or plugin with the commands
+above.
+
+Once Pavedline loads, `/pavedline:doctor` checks every tool and skill Pavedline needs and prints the exact command for anything missing.
+Adding marketplaces, installing plugins and tools, and running the local cluster are your choices: Pavedline prints
+commands and asks first; it does not install software on its own.
+
+## What works in v0.1
+
+- **Steps 0–3:** [start](docs/steps/00-start.md) · [market and SEO research](docs/steps/01-market.md) ·
+  [grill](docs/steps/02-grill.md) · [spec](docs/steps/03-spec.md). The guided flow stops after the spec; step 4
+  ships in v0.2.
+- **Memory in your repository:** `PRODUCT.md`, `STATE.md`, `WAITING.md`, `GLOSSARY.md` and numbered decision records,
+  so a fresh session resumes from files.
+- **Six hooks:** block `.env` reads and secrets written into files; block cluster commands outside the local
+  `kind-pavedline-*` cluster; block `--no-verify` and force-pushes to the main branch; block a `STATE.md` over 60
+  lines; warn when `CLAUDE.md` passes 150 lines; print the project state when a session starts.
+- **`/pavedline:doctor`:** checks the machine and plugins, prints the fix for anything missing.
+- **Local cluster scripts:** a kind cluster with Argo CD, CloudNativePG and a local image registry, with `up`,
+  `verify` and `down` scripts. See [environments](docs/environments.md).
+- **CI for the factory itself:** tests, secret scan, diagram checks and a cluster smoke test on every pull request (the smoke test has not yet run on GitHub; its first run happens on the first pull request).
+
+Questions: [FAQ](docs/faq.md).
 
 ---
 
@@ -113,19 +140,11 @@ Asked for **just in time**, never all on day one:
 
 ## Built on the shoulders of
 
-Pavedline installs these from their makers; it does not copy them. Full list with licences in
-[`CREDITS.md`](CREDITS.md).
-
-[superpowers](https://github.com/obra/superpowers) (Jesse Vincent) ·
-[skills](https://github.com/mattpocock/skills) (Matt Pocock) ·
-[knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) (Anthropic) ·
-[ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) ·
-[impeccable](https://github.com/pbakaus/impeccable) (Paul Bakaus) ·
-[Figma plugin](https://www.figma.com/) ·
-[Next.js skills](https://github.com/vercel/next.js) and [agent-skills](https://github.com/vercel-labs/agent-skills) (Vercel) ·
-Clerk skills · [Playwright MCP](https://github.com/microsoft/playwright-mcp) (Microsoft).
-Ideas from [ECC](https://github.com/affaan-m/ECC), [spec-kit](https://github.com/github/spec-kit) and
-[BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD).
+Pavedline installs its dependencies from their makers and does not copy them: [superpowers](https://github.com/obra/superpowers)
+(Jesse Vincent), [skills](https://github.com/mattpocock/skills) (Matt Pocock),
+[knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) (Anthropic) and
+[Playwright MCP](https://github.com/microsoft/playwright-mcp) (Microsoft), plus ideas from several other projects.
+Every project, author, licence and how it is used is in [`CREDITS.md`](CREDITS.md).
 
 ## Who's behind this
 
