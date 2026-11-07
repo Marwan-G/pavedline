@@ -9,7 +9,7 @@ Step 3. The spec turns the decisions into something that can be built and tested
 
 ## 1. Read first, in order
 
-`PRODUCT.md`, `BRIEF.md`, `SEO-STRATEGY.md`, every file in `decisions/`, `GLOSSARY.md`, `STATE.md`. Use the words of `GLOSSARY.md` exactly. If step 2 is not finished (the `grilling` skill from `mattpocock-skills` has open questions, or `decisions/` has nothing beyond 0001–0007), say so and ask whether to continue; if the skill is missing, run `/pavedline:doctor`.
+`PRODUCT.md`, `docs/business/BRIEF.md`, `docs/business/SEO-STRATEGY.md`, every file in `decisions/`, `GLOSSARY.md`, `STATE.md`. Use the words of `GLOSSARY.md` exactly. If `STATE.md` says `STEP: 2 — Grill` and the founder confirms the decisions are complete, set `STEP: 3 — Spec` (fresh `date` timestamp in `LAST`) and continue. If step 2 is not finished (the `grilling` skill from `mattpocock-skills` has open questions, or `decisions/` has nothing beyond 0001–0007), say so and ask whether to continue; if the skill is missing, run `/pavedline:doctor`.
 
 Ask only what is undecided. Never re-ask a platform question (step 0) or a product decision (step 2).
 
@@ -23,7 +23,7 @@ Use exactly these sections, in this order:
 4. **Non-goals**: what the product will not do, each with a reason.
 5. **Acceptance tests**: one per must-have feature, in the form "Given ..., when ..., then ...". Number them `AT-001`, `AT-002`, and so on. Each says which surface it belongs to. Later steps map every one of them to a slice, so write them so a test can check them.
 6. **Non-functional needs**: performance, availability, accessibility, privacy and, if compliance is in scope, the obligations from the compliance decision. Every need is measurable ("p95 under 300 ms"), or marked as an open question. Do not invent numbers: mark a guess as an assumption. The system-design numbers come at step 4.
-7. **Site map and URL plan**: for the website and blog, a table of page · short stable URL · target query (from `SEO-STRATEGY.md`) · search intent · conversion goal. The blog lives under `/blog` unless a decision says otherwise. For the web app and mobile app, a list of screens or routes. One page, one target query.
+7. **Site map and URL plan**: for the website and blog, a table of page · short stable URL · target query (from `docs/business/SEO-STRATEGY.md`) · search intent · conversion goal. The blog lives under `/blog` unless a decision says otherwise. For the web app and mobile app, a list of screens or routes. One page, one target query.
 
 ## 3. Check the spec
 
@@ -34,7 +34,7 @@ Use exactly these sections, in this order:
 
 ## 4. Update the brief if needed
 
-If the spec changes the pricing (a feature moves to another tier, a tier is added), edit the pricing section of `BRIEF.md` (see the `pricing-model` skill) and say so in the summary. Do not leave them in disagreement.
+If the spec changes the pricing (a feature moves to another tier, a tier is added), edit the pricing section of `docs/business/BRIEF.md` (see the `pricing-model` skill) and say so in the summary. Do not leave them in disagreement.
 
 ## 5. Team mode
 

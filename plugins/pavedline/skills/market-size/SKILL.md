@@ -1,15 +1,15 @@
 ---
 name: market-size
-description: Writes the market-size section of BRIEF.md in step 1 of Pavedline, with a top-down and a bottom-up estimate. Every number is sourced with a URL or marked as an assumption. Use after competitor-teardown.
+description: Writes the market-size section of docs/business/BRIEF.md in step 1 of Pavedline, with a top-down and a bottom-up estimate. Every number is sourced with a URL or marked as an assumption. Use after competitor-teardown.
 ---
 
 # market-size
 
-Writes the `## Market size` section of `BRIEF.md`. Honest, small and checkable beats impressive.
+Writes the `## Market size` section of `docs/business/BRIEF.md`. Honest, small and checkable beats impressive.
 
 ## Steps
 
-1. Read `PRODUCT.md`, the pricing section of `BRIEF.md` and `docs/business/competitors/*.md`.
+1. Read `PRODUCT.md`, the pricing section of `docs/business/BRIEF.md` and `docs/business/competitors/*.md`.
 2. Define the market in one sentence: who the customers are, in which regions, for what job. Everything below is measured against that sentence.
 3. **Top-down:** start from a published figure for the wider market (a report, a statistic office, a regulator). Narrow it step by step to the defined market. Each narrowing step shows its factor and why.
 4. **Bottom-up:** count the customers you could reach (a sourced count of businesses or people), multiply by the share you could plausibly win in the first years, multiply by the price from the pricing section. Show the arithmetic.
