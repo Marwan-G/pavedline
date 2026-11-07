@@ -113,5 +113,28 @@ class StepOneContracts(unittest.TestCase):
         self.assertIn("bottom-up", t)
 
 
+class StepTwoThreeContracts(unittest.TestCase):
+    def test_spec_has_four_surfaces(self):
+        t = read("spec").lower()
+        for surface in ("website", "blog", "web app", "mobile app"):
+            self.assertIn(surface, t)
+
+    def test_spec_has_acceptance_tests(self):
+        t = read("spec")
+        for needle in ("acceptance tests", "non-goals", "site map", "URL plan"):
+            self.assertIn(needle, t)
+
+    def test_registry_never_values(self):
+        t = read("project-registry")
+        self.assertIn("never the value", t)
+        for f in ("RUN.md", "SERVICES.md", "LINKS.md"):
+            self.assertIn(f, t)
+
+    def test_diagram_uses_canon(self):
+        t = read("diagram")
+        self.assertIn("-Tcanon", t)
+        self.assertIn("-Tsvg", t)
+
+
 if __name__ == "__main__":
     unittest.main()
