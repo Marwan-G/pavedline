@@ -312,7 +312,7 @@ reviewers receive the scanner output with the diff.
 | Code quality, TypeScript | Biome (Apache-2.0) or ESLint, plus `tsc` strict | style, likely bugs, unused code, type errors |
 | Code quality, Python | ruff + pyright strict + import-linter boundaries | lint, type errors, layering violations |
 | Security of first-party code | CodeQL (GitHub code scanning, free for public repos) and Semgrep (LGPL-2.1, used as a tool, not linked) | injection, unsafe patterns, taint flows |
-| Dependencies | Dependabot alerts + Trivy (Apache-2.0) | known-vulnerable packages |
+| Dependencies | **Renovate** (AGPL-3.0, run as a CI tool) for updates; Dependabot security alerts (GitHub built-in) + Trivy (Apache-2.0) for known vulnerabilities | outdated and known-vulnerable packages, images, charts, actions |
 | Containers | Trivy | vulnerable base images and OS packages |
 | Infrastructure as code | Checkov (Apache-2.0) | insecure Terraform, Kubernetes manifests and Helm values |
 | Running application | OWASP ZAP baseline (Apache-2.0) against the local cluster | missing security headers, exposed endpoints |
@@ -432,6 +432,7 @@ Teleport is an optional add-on.
 - DB tests (throwaway Postgres built from the migrations) at the merge gate only
 - `.dot` validate/render + drift check
 - secret scan (gitleaks, MIT; call)
+- Renovate (self-run in CI, weekly) for every pinned version (§18.8)
 - Helm lint/template
 - the gates-line check
 - `claude plugin validate` (in Pavedline's own repo)
@@ -700,10 +701,20 @@ the founder can answer.
    optional. The `deployer` agent may run read-only `kubectl` / `argocd` to verify. It **syncs only after the founder
    says "deploy" in the session**, with that approval quoted in its prompt. The change-specific check is written by the
    builder into the PR template's `Post-deploy check:` field. A PR without it fails CI when it touches deployable paths.
-8. **Version pins (call).** Templates pin **exact versions** (images, charts, CNPG, the Barman plugin, Next.js,
-   Python packages via `uv.lock`). GitHub **Dependabot** (built into GitHub; not a new service) proposes updates. The
-   design's date-stamped facts are re-verified when each template is written, and the verification date goes into the
-   template's README.
+8. **Version pins and updates (call; Renovate added at the founder's request).** Templates pin **exact versions**
+   (images by digest, charts, CNPG, the Barman plugin, Next.js, Python packages via `uv.lock`, GitHub Actions by SHA).
+   **Renovate** keeps them current. Facts (2026-11-07): `renovatebot/renovate` is AGPL-3.0, v44.222.2. Its managers
+   include `argocd`, `helm-values`, `helmv3`, `kubernetes`, `dockerfile`, `github-actions`, `npm`, `pep621`, plus
+   custom regex managers for versions written in scripts. So it updates image tags inside Helm values and ArgoCD
+   manifests, which Dependabot version updates do not do generically. It **runs inside our own CI** through
+   `renovatebot/github-action`, not Mend's hosted app, so no third party gets repository access (no new service).
+   Running AGPL software as a CI tool creates no obligation for the product's code.
+   - Weekly schedule. Minor and patch updates are grouped. A dependency-dashboard issue lists everything pending.
+   - **Auto-merge only** patch updates of development tooling, after CI is green.
+   - **Never auto-merge** cluster add-ons, CNPG, ArgoCD, base images or Terraform providers. These open a PR that
+     must pass the local-cluster test and the five gates.
+   - GitHub's built-in **Dependabot security alerts** stay on as a second net.
+   - The template's dated facts are re-verified when each template is written, and the date goes into its README.
 
 ## 19. How v1 is proven: RESOLVED by the founder, 2026-11-07
 
