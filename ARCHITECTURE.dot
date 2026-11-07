@@ -1,0 +1,48 @@
+// Pavedline — architecture of the factory itself. Source of truth for ARCHITECTURE.svg.
+// Validate + render: python3 scripts/dot_check.py   Check: python3 scripts/dot_check.py --check
+digraph architecture {
+  graph [rankdir=TB, fontname="Helvetica", bgcolor="white", pad=0.4, nodesep=0.45, ranksep=0.6, newrank=true,
+         label="Pavedline — architecture of the plugin marketplace and its CI",
+         labelloc=t, fontsize=20, fontcolor="#0F172A"];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#334155",
+         fillcolor="#FFFFFF", penwidth=1.2, width=2.4, height=0.8];
+  edge  [fontname="Helvetica", fontsize=10, color="#475569", arrowsize=0.7, penwidth=1.2, fontcolor="#B45309"];
+
+  market [label="Marketplace\n.claude-plugin/marketplace.json", fillcolor="#FFFBEB", color="#F59E0B"];
+  deps   [label="Dependencies\nsuperpowers · mattpocock-skills\nproduct-management", shape=note, fillcolor="#F1F5F9", color="#64748B"];
+
+  subgraph cluster_plugin {
+    label="PLUGIN — plugins/pavedline"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
+    manifest  [label="plugin.json\nname · version · dependencies"];
+    skills    [label="Skills\nstart · grill · spec · design\nplan · build · deploy · learn"];
+    agents    [label="Agents\nrole per file\nmodel generated from config/models.yaml"];
+    hooks     [label="Hooks\nsecret guard · cluster-context guard\nSTATE.md cap"];
+    mcp       [label="MCP servers\n.mcp.json"];
+    templates [label="Templates\nCLAUDE.md · STATE.md\nARCHITECTURE.dot · Helm · CI"];
+  }
+
+  subgraph cluster_repo {
+    label="REPO — scripts and tests"; style="rounded,filled"; fillcolor="#F5F3FF"; color="#C4B5FD"; fontcolor="#4C1D95"; fontsize=13;
+    sanitize [label="sanitize_scan.py\ndeny-list scan of every tracked file"];
+    dotcheck [label="dot_check.py\nvalidate · render · hash check"];
+    dotdrift [label="dot_drift.py\ncode changed, diagram not?"];
+    tests    [label="tests/\nunittest, stdlib only"];
+  }
+
+  subgraph cluster_ci {
+    label="CI — GitHub Actions"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B"; fontsize=13;
+    ci [label="Pull-request checks\nunit tests · scan · diagrams · drift"];
+  }
+
+  user [label="Your project\n(repository you build in)", fillcolor="#FEF2F2", color="#FCA5A5"];
+
+  market -> manifest [label=" lists "];
+  manifest -> deps [label=" requires ", style=dashed];
+  manifest -> skills; manifest -> agents; manifest -> hooks; manifest -> mcp; manifest -> templates;
+  templates -> user [label=" start copies ", color="#16A34A", fontcolor="#16A34A"];
+  hooks -> user [label=" guard every tool call ", color="#B91C1C", fontcolor="#B91C1C"];
+  skills -> agents [label=" dispatch ", style=dashed];
+
+  sanitize -> ci; dotcheck -> ci; dotdrift -> ci; tests -> ci;
+  ci -> market [label=" gates every change ", style=dashed, color="#059669", fontcolor="#059669", constraint=false];
+}
