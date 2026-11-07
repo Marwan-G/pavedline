@@ -3,7 +3,7 @@
 set -euo pipefail
 
 usage() { echo "usage: down.sh <project> [--all]" >&2; exit 2; }
-[ "$#" -ge 1 ] && [ "$#" -le 2 ] || usage
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then usage; fi
 PROJECT="$1"
 ALL=0
 if [ "$#" -eq 2 ]; then
