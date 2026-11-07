@@ -20,11 +20,16 @@ local Kubernetes → cloud staging → production. Website, blog, web app and mo
 ## Install
 
 ```
+/plugin marketplace add anthropics/claude-plugins-official
 /plugin marketplace add anthropics/knowledge-work-plugins
 /plugin marketplace add Marwan-G/pavedline
 /plugin install pavedline@pavedline
 /pavedline:start
 ```
+
+Add both dependency marketplaces first: Pavedline's dependencies (`superpowers`, `mattpocock-skills`,
+`product-management`) install automatically only from marketplaces you have already added. Without them the install
+warns that Pavedline will not load. (Verified on a clean profile with `scripts/install_test.sh`.)
 
 `/pavedline:doctor` checks every tool and skill Pavedline needs and prints the exact command for anything missing.
 Adding marketplaces, installing plugins and tools, and running the local cluster are your choices: Pavedline prints

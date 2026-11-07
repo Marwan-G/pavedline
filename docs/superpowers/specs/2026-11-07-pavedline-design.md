@@ -540,11 +540,16 @@ that agents preload are **not** marked `disable-model-invocation`, because that 
 | microsoft/playwright-mcp | Apache-2.0 | competitor research | shipped in the plugin's `.mcp.json`, pinned |
 | unclecode/crawl4ai | Apache-2.0 (attribution required) | optional bulk crawl | optional |
 
-Dependencies are declared in `plugin.json`, and `marketplace.json` allow-lists their marketplaces. The docs say the
-allow-list **permits** cross-marketplace installs; they do not say the other marketplace is added automatically. So
-the README's install section adds each dependency marketplace explicitly, and v0.1 tests the install on a clean
-profile before claiming more (§17). `doctor` checks everything that loaded and prints the exact command for anything
-missing.
+Dependencies are declared in `plugin.json`, and `marketplace.json` allow-lists their marketplaces. Observed on a
+clean profile (`scripts/install_test.sh`, Claude Code `CLAUDE_CONFIG_DIR` isolation): a dependency is installed
+automatically **only when its marketplace has already been added**. With only the Pavedline marketplace added,
+`superpowers` and `mattpocock-skills` (marketplace `claude-plugins-official`) and `product-management`
+(`knowledge-work-plugins`) were not installed, and the install printed a warning that Pavedline will not load
+without them. The built-in `anthropic-plugin-directory` is not `claude-plugins-official`. With
+`anthropics/claude-plugins-official` and `anthropics/knowledge-work-plugins` added first, installing
+`pavedline@pavedline` installed all three dependencies automatically. So the README's install section adds both
+dependency marketplaces explicitly before installing. `doctor` checks everything that loaded and prints the exact
+command for anything missing.
 
 ### 12.3 `multi-tenancy` and `db-schema`: the non-negotiable rules
 The base is sickn33's `saas-multi-tenant` skill (MIT, adapted with credit), with Supabase's Postgres best practices
