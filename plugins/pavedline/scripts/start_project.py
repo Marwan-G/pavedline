@@ -9,6 +9,8 @@ Standard library only.
 """
 import argparse
 import datetime
+import hashlib
+import re
 import pathlib
 import sys
 
@@ -27,6 +29,25 @@ def substitute(data: bytes, values: dict) -> bytes:
     return text.encode("utf-8")
 
 
+HASH_RE = re.compile(rb"<!-- dot-source-sha256: [0-9a-f]{64} -->")
+
+
+def refresh_svg_hash(dot: pathlib.Path) -> None:
+    """Point a copied X.svg's source-hash comment at the substituted X.dot."""
+    svg = dot.with_suffix(".svg")
+    if not svg.is_file():
+        return
+    marker = b"<!-- dot-source-sha256: " + hashlib.sha256(dot.read_bytes()).hexdigest().encode() + b" -->"
+    svg.write_bytes(HASH_RE.sub(lambda _m: marker, svg.read_bytes()))
+
+
+def is_conflict(target: pathlib.Path, rel: pathlib.Path) -> bool:
+    dest = target / rel
+    if dest.exists() or dest.is_symlink():
+        return True
+    return any((target / a).exists() and not (target / a).is_dir() for a in rel.parents if a != pathlib.Path("."))
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--target", required=True)
@@ -42,7 +63,7 @@ def main(argv=None) -> int:
 
     files = sorted(p for p in TEMPLATES.rglob("*") if p.is_file())
     rels = [p.relative_to(TEMPLATES) for p in files]
-    conflicts = [r for r in rels if (target / r).exists() or (target / r).is_symlink()]
+    conflicts = [r for r in rels if is_conflict(target, r)]
     if conflicts:
         for r in conflicts:
             print("conflict: " + r.as_posix())
@@ -58,6 +79,10 @@ def main(argv=None) -> int:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(substitute(src.read_bytes(), values))
         print("created: " + rel.as_posix())
+    if not args.dry_run:
+        for rel in rels:
+            if rel.suffix == ".dot":
+                refresh_svg_hash(target / rel)
     return 0
 
 

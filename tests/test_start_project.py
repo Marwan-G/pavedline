@@ -79,6 +79,23 @@ class StartProjectTests(unittest.TestCase):
         self.start()
         self.assertIn(datetime.date.today().isoformat(), (self.dir / "CLAUDE.md").read_text())
 
+    def test_copied_diagram_passes_dot_check(self):
+        sys.path.insert(0, str(ROOT / "scripts"))
+        try:
+            import dot_check
+        finally:
+            sys.path.pop(0)
+        self.start()
+        problems = dot_check.check([self.dir / "ARCHITECTURE.dot"])
+        self.assertEqual(problems, [])
+
+    def test_file_in_place_of_directory_is_conflict(self):
+        (self.dir / "docs").write_text("x")
+        r = self.start()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("conflict: docs", r.stdout)
+        self.assertEqual([p.name for p in self.dir.iterdir()], ["docs"])
+
     def test_template_sizes(self):
         self.assertLessEqual(len((TEMPLATES / "CLAUDE.md").read_text().splitlines()), 150)
         self.assertLessEqual(len((TEMPLATES / "STATE.md").read_text().splitlines()), 60)
