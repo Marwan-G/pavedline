@@ -32,7 +32,7 @@ Pavedline is named in this repo (founder).** Product notes live only in that pro
 3. **Web app**: the multi-tenant SaaS application.
 4. **Mobile app**: native iOS and Android, sharing the API, auth, tokens and glossary with the web app.
 
-Steps 3 (spec), 6 (architecture), 7 (Figma: a frame set per surface), 8 (plan) and 10 (deploy) cover all four. A
+Steps 3 (spec), 6 (architecture), 7 (Figma: a frame set per surface), 8 (plan), 10 (local deploy) and 11 (production) cover all four. A
 project may defer a surface only through a recorded ADR.
 
 ## 2. Who it is for
@@ -45,7 +45,7 @@ project may defer a surface only through a recorded ADR.
 ## 3. Goals
 
 0. **Four surfaces, always (founder):** website, blog, web app and mobile app (§1).
-1. One clear path: **step 0 → step 11** (§5). Each step has defined inputs, output files, skills, an agent, a gate
+1. One clear path: **step 0 → step 12** (§5). Built and verified on local Kubernetes; the cloud comes once, at step 11. Each step has defined inputs, output files, skills, an agent, a gate
    and an approver.
 2. **Memory from files only.** A fresh session, or a new teammate, resumes from the repo with no chat history (§6).
 3. **Production from the first commit.** A Helm base chart, GitOps through ArgoCD, staging and production
@@ -84,7 +84,7 @@ project may defer a surface only through a recorded ADR.
 - **A paid or closed tool inside the factory.** The user's own production accounts (cloud, Figma, app stores, Clerk, domain) are requirements, listed in §12, not factory tools.
 - **Leaking anything private.** No real cloud IDs, tenancy OCIDs, domains, names in examples, or secrets.
 
-## 5. The flow: twelve steps
+## 5. The flow: thirteen steps
 
 Source of truth: [`docs/flow.dot`](../../flow.dot). Every step writes files. A step is done when its output files
 exist, its gate passed, and `STATE.md` points at the next step. **Every checkpoint ends by asking the founder
@@ -102,10 +102,11 @@ exist, its gate passed, and `STATE.md` points at the next step. **Every checkpoi
 | 7 | **Figma (required)** | Figma file: tokens (light/dark), type, spacing, components with all variants (Figma name = code name), FigJam user flows, a frame set **per surface** (website, blog, web app on desktop + mobile web, native mobile app), every screen in every state (empty, loading, error, success, no-permission); **multi-tenant screens when step 0 said multi-tenant**: org switcher, invite members, roles, tenant settings, a new tenant's first run, org switching on mobile; **lifecycle and release screens**: billing and plans, legal pages and cookie consent, data export and delete, the admin/support console with its impersonation banner, the "please update" screen for old mobile versions; `docs/design/DESIGN.md` (file + node links); Code Connect map; exported tokens | `ui-ux-pro-max` (reference input, never the authority), `figma-use`, `figma-generate-library`, `figma-generate-design`, `figma-use-figjam`, `figma-code-connect`, `impeccable` (critique), new `design-system-contract` | designer + design-verifier (blind) | `DESIGN VERDICT: APPROVE`, then **founder approves the visual** |
 | 8 | **Plan** | `docs/plans/<date>-<wave>.md` + `docs/plans/<date>-<wave>.dot` (slice dependency graph) | `superpowers:writing-plans`, new `plan-graph` | orchestrator | founder approves the wave |
 | 9 | **Build** (per slice) | code + tests + migrations, PR with the gates line, `handoff/<branch>.md` | superpowers `test-driven-development`, `subagent-driven-development`, `using-git-worktrees`, `verification-before-completion`, `finishing-a-development-branch`; built-in `security-review`; new `quality-gates`; `db-schema` / `multi-tenancy` when a slice touches data | builder + reviewer (blind) + adversary (blind) | five gates (§8), squash-merge |
-| 10 | **Deploy** | web, site and API: the image-tag bump PR (GitOps); mobile: a store build from CI plus the submission checklist (the founder submits); deploy record in `STATE.md` | new `deploy` | deployer | migrations first, sync, then **verify the running pods**, never the `Synced` label |
-| 11 | **Learn** | `docs/retros/<date>.md`; new rules land as edits to the one place they live | `retro` (Matt Pocock), new `lessons` | orchestrator | founder reads |
+| 10 | **Deploy to local Kubernetes** (every wave) | web, site and API: the image-tag bump PR, synced by ArgoCD **inside the local kind cluster**; mobile: a CI build installed on simulators/devices; deploy record in `STATE.md` | new `deploy`, new `local-cluster` | deployer | migrations first, sync, then **verify the running pods**, never the `Synced` label |
+| 11 | **Go to production** (once, at the end; §5.6) | `docs/production/INFRA.md`, `NEEDS.md`, `LAUNCH.md`; Terraform profile filled; **cloud staging, then production** | new `go-to-production`, `deploy`, `gitops` | deployer + architect | founder: "time for production?" → infra answers → founder's `terraform apply` → staging verified → production verified → **"go live"** |
+| 12 | **Learn** | `docs/retros/<date>.md`; new rules land as edits to the one place they live | `retro` (Matt Pocock), new `lessons` | orchestrator | founder reads |
 
-Steps 8–11 repeat per wave until launch. Steps 1–7 can be re-entered when a later step changes the plan. The
+Steps 8–10 repeat per wave until the product is feature-complete on local Kubernetes; then step 11 runs once; after launch every wave goes local → cloud staging → production. Steps 1–7 can be re-entered when a later step changes the plan. The
 re-entry is recorded as a decision.
 
 ### 5.1 Step 0 intake: stack-neutral questions only
@@ -117,7 +118,7 @@ Each answer becomes an ADR:
    (tenant key on every table, RLS), 6 (architecture), 7 (Figma tenant screens), 9 (cross-tenant leak test at the
    merge gate) and the API (every call is scoped to a tenant).
 2. Solo or team.
-3. Cloud / infra profile.
+3. Local runtime for the test cluster (default: Colima + kind; Docker Desktop or OrbStack if already installed). **No cloud question here (founder):** the cloud is chosen at step 11.
 4. **Database in Kubernetes (CNPG) or a managed service (founder).**
 5. Surfaces: all four by default (§1). Deferring one needs a recorded reason.
 6. Domain, environments (default: staging + production), email provider.
@@ -201,6 +202,40 @@ plugin (`seo-audit`, `content-creation`, `draft-content`, `performance-report`, 
 3. **Monthly:** Search Console review (queries, click rate, impressions, pages not indexed, real-user Core Web Vitals)
    + `seo-audit` → `docs/growth/YYYY-MM.md` with actions.
 4. **Quarterly:** refresh posts that are losing traffic, merge or remove thin ones, re-check internal links.
+
+### 5.6 Step 11: Go to production (cloud), asked once, at the end (founder)
+
+**Principle:** build everything on local Kubernetes and bind to the cloud **once**, at the end. Steps 0–10 make
+only **portable** decisions ("Postgres 16, S3-compatible storage, Kubernetes with Gateway API, one region plus a
+backup copy"). Step 11 maps them onto real infrastructure. Decisions that change the *design* stay early (step 0:
+database in Kubernetes or managed; step 4: multi-region, data residency); only "where exactly" waits for step 11.
+
+**Accounts are asked for just in time, never all at the start:** Figma at step 7, Clerk development keys at the
+first auth slice, Apple and Google developer accounts before the first mobile build, production accounts at step 11.
+The README lists all of them up front, so nothing is a surprise.
+
+**Step 11, in order:**
+1. **The question:** "Everything works on local Kubernetes. Is it time to go to production in the cloud?" Nothing
+   moves until the founder says go.
+2. **Infra intake, "what do you already have?"** Cloud account and provider · existing cluster or new · regions
+   (from the step-4 multi-region decision) · domain and DNS (Cloudflare?) · container registry · secrets store ·
+   object storage · managed database (if step 4 chose one) · email sending domain · budget ceiling. Output:
+   `docs/production/INFRA.md` + an ADR per binding.
+3. **"What I need from you":** `docs/production/NEEDS.md`. Each item also goes into `STATE.md ▶ WAITING ON YOU`:
+   accounts to create, logins, approvals, every `terraform apply` (always the founder's), and secrets placed directly
+   in the vault, **never pasted into chat**.
+4. **Provision:** the agent fills the infra profile (Terraform). The founder applies it, and an applied plan shows
+   `0 to destroy`. ArgoCD is bootstrapped.
+5. **Cloud staging first (founder):** deployed through the same GitOps path and verified against everything local
+   could not prove: real DNS and TLS, Cloudflare Tunnel, cloud IAM and vault, a backup **and a real restore**, the
+   two alerts (§10.9), email deliverability (SPF/DKIM/DMARC), and running pods on the release SHA. Staging holds
+   generated data only and is never indexable.
+6. **Production:** promoted from the verified staging SHA through a GitOps PR, verified the same way. Then the
+   mobile store submissions, the Search Console and Bing sitemap submissions, and the legal pages live.
+7. **Launch checklist** (`docs/production/LAUNCH.md`), then the founder's final **"go live"**. The Grow loop (§5.5)
+   starts.
+
+After launch, waves continue: build → local → cloud staging → production, each promotion by PR.
 
 **Stack packs (`stacks/<name>/`), applied at step 6 once step 4 has decided the stack:** one directory per supported stack, holding its Dockerfiles, Helm values, CI jobs,
 test/typecheck commands, `RUN.md` fragment and the list of stack skills it switches on. v1 ships **`nextjs-fastapi`** (name kept short; it includes the mobile app). It is a monorepo:
@@ -367,7 +402,7 @@ before the new image starts · per-environment values (`values-staging.yaml`, `v
 3. Manual sync of each changed app.
 4. **Verify the running state:** pods run the new SHA, 0 restarts, health endpoint ok, plus one change-specific
    read-only check that the PR names.
-5. On failure: revert and record it. Staging is a full environment from day one (call).
+5. On failure: revert and record it. Before launch, "staging" is the local cluster; at step 11 a **cloud staging** environment is created first and every later release passes through it (founder).
 
 ### 10.4b Release compatibility: why "rollback = git revert" is not enough
 
@@ -463,9 +498,9 @@ matches a secret pattern.
 (MIT) is *ideas only*: project memory, session-summary hooks, the learning loop and guard hooks. ECC is **not
 installed**, because it overlaps superpowers and its agents declare their own models, which conflicts with the single model-policy file.
 
-**New skills (29: + `seo-foundation`, `content-ops`, `local-cluster`; the earlier "21" was a miscount; `doctor` added by §18.4; `system-design` + `backend-evaluate` added with step 4):** start · architecture-intake · state · competitor-teardown ·
+**New skills (30: + `seo-foundation`, `content-ops`, `local-cluster`, `go-to-production`; the earlier "21" was a miscount; `doctor` added by §18.4; `system-design` + `backend-evaluate` added with step 4):** start · architecture-intake · state · competitor-teardown ·
 pricing-model · market-size · spec · system-design · backend-evaluate · domain-model · db-schema · multi-tenancy · api-contract · system-architecture ·
-helm-base-chart · gitops · threat-model · fastapi-service (stack pack) · design-system-contract · plan-graph · quality-gates · deploy · lessons · seo-foundation · content-ops · local-cluster · diagram · project-registry
+helm-base-chart · gitops · threat-model · fastapi-service (stack pack) · design-system-contract · plan-graph · quality-gates · deploy · lessons · seo-foundation · content-ops · local-cluster · go-to-production · diagram · project-registry
 · doctor (`diagram`, `project-registry` and `doctor` are cross-cutting). Each skill does one job, has a short `SKILL.md`, and keeps
 detail in `references/`.
 
@@ -513,7 +548,7 @@ cockpit is a **separate, optional plugin**: a pane showing step, next action, th
 1. Name + tagline + badges (licence, version, CI).
 2. **The flow diagram (SVG from `docs/flow.dot`), light and dark.**
 3. "Why Pavedline": the gap is that no open kit takes a serious product through a complete, real SDLC to verified
-   production through GitOps. Three or four lines, then the twelve steps.
+   production through GitOps. Three or four lines, then the thirteen steps.
 4. "What you get": skills, agents, hooks, templates and infra, as a short table with links.
 5. **"This is for serious projects": requirements, shown plainly:**
 
@@ -676,8 +711,8 @@ the founder can answer.
 3. **Release order: vertical slices (call).** Each release is usable on its own:
    - v0.1: steps 0–3 + memory files + hooks + `doctor` + README/diagram.
    - v0.2: steps 4–7 (system design, data, architecture, Figma).
-   - v0.3: steps 8–10 + Helm base chart + GitOps templates + OCI profile + CI.
-   - v0.4: step 11 + the cockpit mod.
+   - v0.3: steps 8–10 + Helm base chart + GitOps templates + CI.
+   - v0.4: step 11 (go to production: OCI profile, cloud staging, production) + step 12 + the cockpit mod.
    - v1.0: the §19 proof passes.
 4. **Dependencies (answered, verified 2026-11-07 in the plugin docs).** `plugin.json` `dependencies` accepts
    `"name@marketplace"`. Dependencies auto-install **only if** Pavedline's `marketplace.json` lists the other

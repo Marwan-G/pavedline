@@ -10,7 +10,7 @@ digraph pavedline {
 
   subgraph cluster_discover {
     label="DISCOVER"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
-    s0 [label="0 · Start\nmulti-tenant? · solo/team · cloud\nDB in Kubernetes or managed?\n→ STATE · ADRs · RUN · SERVICES"];
+    s0 [label="0 · Start\nmulti-tenant? · solo/team · surfaces\nDB in Kubernetes or managed?\n→ STATE · ADRs · RUN · SERVICES"];
     s1 [label="1 · Market + SEO research\nyour similar sites → competitors\npricing · positioning · topics\n→ BRIEF · SEO-STRATEGY"];
     s2 [label="2 · Grill\nrelentless interview\n→ decisions · GLOSSARY"];
     s3 [label="3 · Spec\nusers · jobs · features\nacceptance tests\n→ SPEC.md"];
@@ -23,11 +23,11 @@ digraph pavedline {
     s6 [label="7 · Figma (required)\ntokens · components\nsite · blog · web app · mobile app\nevery screen · every state"];
   }
   subgraph cluster_deliver {
-    label="DELIVER — repeats per wave"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B"; fontsize=13;
+    label="DELIVER — repeats per wave, all on local Kubernetes"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B"; fontsize=13;
     s7 [label="8 · Plan\nwaves → slices\n→ plan.md + plan.dot"];
     s8 [label="9 · Build (per slice)\nTDD → review → security → adversarial\nverify on LOCAL Kubernetes (kind)\nsite: SEO gate · → squash-merge PR"];
-    s9 [label="10 · Deploy\nweb · site · API: GitOps → ArgoCD\nmigrations first · verify RUNNING pods\nmobile: CI build → stores"];
-    s10 [label="11 · Learn\nretro → lessons\nrule fixed in ONE place", fillcolor="#FFFBEB", color="#F59E0B"];
+    s9 [label="10 · Deploy to LOCAL Kubernetes\nGitOps → ArgoCD inside kind\nmigrations first · verify RUNNING pods\nmobile: CI build → devices"];
+    s10 [label="12 · Learn\nretro → lessons\nrule fixed in ONE place", fillcolor="#FFFBEB", color="#F59E0B"];
   }
 
   { rank=same; s0; s1; s2; s3; }
@@ -45,7 +45,13 @@ digraph pavedline {
   s6 -> s7 [xlabel="blind check +\nyou approve visual "];
   s7 -> s8 [xlabel="you approve wave "];
   s8 -> s9 [xlabel="5 gates pass "];
-  s9 -> s10;
+  s9 -> s10 [xlabel="wave done "];
+
+  subgraph cluster_prod {
+    label="PRODUCTION — once, at the end"; style="rounded,filled"; fillcolor="#FEF2F2"; color="#FCA5A5"; fontcolor="#7F1D1D"; fontsize=13;
+    s11 [label="11 · Go to production (cloud)\n\"time for production?\" → what infra do you have?\n→ NEEDS.md (what I need from you)\nyour terraform apply → CLOUD STAGING verified\n→ PRODUCTION verified → you: go live"];
+  }
+  s9 -> s11 [xlabel="feature-complete +\nyou say go ", color="#B91C1C"];
   s10 -> s7 [label=" next wave", style=dashed, color="#059669", fontcolor="#059669", constraint=false];
 
   // three rails underneath everything
