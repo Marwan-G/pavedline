@@ -2,7 +2,7 @@
 name: start
 description: Starts a new Pavedline product (step 0). Checks the machine, asks the platform questions one at a time, copies the project templates and records each answer as a decision. Run it once, in the repository of the new product, by typing /pavedline:start.
 disable-model-invocation: true
-allowed-tools: Bash(python3 *)
+allowed-tools: Bash(python3 *) Bash(date *) Bash(git rev-parse *) Bash(git init*) Bash(git add *) Bash(git commit *)
 ---
 
 # start
@@ -43,7 +43,15 @@ Do not ask anything else at step 0. If the user volunteers more, note it in the 
 
 ## 4. Create the project files
 
-Take the product name from answer 1 (a short lowercase slug: letters, digits, hyphens). Take the mode from answer 4 (`solo` or `team`). Run, from the repository root:
+First check the target is a git repository:
+
+```
+git rev-parse --is-inside-work-tree
+```
+
+If it is not, ask the user before running `git init`. Never initialise silently. If the user says no, stop and explain that Pavedline keeps its records in git.
+
+Propose the project name: a short kebab-case slug (letters, digits, hyphens) made from answer 1. Show it and let the user confirm or change it. It also names the local cluster `pavedline-<project>`. Take the mode from answer 4 (`solo` or `team`). Then run, from the repository root:
 
 ```
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/start_project.py" --target . --name <name> --mode <solo|team>
@@ -54,8 +62,7 @@ The script never overwrites. If it exits 1 and lists `conflict:` lines, write no
 ## 5. Record the answers
 
 - Write answer 1 into `PRODUCT.md`, replacing the placeholder paragraph. One paragraph only.
-- Write one decision record per answer 2 to 7 in `decisions/`, numbered from `0001`, in the format of `decisions/0000-template.md`. File name: `NNNN-short-title.md`. Set Status to `accepted` and the date from `date +%F`. Under "Stale outputs" write `none`.
-- Question 3 follows the `compliance` skill; its decision is also numbered in this run.
+- Write exactly one decision record per question, seven in all, in `decisions/`, in the format of `decisions/0000-template.md`, numbered in question order: `0001` product statement (question 1, also in `PRODUCT.md`), `0002` multi-tenancy (question 2; the isolation model, if asked, goes in the same record), `0003` compliance (question 3; one record for yes or no, written as the `compliance` skill says), `0004` solo or team, `0005` surfaces, `0006` database, `0007` local runtime. File name: `NNNN-short-title.md`. Status `accepted`, date from `date +%F`, "Stale outputs" `none`.
 - In each Consequences section say what the answer means for later steps (see the `architecture-intake` skill).
 
 ## 6. Point STATE.md at step 1
@@ -64,18 +71,18 @@ Edit `STATE.md` (see the `state` skill for the rules) and set these lines. Take 
 
 ```
 STEP: 1 — Market + SEO research
-LAST: <timestamp> — step 0 done: PRODUCT.md and decisions 0001 to 000N written
+LAST: <timestamp> — step 0 done: PRODUCT.md and decisions 0001–0007 written
 NEXT: step 1 — ask which competitors and sites the founder already has in mind, then start the market and SEO research
 ```
 
-Commit the new files in one commit.
+Commit the new files in one commit. If the repository already has commits by someone else, ask the user for a go before committing.
 
 ## 7. Close and wait for the go
 
 End with a short summary:
 
 - what was created (files and the decisions, one line each);
-- anything waiting on the user, if there is something;
+- anything only the user can do (for example installing a tool `doctor` reported missing): add each to `WAITING.md` as `- Fn · what · where/how · what it unblocks` and list it here;
 - the next step: market and SEO research.
 
 Then ask: **go?** Step 1 starts only when the user says go. Do not start it on your own.

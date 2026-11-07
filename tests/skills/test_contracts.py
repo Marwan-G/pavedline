@@ -12,7 +12,7 @@ import lint_skills as lint  # noqa: E402
 PRIVACY = "Pavedline collects nothing. Every answer stays in your own repository."
 COMPLIANCE = ("Should we design with compliance in mind (privacy laws such as GDPR, "
               "health or payment rules)? Recommended: yes.")
-CLOUD_QUESTION = re.compile(r"(which|what|pick|choose)[^.\n]*cloud provider[^.\n]*\?", re.I)
+CLOUD_QUESTION = re.compile(r"(which|what|pick|choose)[^.\n]*\bcloud\b[^.\n]*\?|cloud provider\?", re.I)
 
 
 def read(name):
@@ -52,6 +52,41 @@ class StepZeroContracts(unittest.TestCase):
         t = read("state")
         for needle in ("60 lines", "WAITING.md", "handoff/", "date", "remote"):
             self.assertIn(needle, t)
+
+    def test_start_question_order(self):
+        t = read("start")
+        marks = ["**What are you building?**", "**Multi-tenant?**", "**Compliance.**",
+                 "**Solo or team?**", "**Surfaces.**", "**Database:", "**Local runtime.**"]
+        idx = [t.index(m) for m in marks]
+        self.assertEqual(idx, sorted(idx))
+
+    def test_intake_question_order(self):
+        t = read("architecture-intake")
+        idx = [t.index("## Question %d" % n) for n in (2, 4, 5, 6, 7)]
+        self.assertEqual(idx, sorted(idx))
+
+    def test_compliance_order(self):
+        t = read("compliance")
+        idx = [t.index(m) for m in (COMPLIANCE, "## If yes", "## If no")]
+        self.assertEqual(idx, sorted(idx))
+        self.assertIn("stay in", t)
+        self.assertIn("repository", t)
+
+    def test_start_never_installs_and_privacy_first(self):
+        t = read("start")
+        self.assertIn("Never install", t)
+        self.assertLess(t.index(PRIVACY), t.index("**What are you building?**"))
+        self.assertIn("go?", t)
+
+    def test_start_one_adr_per_question(self):
+        t = read("start")
+        self.assertIn("0001–0007", t)
+        self.assertIn("git rev-parse --is-inside-work-tree", t)
+        self.assertIn("Bash(git commit *)", t)
+
+    def test_cloud_regex_catches_questions(self):
+        for s in ("Which cloud do you use?", "Pick a cloud provider?", "cloud provider?"):
+            self.assertTrue(CLOUD_QUESTION.search(s), s)
 
     def test_linter_passes(self):
         self.assertEqual(lint.check_skills(SKILLS), [])
