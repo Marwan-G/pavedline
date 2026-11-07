@@ -10,7 +10,7 @@ digraph pavedline {
 
   subgraph cluster_discover {
     label="DISCOVER"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
-    step0  [label="0 · Start\nwhat are you building? · multi-tenant?\ncompliance in mind? · solo/team\nDB in Kubernetes or managed?"];
+    step0  [label="0 · Start\nwhat are you building? · multi-tenant?\ncompliance in mind? · solo/team · surfaces\nDB in Kubernetes or managed? · local runtime"];
     step1  [label="1 · Market + SEO research\nyour similar sites → competitors\npricing · positioning · topics\n→ BRIEF · SEO-STRATEGY"];
     step2  [label="2 · Grill\nrelentless interview\n→ decisions · GLOSSARY"];
     step3  [label="3 · Spec\nusers · jobs · features per surface\nacceptance tests\n→ SPEC.md"];

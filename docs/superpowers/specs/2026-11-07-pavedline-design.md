@@ -77,7 +77,7 @@ proved and fixing what hurt it (§15).
 | **verified (cloud)** | verified (local) **plus** what local cannot prove: real DNS and TLS, the tunnel or ingress, cloud IAM and vault, a backup **and a real restore**, the three alerts fired in a test, email deliverability |
 | **wave** | a planned group of slices (step 8) that ends with deploy (step 10) and learn (step 11) |
 | **slice** | the smallest change with its own tests, review gates and PR |
-| **feature-complete** | every acceptance test in `SPEC.md` mapped to a merged slice and passing on local, and the integration wave passed (§6.7) |
+| **feature-complete** | every acceptance test in `SPEC.md` mapped to a merged slice and passing on local. The integration wave (§6.7) follows it, before step 12 |
 
 ## 6. The flow: thirteen steps
 
@@ -388,8 +388,10 @@ Lint counts as evidence only when its config exists and CI ran it; the stack pac
 ### 9.3 Hooks versus CI
 **CI is the authoritative enforcer.** Plugin hooks run in interactive and `claude -p` sessions when the plugin is
 loaded; they do **not** run under `--bare`, outside Claude, or when hooks are disabled (checked 2026-11-07). So hooks
-are early warnings, **except** the secret and `.env` guards and the cluster-context guard, which block. Each of these
-also has a CI backstop (gitleaks; the deny-list scan).
+are early warnings, **except** the blocking hooks listed in §12.4 (secret and `.env` guards, the cluster-context
+guard, the `--no-verify` / force-push guard, the `STATE.md` cap). Their CI backstops: gitleaks and the deny-list scan
+(secrets), branch protection on main (force-push, required checks), and a CI line-count check on `STATE.md`. The
+cluster-context guard has no CI equivalent, because CI never holds cloud cluster credentials.
 
 ## 10. Diagrams
 
