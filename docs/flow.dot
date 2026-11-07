@@ -2,64 +2,63 @@
 // Validate: dot -Tcanon docs/flow.dot -o /dev/null   Render: dot -Tsvg docs/flow.dot -o docs/flow.svg
 digraph pavedline {
   graph [rankdir=TB, fontname="Helvetica", bgcolor="white", pad=0.4, nodesep=0.45, ranksep=0.55, newrank=true,
-         label="Pavedline — the GitOps software factory for Claude Code\nidea → production on a paved road · website + blog · web app · mobile app",
+         label="Pavedline — the GitOps software factory for Claude Code\nship a multi-tenant SaaS to production, not a demo · website + blog · web app · mobile app",
          labelloc=t, fontsize=20, fontcolor="#0F172A"];
   node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#334155",
          fillcolor="#FFFFFF", penwidth=1.2, width=2.6, height=1.0];
-  edge  [fontname="Helvetica", fontsize=10, color="#475569", arrowsize=0.7, penwidth=1.2];
+  edge  [fontname="Helvetica", fontsize=10, color="#475569", arrowsize=0.7, penwidth=1.2, fontcolor="#B45309"];
 
   subgraph cluster_discover {
     label="DISCOVER"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
-    s0 [label="0 · Start\nmulti-tenant? · solo/team · surfaces\nDB in Kubernetes or managed?\n→ STATE · ADRs · RUN · SERVICES"];
-    s1 [label="1 · Market + SEO research\nyour similar sites → competitors\npricing · positioning · topics\n→ BRIEF · SEO-STRATEGY"];
-    s2 [label="2 · Grill\nrelentless interview\n→ decisions · GLOSSARY"];
-    s3 [label="3 · Spec\nusers · jobs · features\nacceptance tests\n→ SPEC.md"];
+    step0  [label="0 · Start\nwhat are you building? · multi-tenant?\ncompliance in mind? · solo/team\nDB in Kubernetes or managed?"];
+    step1  [label="1 · Market + SEO research\nyour similar sites → competitors\npricing · positioning · topics\n→ BRIEF · SEO-STRATEGY"];
+    step2  [label="2 · Grill\nrelentless interview\n→ decisions · GLOSSARY"];
+    step3  [label="3 · Spec\nusers · jobs · features per surface\nacceptance tests\n→ SPEC.md"];
   }
   subgraph cluster_design {
     label="DESIGN"; style="rounded,filled"; fillcolor="#F5F3FF"; color="#C4B5FD"; fontcolor="#4C1D95"; fontsize=13;
-    s4 [label="4 · System design (must-ask)\nbackend (FastAPI?) · Clerk · security\nconcurrency · performance · files\nmulti-region · mesh (Istio?) · billing\ntenant lifecycle · SEO"];
-    s4b [label="5 · Data + API\ndomain · erd.dot · schema\nmulti-tenancy + RLS\nOpenAPI first"];
-    s5 [label="6 · Architecture\nARCHITECTURE.dot\nthreat model · Helm chart\nenvironments · GitOps"];
-    s6 [label="7 · Figma (required)\ntokens · components\nsite · blog · web app · mobile app\nevery screen · every state"];
+    step4  [label="4 · System design (must-ask)\nbackend · Clerk · security · tenancy\njobs · notifications · payments\nregions · mesh · SEO · lead times"];
+    step5  [label="5 · Data + API\ndomain · erd.dot · schema\nRLS forced · migrations\nOpenAPI first"];
+    step6  [label="6 · Architecture\nARCHITECTURE.dot · threats\nHelm chart · environments\nstack templates applied"];
+    step7  [label="7 · Figma (required)\ntokens · components\nsite · blog · web app · mobile\nevery screen · every state"];
   }
   subgraph cluster_deliver {
-    label="DELIVER — repeats per wave, all on local Kubernetes"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B"; fontsize=13;
-    s7 [label="8 · Plan\nwaves → slices\n→ plan.md + plan.dot"];
-    s8 [label="9 · Build (per slice)\nTDD → review → security → adversarial\nverify on LOCAL Kubernetes (kind)\nsite: SEO gate · → squash-merge PR"];
-    s9 [label="10 · Deploy to LOCAL Kubernetes\nGitOps → ArgoCD inside kind\nmigrations first · verify RUNNING pods\nmobile: CI build → devices"];
-    s10 [label="12 · Learn\nretro → lessons\nrule fixed in ONE place", fillcolor="#FFFBEB", color="#F59E0B"];
+    label="DELIVER — each wave, on LOCAL Kubernetes"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B"; fontsize=13;
+    step8  [label="8 · Plan\nwave → slices\n→ plan.md + plan.dot"];
+    step9  [label="9 · Build (per slice)\nTDD → review → security\n→ adversarial → verify\n→ squash-merge PR"];
+    step10 [label="10 · Deploy to local\nGitOps → ArgoCD in kind\nmigrations first\nverify RUNNING pods"];
+    step11 [label="11 · Learn\nretro → lessons\nrule fixed in ONE place", fillcolor="#FFFBEB", color="#F59E0B"];
   }
-
-  { rank=same; s0; s1; s2; s3; }
-  { rank=same; s4; s4b; s5; s6; }
-  { rank=same; s7; s8; s9; s10; }
-
-  edge [fontcolor="#B45309"];
-  s0 -> s1 [xlabel="you confirm "];
-  s1 -> s2 [xlabel="you approve "];
-  s2 -> s3;
-  s3 -> s4 [xlabel="you approve "];
-  s4 -> s4b [xlabel="you answer +\ngo? "];
-  s4b -> s5 [xlabel="blind review "];
-  s5 -> s6 [xlabel="you approve "];
-  s6 -> s7 [xlabel="blind check +\nyou approve visual "];
-  s7 -> s8 [xlabel="you approve wave "];
-  s8 -> s9 [xlabel="5 gates pass "];
-  s9 -> s10 [xlabel="wave done "];
-
+  integ [label="Integration wave\nprovider test modes · real webhooks\nTestFlight / internal track", fillcolor="#F0FDF4", color="#16A34A"];
   subgraph cluster_prod {
     label="PRODUCTION — once, at the end"; style="rounded,filled"; fillcolor="#FEF2F2"; color="#FCA5A5"; fontcolor="#7F1D1D"; fontsize=13;
-    s11 [label="11 · Go to production (cloud)\n\"time for production?\" → what infra do you have?\n→ NEEDS.md (what I need from you)\nyour terraform apply → CLOUD STAGING verified\n→ PRODUCTION verified → you: go live"];
+    step12 [label="12 · Go to production (cloud)\n\"time for production?\" → what infra do you have?\n→ NEEDS.md (what I need from you)\nyour terraform apply → CLOUD STAGING verified\n→ PRODUCTION verified → LAUNCH checklist → you: go live"];
   }
-  s9 -> s11 [xlabel="feature-complete +\nyou say go ", color="#B91C1C"];
-  s10 -> s7 [label=" next wave", style=dashed, color="#059669", fontcolor="#059669", constraint=false];
 
-  // three rails underneath everything
+  { rank=same; step0; step1; step2; step3; }
+  { rank=same; step4; step5; step6; step7; }
+  { rank=same; step8; step9; step10; step11; }
+
+  step0 -> step1 [xlabel="you confirm "];
+  step1 -> step2 [xlabel="you approve "];
+  step2 -> step3;
+  step3 -> step4 [xlabel="you approve "];
+  step4 -> step5 [xlabel="you answer + go "];
+  step5 -> step6 [xlabel="blind review +\nyou approve "];
+  step6 -> step7 [xlabel="you approve "];
+  step7 -> step8 [xlabel="blind check +\nyou approve visual "];
+  step8 -> step9 [xlabel="you approve wave "];
+  step9 -> step10 [xlabel="5 gates per slice "];
+  step10 -> step11 [xlabel="verified (local) "];
+  step11 -> step8 [label=" next wave", style=dashed, color="#059669", fontcolor="#059669", constraint=false];
+  step11 -> integ [xlabel="feature-complete ", color="#16A34A", fontcolor="#16A34A"];
+  integ -> step12 [xlabel="you say go ", color="#B91C1C", fontcolor="#B91C1C"];
+
   node [shape=note, style="filled", fillcolor="#F1F5F9", color="#64748B", fontsize=10, width=3.6, height=0.9];
-  mem   [label="MEMORY — files only, any fresh session resumes\nCLAUDE.md ≤150 · STATE.md ≤60 (hook)\ndecisions/ · GLOSSARY · handoff/<branch>.md"];
-  git   [label="GITOPS — git is the only path to a cluster\nTerraform · ArgoCD · Helm · image tags\nnever kubectl apply · rollback = git revert"];
-  guard [label="ENFORCED, NOT PROSE\nhooks: secrets · STATE cap · .dot drift · gates line\nCI: tests · DB at merge · image boots · gitleaks"];
-  grow  [label="GROW — standing loop for website + blog\npublish: brief → draft → you approve → PR\nmonthly Search Console review · quarterly refresh", fillcolor="#FFF7ED", color="#EA580C"];
+  mem   [label="MEMORY — files only; any fresh session resumes\nCLAUDE.md ≤150 · PRODUCT · STATE.md ≤60 (hook)\nWAITING · decisions/ · GLOSSARY · handoff/"];
+  git   [label="GITOPS — git is the only path to a cluster\nHelm · ArgoCD · image tags · Terraform\nrollback = revert + expand/contract migrations"];
+  guard [label="ENFORCED, NOT PROSE\nCI: tests · scanners · leak test · SEO + a11y gates\nhooks: secrets · cluster context · STATE cap"];
+  grow  [label="AFTER LAUNCH\nGrow loop (SEO + content) · three alerts:\nuptime · backup failed · job failed/late", fillcolor="#FFF7ED", color="#EA580C"];
   { rank=same; mem; git; guard; grow; }
-  s8 -> mem [style=invis]; s9 -> git [style=invis]; s10 -> guard [style=invis]; s10 -> grow [style=invis];
+  step12 -> mem [style=invis]; step12 -> git [style=invis]; step12 -> guard [style=invis]; step12 -> grow [style=invis];
 }

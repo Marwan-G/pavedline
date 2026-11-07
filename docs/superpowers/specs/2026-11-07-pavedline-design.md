@@ -1,782 +1,705 @@
 # Pavedline — design
 
-> **The GitOps software factory for Claude Code: from idea to production on a paved road.**
+> **The GitOps software factory for Claude Code: ship a multi-tenant SaaS to production, not a demo.**
 
-Status: **approved 2026-11-07.** Written 2026-11-07.
-Author: Marwan Ghubein ([LinkedIn](https://www.linkedin.com/in/marwan-ghubein/)), with Claude Opus 5.5.
-Flow diagram: [`docs/flow.dot`](../../flow.dot), rendered to `docs/flow.svg`.
+Author: Marwan Ghubein ([LinkedIn](https://www.linkedin.com/in/marwan-ghubein/)). Written 2026-11-07. Flow:
+[`docs/flow.dot`](../../flow.dot), rendered to `docs/flow.svg`.
 
-Each decision below is marked **(founder)** if Marwan made it in the 2026-11-07 conversation, or **(call)** if
-the designer made it from verified facts. The founder can overturn any (call).
+**Legend.** **(decided)** = settled by the project owner. **(default)** = the designer's choice from verified facts;
+a project may override it with a recorded decision. Facts carry the date they were checked; §19 lists the sources.
 
 ---
 
-## 1. Intent: why this exists
+## 1. Why Pavedline exists
 
-AI coding agents are good at producing a demo. Almost nothing open-source takes a **serious product** through a
-**complete, real SDLC that ends in production**: market research, interrogating the idea, a spec, the data model and
-multi-tenancy, the architecture, a real Figma design system, a plan, test-driven build, independent reviews, GitOps
-deploy, and post-deploy verification. And it has to remember everything between sessions. Existing kits cover parts.
-superpowers covers build discipline. spec-kit covers specs. ECC covers a large toolbox. Matt Pocock's skills cover
-interrogation and specs. None ends in a running, verified production system on Kubernetes through GitOps.
+Agent kits today are excellent **parts**: a build discipline (superpowers), a spec format (spec-kit), a large
+toolbox (ECC), sharp interrogation skills (Matt Pocock's skills). Their focus is general, and deliberately so.
+Pavedline's focus is different: **one path, end to end, for one kind of product**, from the first idea to a
+multi-tenant SaaS running in production, with every step producing files, every change reviewed, and every release
+verified on a real Kubernetes cluster.
 
-Pavedline is that end-to-end path. It is distilled from the workflow the author used to build and run a production
-platform. It keeps what that workflow proved and fixes what hurt it (§14).
-
-Its first user is the author, for a new multi-tenant SaaS built in its own private repo. **No product built with
-Pavedline is named in this repo (founder).** Product notes live only in that product's own repo.
-
-**Every product ships four surfaces (founder):**
-1. **Website**: public marketing pages (product, pricing, about, legal), SEO-ready.
-2. **Blog**: articles on the website's domain (MDX), with RSS and sitemap.
-3. **Web app**: the multi-tenant SaaS application.
-4. **Mobile app**: native iOS and Android, sharing the API, auth, tokens and glossary with the web app.
-
-Steps 3 (spec), 6 (architecture), 7 (Figma: a frame set per surface), 8 (plan), 10 (local deploy) and 11 (production) cover all four. A
-project may defer a surface only through a recorded ADR.
+It is distilled from the workflow the author used to build and run a production platform, keeping what that workflow
+proved and fixing what hurt it (§15).
 
 ## 2. Who it is for
 
-- **Solo founders working with Claude, and teams of several developers. Both must work (founder).**
-- **Serious production projects, not local demo apps (founder).** It expects real accounts: cloud, domain,
-  Figma, GitHub. The README says so up front and lists the requirements (§12).
-- **Public and open-source (founder):** a public GitHub repo, MIT licence (call), and no secret anywhere.
+- **Built for (decided):** developers, tech leads, DevOps, DevSecOps and platform engineers building a real,
+  multi-tenant product that people will pay for and depend on. **Solo founders and teams both work (decided).**
+- **Not for:** weekend demos, one-prompt apps, or anyone who wants an agent to merge code nobody reviewed.
+- **Serious means real accounts (decided):** cloud, domain, Figma, app stores. They are requested **just in time**,
+  never all at once (§6.8), and the README lists them up front (§13).
+- **Privacy (decided):** Pavedline collects nothing and has no telemetry. Every answer stays in the user's own repo.
+- **Public and open-source (decided):** MIT licence (default), no secret and no private identifier anywhere (§16).
 
 ## 3. Goals
 
-0. **Four surfaces, always (founder):** website, blog, web app and mobile app (§1).
-1. One clear path: **step 0 → step 12** (§5). Built and verified on local Kubernetes; the cloud comes once, at step 11. Each step has defined inputs, output files, skills, an agent, a gate
-   and an approver.
-2. **Memory from files only.** A fresh session, or a new teammate, resumes from the repo with no chat history (§6).
-3. **Production from the first commit.** A Helm base chart, GitOps through ArgoCD, staging and production
-   environments, backups with a tested restore, least privilege and secret hygiene (§10).
-4. **GitOps is the backbone, not a feature (founder).** Git is the only way anything reaches a cluster (§10.1).
-5. **Diagrams everywhere (founder).** Every folder that holds architecture carries a `.dot`, and every plan carries
-   a `.dot`. CI validates and renders them, and fails on drift (§9).
-6. **Figma is required (founder).** There is a real design system and every screen in every state, approved
-   before build (§5, step 7).
-7. **Database design is its own step (founder).** The step-0 intake asks: DB in Kubernetes or a managed service?
-   (founder). **Multi-tenancy is the first intake question** (§5.1); a dedicated skill covers it (§5, step 5).
-8. **Market research toward profitability (founder),** done with free open-source tools only (founder).
-9. **Rules are enforced by hooks and CI, not prose.** Each rule is written once, in one place.
-10. **Attractive public face (founder).** A diagram on the first page, a clear "what you get", a requirements list,
-    and "who's behind this".
+1. **Every product ships four surfaces (decided):** website, blog, web app and a native mobile app. A project defers
+   one only through a recorded decision.
+2. **One clear path, step 0 → step 12 (§6).** Every step has inputs, output files, skills, an agent, a gate and an
+   approver. Every checkpoint ends with "go?"; nothing moves without it (decided).
+3. **Memory from files only (§7).** A fresh session or a new teammate resumes with no chat history.
+4. **Production architecture from the first commit (§11).** Helm base chart, GitOps, backups with tested restores,
+   least privilege, secret hygiene.
+5. **GitOps is the backbone (decided).** Git is the only path to any cluster.
+6. **Built and verified on local Kubernetes; the cloud comes once, at the end (decided, §6.10).**
+7. **Multi-tenancy is the first architecture question (decided, §6.1)** and is enforced, not advised (§12.3).
+8. **Figma is required (decided, step 7):** a real design system and every screen in every state.
+9. **Database design is its own step (decided, step 5);** in-cluster or managed is asked at step 0 (decided).
+10. **Market research toward profitability, with free open-source tools only (decided, §6.2).**
+11. **The best possible website SEO (decided, §6.6).**
+12. **Rules enforced by CI and hooks, each written in one place (§9, §12).**
+13. **An attractive, honest public face (decided, §13).**
 
 ## 4. Non-goals and anti-goals
 
-**Non-goals (not now):**
-- **Observability and tracing: out of scope (founder)**, except two alerts (uptime and backup failure, §10.9). A clean seam is left (`templates/infra/k8s/addons/` slot +
-  `docs/extending.md`), so a future observability agent and skill can plug in. No OpenTelemetry, Prometheus or
-  logging stack ships in v1.
-- Building any product inside this repo.
-- Supporting every cloud in v1. The process and the Helm/ArgoCD core are cloud-agnostic, and **one infra profile
-  ships: OCI/OKE** (call). Other profiles come later, as contributions.
+**Non-goals (now):**
+- **Observability and tracing (decided).** A clean seam is left for a future observability agent (§12.5). The only
+  exception is **three alerts** (decided, §11.11).
+- Building any product inside this repo; naming any product built with it (decided).
 - Replacing the plugins it depends on.
 
 **Anti-goals (failure even if it technically works):**
-- **A changelog posing as instructions.** In the source project, the instructions file reached 1,213 lines of dated amendments.
-  Pavedline's project `CLAUDE.md` stays at about 150 lines or fewer, and current rules are stated only once.
-- **Records that outgrow their purpose.** Its progress checklist reached 933 KB and its hand-off 9,272 lines, and 89
-  of 120 PRs in eight days were records-only. Pavedline caps record size with hooks and archives history automatically.
-- **The same rule copied into 5–7 files.** That made drift unavoidable.
-- **Gates that exist only in prose.**
-- **Anything that only works as a local demo.**
-- **A paid or closed tool inside the factory.** The user's own production accounts (cloud, Figma, app stores, Clerk, domain) are requirements, listed in §12, not factory tools.
-- **Leaking anything private.** No real cloud IDs, tenancy OCIDs, domains, names in examples, or secrets.
+- An instructions file that turns into a changelog (the source project's grew past 1,000 lines of dated amendments).
+- Records that outgrow their purpose (the source project's progress files grew to hundreds of kilobytes).
+- The same rule copied into several files; gates that exist only in prose.
+- Anything that works only as a local demo.
+- A paid or closed tool **inside the factory**. The user's own production accounts are requirements, not factory tools.
+- Leaking anything private.
 
-## 5. The flow: thirteen steps
+## 5. Vocabulary (one definition each)
 
-Source of truth: [`docs/flow.dot`](../../flow.dot). Every step writes files. A step is done when its output files
-exist, its gate passed, and `STATE.md` points at the next step. **Every checkpoint ends by asking the founder
-"go?"; nothing moves on without it (founder).**
+| Term | Meaning |
+|---|---|
+| **local** | the kind cluster on the developer's machine. Every wave deploys and is verified here, through ArgoCD (§11.6) |
+| **staging** | the **cloud** staging environment, created at step 12 before production. Generated data only; never indexable |
+| **production** | the live cloud environment, promoted from a verified staging SHA |
+| **verified (local)** | migrations applied, ArgoCD synced, pods running the release SHA with 0 restarts, health endpoints OK, the slice's acceptance tests passing against the cluster |
+| **verified (cloud)** | verified (local) **plus** what local cannot prove: real DNS and TLS, the tunnel or ingress, cloud IAM and vault, a backup **and a real restore**, the three alerts fired in a test, email deliverability |
+| **wave** | a planned group of slices (step 8) that ends with deploy (step 10) and learn (step 11) |
+| **slice** | the smallest change with its own tests, review gates and PR |
+| **feature-complete** | every acceptance test in `SPEC.md` mapped to a merged slice and passing on local, and the integration wave passed (§6.7) |
+
+## 6. The flow: thirteen steps
+
+Source of truth: [`docs/flow.dot`](../../flow.dot). A step is done when its output files exist, its gate passed,
+and `STATE.md` points at the next step.
 
 | # | Step | Output files (in the product repo) | Skills (new = Pavedline writes it) | Agent | Gate / approver |
 |---|---|---|---|---|---|
-| 0 | **Start** | `STATE.md`, `CLAUDE.md`, `decisions/0001-…` (one ADR per intake answer), `RUN.md`, `SERVICES.md`, `LINKS.md`; stack-neutral templates only (records, GitOps core) | new `start`, new `architecture-intake`, new `state`, new `doctor` | orchestrator | founder confirms intake |
-| 1 | **Market** | **Input: the founder names the sites and products they already have in mind (founder); the researcher starts there and widens.** Output: `docs/business/competitors/*.md`, `docs/business/BRIEF.md` (pricing, positioning, market size, how it makes money), `docs/business/landscape.dot` | new `competitor-teardown`, new `pricing-model`, new `market-size`; `competitive-brief` + `synthesize-research` (Anthropic knowledge-work-plugins) | researcher | founder approves brief |
-| 2 | **Grill** | `decisions/*`, `GLOSSARY.md` | `grilling`, `grill-with-docs` (Matt Pocock) | orchestrator | interrogation frontier empty |
-| 3 | **Spec** | `docs/spec/SPEC.md` (users, jobs, features per surface, non-goals, acceptance tests); team mode adds GitHub issues | new `spec`; `to-tickets` (Matt Pocock, team mode) | orchestrator | founder approves spec |
-| 4 | **System design decisions** (new; mandatory questions, §5.2) | one ADR per answer; `docs/architecture/SYSTEM-DESIGN.md` (all answers with real numbers); `docs/architecture/AUTH.md`; `SERVICES.md` rows for any new service | new `system-design`, new `backend-evaluate`; Clerk skills (`clerk-orgs`, `clerk-nextjs-patterns`, `clerk-expo-patterns`, `clerk-webhooks`) | architect (+ researcher for evidence) | founder answers / approves each decision, then "go?" |
-| 5 | **Data + API** | `docs/data/DOMAIN.md`, `docs/data/erd.dot`, `docs/data/SCHEMA.md` (tables, keys, constraints, indexes, tenancy key, version columns for concurrent edits, storage keys for files, retention, billing and entitlements, the audit log, feature flags; RLS rules per §11), `docs/data/MIGRATIONS.md`, `docs/api/openapi.yaml` | new `domain-model`, new `db-schema`, new `multi-tenancy`, new `api-contract` | architect + blind reviewer | reviewer `VERDICT: APPROVE`, then founder |
-| 6 | **Architecture** | `docs/architecture/ARCHITECTURE.dot` (context + containers, showing every step-4 result: bucket, CDN, queue, workers, regions), `docs/architecture/THREATS.md`, Helm/env layout; **the stack-dependent templates are copied now**, after step 4 decided the stack | new `system-architecture`, new `helm-base-chart`, new `gitops`, new `threat-model` | architect | founder approves |
-| 7 | **Figma (required)** | Figma file: tokens (light/dark), type, spacing, components with all variants (Figma name = code name), FigJam user flows, a frame set **per surface** (website, blog, web app on desktop + mobile web, native mobile app), every screen in every state (empty, loading, error, success, no-permission); **multi-tenant screens when step 0 said multi-tenant**: org switcher, invite members, roles, tenant settings, a new tenant's first run, org switching on mobile; **lifecycle and release screens**: billing and plans, legal pages and cookie consent, data export and delete, the admin/support console with its impersonation banner, the "please update" screen for old mobile versions; `docs/design/DESIGN.md` (file + node links); Code Connect map; exported tokens | `ui-ux-pro-max` (reference input, never the authority), `figma-use`, `figma-generate-library`, `figma-generate-design`, `figma-use-figjam`, `figma-code-connect`, `impeccable` (critique), new `design-system-contract` | designer + design-verifier (blind) | `DESIGN VERDICT: APPROVE`, then **founder approves the visual** |
-| 8 | **Plan** | `docs/plans/<date>-<wave>.md` + `docs/plans/<date>-<wave>.dot` (slice dependency graph) | `superpowers:writing-plans`, new `plan-graph` | orchestrator | founder approves the wave |
-| 9 | **Build** (per slice) | code + tests + migrations, PR with the gates line, `handoff/<branch>.md` | superpowers `test-driven-development`, `subagent-driven-development`, `using-git-worktrees`, `verification-before-completion`, `finishing-a-development-branch`; built-in `security-review`; new `quality-gates`; `db-schema` / `multi-tenancy` when a slice touches data | builder + reviewer (blind) + adversary (blind) | five gates (§8), squash-merge |
-| 10 | **Deploy to local Kubernetes** (every wave) | web, site and API: the image-tag bump PR, synced by ArgoCD **inside the local kind cluster**; mobile: a CI build installed on simulators/devices; deploy record in `STATE.md` | new `deploy`, new `local-cluster` | deployer | migrations first, sync, then **verify the running pods**, never the `Synced` label |
-| 11 | **Go to production** (once, at the end; §5.6) | `docs/production/INFRA.md`, `NEEDS.md`, `LAUNCH.md`; Terraform profile filled; **cloud staging, then production** | new `go-to-production`, `deploy`, `gitops` | deployer + architect | founder: "time for production?" → infra answers → founder's `terraform apply` → staging verified → production verified → **"go live"** |
-| 12 | **Learn** | `docs/retros/<date>.md`; new rules land as edits to the one place they live | `retro` (Matt Pocock), new `lessons` | orchestrator | founder reads |
+| 0 | **Start** (§6.1) | `PRODUCT.md`, `STATE.md`, `WAITING.md`, `CLAUDE.md`, `decisions/0001-…`, `RUN.md`, `SERVICES.md`, `LINKS.md`, stack-neutral templates | new `start`, `architecture-intake`, `compliance`, `state`, `doctor` | orchestrator | founder confirms the intake |
+| 1 | **Market + SEO research** (§6.2) | `docs/business/competitors/*.md`, `BRIEF.md`, `SEO-STRATEGY.md`, `landscape.dot` | new `competitor-teardown`, `pricing-model`, `market-size`; `competitive-brief`, `synthesize-research` (knowledge-work-plugins) | researcher | founder approves the brief |
+| 2 | **Grill** | `decisions/*`, `GLOSSARY.md` | `grilling`, `grill-with-docs` (Matt Pocock) | orchestrator | the interrogation frontier is empty |
+| 3 | **Spec** | `docs/spec/SPEC.md`: users, jobs, features **per surface**, non-goals, acceptance tests, non-functional needs, site map and URL plan; team mode adds GitHub issues | new `spec`; `to-tickets` (team mode) | orchestrator | founder approves; the brief is updated if the spec changes pricing |
+| 4 | **System design** (§6.3, §6.4) | an ADR per answer, `docs/architecture/SYSTEM-DESIGN.md` (with numbers), `AUTH.md`, `TENANCY-LIFECYCLE.md`, `docs/production/LEAD-TIME.md` | new `system-design`, `backend-evaluate`; Clerk skills | architect (+ researcher for evidence) | founder answers and approves each decision |
+| 5 | **Data + API** | `docs/data/DOMAIN.md`, `erd.dot`, `SCHEMA.md`, `MIGRATIONS.md`, `docs/api/openapi.yaml` | new `domain-model`, `db-schema`, `multi-tenancy`, `api-contract` | architect + blind reviewer | reviewer `APPROVE`, then founder. Machine checks (RLS, migrations) run from step 9 |
+| 6 | **Architecture** | `docs/architecture/ARCHITECTURE.dot`, `THREATS.md`, Helm and environment layout; **stack templates copied now** (§6.9) | new `system-architecture`, `helm-base-chart`, `gitops`, `threat-model` | architect | founder approves |
+| 7 | **Figma (required)** | tokens (light/dark), type, spacing, components (Figma name = code name), FigJam flows, a frame set **per surface**, every screen in every state, the screens required by §6.4 and §11.4, accessibility annotations; `docs/design/DESIGN.md` with file and node links; Code Connect; exported tokens | `ui-ux-pro-max` (reference only), `figma-use`, `figma-generate-library`, `figma-generate-design`, `figma-use-figjam`, `figma-code-connect`, `impeccable`; new `design-system-contract` | designer + design-verifier (blind) | `DESIGN VERDICT: APPROVE`, then **founder approves the visual** |
+| 8 | **Plan** (§6.7) | `docs/plans/<date>-<wave>.md` + `.dot`; every acceptance test mapped to a slice | `superpowers:writing-plans`, new `plan-graph` | orchestrator | founder approves the wave |
+| 9 | **Build** (per slice, §9) | code, tests, migrations, a PR with the gates line, `handoff/<branch>.md` | superpowers TDD, subagent-driven development, worktrees, verification, finishing a branch; built-in `security-review`; new `quality-gates`; stack and data skills as needed | builder + reviewer + adversary (both blind) | the five gates, squash-merge |
+| 10 | **Deploy to local** | the tag-bump PR synced by ArgoCD in the local cluster; mobile builds on simulators and devices | new `deploy`, `local-cluster`, `mobile-build` | deployer | verified (local) |
+| 11 | **Learn** (end of every wave) | `docs/retros/<date>.md`; each new rule lands in the one place it lives (`docs/rules-index.md` says where) | `retro` (Matt Pocock), new `lessons` | orchestrator | founder reads |
+| 12 | **Go to production** (once, §6.10) | `docs/production/INFRA.md`, `NEEDS.md`, `LAUNCH.md`; infra profile filled; **cloud staging, then production** | new `go-to-production`, `deploy`, `gitops` | deployer + architect | "time for production?" → infra intake → founder's apply → staging verified → production verified → **"go live"** |
 
-Steps 8–10 repeat per wave until the product is feature-complete on local Kubernetes; then step 11 runs once; after launch every wave goes local → cloud staging → production. Steps 1–7 can be re-entered when a later step changes the plan. The
-re-entry is recorded as a decision.
+**The loop.** Steps 8 → 9 → 10 → 11 repeat per wave on local Kubernetes. The **integration wave** (§6.7) runs
+before step 12. Step 12 runs once. After launch, every wave goes local → staging → production, each promotion by PR.
 
-### 5.1 Step 0 intake: stack-neutral questions only
+**Re-entry.** Any of steps 1–7 can be reopened with a recorded decision. The decision lists the downstream outputs it
+makes stale (for example, a changed step-4 answer marks `SCHEMA.md` and the affected Figma screens stale), and
+`STATE.md ▶ STALE` tracks them until they are updated.
 
-Each answer becomes an ADR:
-1. **Is the product multi-tenant? (first question; founder)** Options: single-tenant, multi-tenant B2B (organisations), or B2C.
-   If multi-tenant: the model (default: shared schema + `tenant_id` + row-level security; alternatives:
-   schema-per-tenant, database-per-tenant). The answer flows into steps 4 (auth: Clerk Organization ↔ tenant), 5
-   (tenant key on every table, RLS), 6 (architecture), 7 (Figma tenant screens), 9 (cross-tenant leak test at the
-   merge gate) and the API (every call is scoped to a tenant).
-2. Solo or team.
-3. Local runtime for the test cluster (default: Colima + kind; Docker Desktop or OrbStack if already installed). **No cloud question here (founder):** the cloud is chosen at step 11.
-4. **Database in Kubernetes (CNPG) or a managed service (founder).**
-5. Surfaces: all four by default (§1). Deferring one needs a recorded reason.
-6. Domain, environments (default: staging + production), email provider.
+**Light path (default).** A small change (a bug fix, a copy edit) skips steps 1–8 and runs 9–11.
 
-**Not asked at the start (founder):** cost per tenant. It would block early progress. It is not a mandatory
-question. A project can add usage metering later as an ordinary wave.
+### 6.1 Step 0: start
 
-### 5.2 Step 4: the mandatory system-design questions
+Asked in this order. Each answer becomes an ADR:
+1. **"What are you building?"** One paragraph: who it serves, the problem, the one thing it must do well. Saved as
+   `PRODUCT.md`; every later step reads it.
+2. **Multi-tenant? (decided: the first architecture question)** Single-tenant, multi-tenant B2B (organisations) or
+   B2C. If multi-tenant: shared schema + `tenant_id` + row-level security (default), schema-per-tenant or
+   database-per-tenant. The answer flows into auth (step 4), data (5), architecture (6), the tenant screens (7), the
+   leak test (9) and the API.
+3. **Compliance (decided wording):** "Should we design with compliance in mind (privacy laws such as GDPR, health
+   or payment rules)? Recommended: yes." On **yes**, three short questions: the kinds of data (personal, health,
+   payment, children's), the countries served, and any rule set the founder already knows applies. The answers feed
+   the market step, the security rows of step 4, the threat model, the processor agreements and the launch
+   checklist. On **no**, an ADR records "compliance not in scope" with one line on what that means (some data types
+   carry legal duties regardless), and the launch checklist asks once more before go-live (default).
+4. Solo or team.
+5. Surfaces: all four by default.
+6. **Database in Kubernetes (CNPG) or a managed service (decided).** Local always runs CNPG; a managed choice is
+   bound to a real service at step 12.
+7. Local runtime: Colima + kind (default), or Docker Desktop / OrbStack if already installed.
 
-None may be skipped. "Not needed" is a valid answer only with a recorded reason. Each answer goes to: **an ADR** · **`docs/architecture/SYSTEM-DESIGN.md`** (with numbers) · **`ARCHITECTURE.dot`** (step 6) · **`SERVICES.md`** for any new service (the ask-before-new-service rule applies: what, why, verified cost) · **the data design and the plan** (locking becomes columns, file locations become storage keys, targets become tests).
+**Not asked at step 0 (decided):** the cloud provider and production accounts (step 12), and cost per tenant (not a
+mandatory question at all). Domain and email provider are asked in step 4 or just in time.
+
+### 6.2 Step 1: market and SEO research
+
+- **Input:** the founder names the sites and products they already have in mind; the researcher starts there.
+- Competitor pages, pricing, feature lists and public complaints → `competitors/*.md`.
+- `BRIEF.md`: positioning, pricing tiers, how the product makes money, market size (sourced).
+- `SEO-STRATEGY.md`: competitors' sitemaps and topics, the queries and search intent (autocomplete, "people also ask",
+  trends), topic clusters, pillar pages, a target query per page.
+- If compliance is in scope: the regulatory landscape for the chosen countries, with sources.
+- **Scraping rules:** Playwright MCP (default) or crawl4ai; robots.txt and each site's terms respected; review sites
+  only through manual export or official APIs; a login-gated competitor is researched from public material only.
+  Every claim carries a URL and is marked definite, inferred or unknown.
+
+### 6.3 Step 4: the mandatory system-design questions
+
+None may be skipped. "Not needed" is valid only with a recorded reason. Each answer goes to an ADR,
+`SYSTEM-DESIGN.md` (with numbers), the architecture diagram (step 6), `SERVICES.md` for any new service, and the data
+design and plan (locking → columns, file locations → storage keys, targets → tests). **Any new service follows the
+ask-before-adding rule** (§12.6). To avoid one exhausting session, the questions come in three short rounds:
+*platform* (backend, auth, tenancy lifecycle, security and compliance), *behaviour* (concurrency through
+notifications and payments), *reach* (accessibility, regions, mesh, website and SEO, search, availability).
 
 | Area | Questions |
 |---|---|
-| **Backend** | **FastAPI is the founder's preference. `backend-evaluate` checks it against the spec's needs with sources, names anything it would struggle with, compares alternatives only then, and recommends. The founder decides.** **Next.js is frontend only (founder).** No business logic in Next.js. The only server code allowed is a pass-through proxy for auth cookies if the auth setup needs one, enforced by a CI import-boundary check |
-| **Auth: Clerk (founder)** | Clerk Organization = tenant? (our `tenants` table keeps the Clerk org id, synced by signed webhooks) · the tenant always comes from the verified token, never from the client · roles: Clerk org roles or app permissions · FastAPI verifies every request with Clerk's Python SDK `clerk-backend-api` → `authenticate_request` (verified 2026-11-07, MIT) and sets the tenant for RLS with `SET LOCAL` · web and mobile sign-in through Clerk's Next.js and Expo SDKs (verified in `clerk/javascript`) · machine tokens / API keys for integrations · all Clerk calls behind one auth wrapper (exit path) · Clerk cost at expected user counts, verified at the time, never designed to the free tier |
-| **Security** | data classification (personal or payment data?) · encryption in transit and at rest · where secrets live · insert-only audit log · rate limits at the Cloudflare edge, never in app code · dependency and container scanning (Trivy, Apache-2.0) · least-privilege DB roles · security headers / CSP · malware scan of uploads (if uploads exist) · deleting one tenant's data on request · break-glass admin access and who holds it |
-| **Concurrency** | expected users, requests/sec, peak · two people editing one record (locking or version check) · retries and duplicate requests (idempotency keys) · background work and its queue (Postgres job table with `FOR UPDATE SKIP LOCKED`, or Redis) |
-| **Performance** | response-time targets: API p95, page load, mobile start-up · caching: what, where, for how long · DB connection pooling (PgBouncer transaction mode rules) |
-| **Images and files** | present at all? types and sizes · upload direct to the bucket (signed URL) or through the API · compress/resize where: on the device, in a background worker, or at the CDN · storage: Cloudflare R2, S3 or OCI Object Storage · public or private (signed reads) · CDN in front · retention |
+| **Backend** | FastAPI is the preferred default (decided). `backend-evaluate` checks it against the spec with sources. Pass criteria: every must-have need has a supported, maintained path; no blocker in concurrency, real-time or background work; the team can run it. It names anything FastAPI would struggle with, compares alternatives only then, and recommends; the founder decides. **Next.js is frontend only (decided):** no business logic; the only server code allowed is a pass-through auth-cookie proxy, enforced by a CI boundary check |
+| **Auth: Clerk (decided)** | Clerk Organisation = tenant, with our `tenants` table keeping the Clerk org id, synced by verified webhooks · the tenant always comes from the verified token · roles: Clerk org roles or app permissions · FastAPI verifies each request with Clerk's Python SDK (`clerk-backend-api`, `authenticate_request`) · web and mobile sign-in through Clerk's Next.js and Expo SDKs · machine tokens for integrations · every Clerk call behind one wrapper · Clerk's cost at expected user counts, never designed to a free tier |
+| **Security and compliance** | data classification · encryption in transit and at rest · secrets location · insert-only audit log · edge rate limits plus **per-tenant** quotas · least-privilege DB roles · security headers and CSP · upload malware scanning · break-glass access · if compliance is in scope: field-level encryption and access logging for sensitive records, data residency, and a **processor agreement (DPA) with every vendor that touches personal data** (auth, email, SMS, storage, analytics, billing) |
+| **Concurrency** | users, requests per second, peak · two people editing one record (locking or a version check) · idempotency keys · the background queue (Postgres job table with `FOR UPDATE SKIP LOCKED`, or Redis) |
+| **Time and scheduling** | timestamps in UTC; user and location timezones and DST · calendars, recurrence, slot generation · contention for the same slot (exclusion constraints or row locks, never session advisory locks under PgBouncer) |
+| **Scheduled jobs** | what must run on time (reminders, renewals, reports) · retries and exactly-once effects · how a late or failed job is detected (alert 3, §11.11) · tested with a fake clock |
+| **Performance** | targets: API p95, page load, mobile start-up · caching · connection pooling |
+| **Images and files** | present? types and sizes · direct-to-bucket upload (signed URL) or through the API · compress or resize where (device, worker, CDN) · storage (Cloudflare R2, S3, OCI Object Storage) · public or private · CDN · retention · bucket versioning |
 | **Real-time** | none, polling, server-sent events or websockets |
-| **Mobile offline** | what works without signal, and how conflicts resolve on sync |
-| **Multi-region** | one region at launch or several · data-residency needs per customer · cross-region backup copy · a standby database in a second region · CDN for global users · cost of each option |
-| **Billing (founder: must-ask)** | needed at launch? provider: Clerk Billing, Stripe or Paddle (verified at the time; ask-before-new-service applies) · plans and **entitlements enforced on the server**, never only in the UI · webhook signature verification and idempotency · trials, failed payments (dunning), tax/VAT, invoices · billing screens in step 7 |
-| **Search, email, notifications** | needed? built in, or a service? |
-| **Service mesh (Istio?)** | needed at all? (mTLS between services, L7 policy, traffic splitting, retries). Options, facts from istio.io 2026-11-07, Istio 1.31.4, Apache-2.0: **none** (NetworkPolicy + app-level auth); **Istio ambient mode** (no sidecar: a per-node Rust `ztunnel` for L4 mTLS, plus optional per-namespace Envoy "waypoint" proxies for L7; resource cost "Small" vs sidecar "Large"; p90/p99 latency ~0.16–0.20 ms at L4 vs ~0.63–0.88 ms for sidecar; production-ready for single-cluster since 1.22; multi-cluster and multi-network still beta; no VMs, no EnvoyFilter); **Istio sidecar mode** (an Envoy proxy in every pod; full features including stable multi-cluster and VMs). **Recommended answer (call):** no mesh at launch unless a requirement demands one; if one is needed, **ambient**. Ambient joins without changing application pods, so it can be added later at low cost. Choose **sidecar** only for multi-cluster / multi-region active-active or VMs (ties to the multi-region answer). The mesh's Gateway API support can also serve as the in-cluster entry point behind Cloudflare Tunnel |
-| **Availability and recovery** | uptime target · RPO (data you can afford to lose) · RTO (time to recover) |
+| **Notifications** | email (provider, sending domain, SPF/DKIM/DMARC, bounces, unsubscribe) · **SMS** (provider, sender registration, opt-in and opt-out, quiet hours, abuse limits) · **push** (APNs/FCM through Expo or direct; permission prompts) · in-app · a user preferences screen |
+| **Payments taken by tenants** | do tenants collect money from *their* customers (deposits, invoices)? the provider (marketplace or connect model), payouts, refunds, disputes, PCI scope kept off our servers, per-tenant webhooks. Separate from the SaaS's own billing |
+| **Billing (the SaaS's own)** | needed at launch? provider (Clerk Billing, Stripe or Paddle) · plans and **entitlements enforced on the server** · webhook verification and idempotency · trials, failed payments, tax/VAT, invoices |
+| **Accessibility** | target **WCAG 2.2 AA (default)** for website, web app and mobile · enforced as a gate (§9) and annotated in Figma |
+| **Mobile offline** | what works without signal; how conflicts resolve on sync |
+| **Multi-region** | one region at launch or several · data residency · a cross-region backup copy · a standby database · CDN · cost |
+| **Service mesh (Istio?)** | needed at all (mTLS between services, L7 policy, traffic splitting)? Facts (istio.io, Istio 1.31.4, 2026-11-07): **ambient mode** has no sidecar (a per-node `ztunnel` for L4 mTLS, optional Envoy waypoints for L7; resource cost "Small" against sidecar's "Large"; production-ready for a single cluster since 1.22; multi-cluster still beta); **sidecar mode** puts an Envoy in every pod (full features, including multi-cluster and VMs). **Recommended answer (default):** no mesh at launch unless a requirement demands one; if needed, ambient; sidecar only for multi-cluster or VMs |
+| **Website, blog and SEO** | rendering (fully server-rendered, static or incremental: default) · content source (MDX in git, or a headless CMS for non-developer writers) · languages and `hreflang` · analytics (Search Console only, or self-hosted Umami) · image delivery · the AI-crawler policy in robots.txt |
+| **Search** | needed? Postgres full-text first (default), or a service |
+| **Availability and recovery** | uptime target · RPO · RTO |
 
-### 5.3 Tenant lifecycle and compliance (mandatory when step 0 answered "multi-tenant")
+**Lead-time register (default).** Step 4 lists every item that takes days or weeks outside our control: payment
+provider verification, SMS sender registration, Apple and Google developer accounts and store review, processor
+agreements, domain verification. They go into `docs/production/LEAD-TIME.md` and `WAITING.md` **at step 4**, so they
+are finished by step 12.
 
-Decided in step 4, designed in steps 5 and 7, and built and tested in step 9. Output:
-`docs/architecture/TENANCY-LIFECYCLE.md` + one ADR per item.
+### 6.4 Tenant lifecycle and compliance (when multi-tenant)
 
-| Stage | What must be designed and tested |
+Decided in step 4, designed in 5 and 7, built and tested in 9. Output: `docs/architecture/TENANCY-LIFECYCLE.md`.
+
+| Stage | Must be designed and tested |
 |---|---|
-| **Create** | Sign-up → Clerk organisation → our `tenants` row → default roles, settings and onboarding state, all **in one transaction**. A half-created tenant is impossible |
-| **Sync and repair** | Clerk webhooks are signature-verified and idempotent (replaying an event is a no-op). A scheduled **reconciliation job** compares Clerk with our tables and repairs drift from missed events. The reconciliation run is part of the test suite |
-| **Suspend / offboard** | Suspension blocks sign-in and API keys but keeps data. Offboarding starts the retention clock. Both are recorded in the audit log |
-| **Export** | A tenant (and a person, for data-subject requests) can export their data in a documented machine-readable format |
-| **Delete** | Deletion removes live data and files. The ADR states how long deleted data survives in backups and WAL, and that restores re-apply deletions. The privacy policy states the same period |
-| **Legal surface** | Terms of service, privacy policy, data-processing agreement, sub-processor list (Clerk, email, analytics, storage, billing) and cookie consent where analytics or marketing cookies exist. These are pages on the website (step 7 designs them, step 9 builds them). Legal text is the founder's responsibility; the workflow only makes sure the pages, links and consent mechanics exist |
-| **Support access** | An admin/support console: who may see a tenant's data, impersonation only with an audit-log entry and a visible banner, and no shared logins |
-| **Per-tenant limits** | Quotas and rate limits per tenant, not only per IP at the edge, so one tenant cannot starve others |
+| **Create** | sign-up → Clerk organisation → `tenants` row → default roles, settings and onboarding state, **in one transaction** |
+| **Sync and repair** | Clerk webhooks verified and idempotent; a scheduled **reconciliation job** repairs drift from missed events; covered by tests |
+| **Suspend / offboard** | suspension blocks sign-in and API keys but keeps data; offboarding starts the retention clock; both audited |
+| **Export** | tenant and individual (data-subject request) export in a documented machine-readable format |
+| **Delete** | live data and files removed; the ADR states how long deleted data survives in backups, and that restores re-apply deletions; the privacy policy says the same |
+| **Legal surface** | terms, privacy policy, processor agreement, sub-processor list, cookie consent where needed. Pages exist and are linked; the legal text is the founder's |
+| **Support access** | an admin console; impersonation only with an audit entry and a visible banner; no shared logins |
+| **Limits** | per-tenant quotas and rate limits |
 
-### 5.4 Who asks what: no question twice (call)
+### 6.5 Who asks what: no question twice (default)
 
-Several pieces ask questions: superpowers' brainstorming, the step-0 intake, grill-me and step 4. Each kind of
-question has **one owner**:
-- step 0 (`start`): platform questions only (§5.1)
-- step 2 (grill-me): product decisions
-- step 4 (`system-design`): system and stack questions (§5.2)
-- **superpowers brainstorming runs only inside a wave, for one feature's design.** It must read `decisions/`,
-  `GLOSSARY.md` and `SPEC.md` first, and ask only what is undecided.
+Step 0 asks platform questions (§6.1). Step 2 (grill-me) asks product decisions. Step 4 asks system and stack
+questions (§6.3). **superpowers brainstorming runs only inside a wave, for one feature's design.** It first reads
+`PRODUCT.md`, `decisions/`, `GLOSSARY.md` and `SPEC.md`, and asks only what is undecided. This is enforceable because
+superpowers states that instructions in `CLAUDE.md` take precedence over its skills (`using-superpowers`, "User
+Instructions"); Pavedline's `CLAUDE.md` template carries the rule.
 
-This is enforceable because superpowers states that instructions in `CLAUDE.md` take precedence over its skills
-(`using-superpowers`, "User Instructions"). Pavedline's `CLAUDE.md` template carries this rule.
+### 6.6 Website, blog and SEO (decided: "it must be the best")
 
-### 5.5 Website and blog: the SEO path (founder)
+**Principle (facts, 2026-11-07):** Core Web Vitals "good" means LCP ≤ 2.5 s, INP ≤ 200 ms and CLS ≤ 0.1 at the 75th
+percentile; INP replaced FID in 2024 (web.dev). Coverage of Google's 2026 AI-search guidance says classic SEO is the
+foundation of its AI features and that `llms.txt` has no ranking effect (secondary sources; re-checked on
+developers.google.com when the skill is written). So: classic, excellent SEO. `llms.txt` is optional, for other agents.
 
-**Principle (facts, 2026-11-07):** Core Web Vitals "good" = LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1 at the 75th
-percentile, mobile and desktop; INP replaced FID in 2024 (web.dev/articles/vitals). Industry coverage of Google's
-2026 AI-search guidance says classic SEO is the foundation for Google's AI features, and that `llms.txt` has no
-ranking effect in Google Search (secondary sources; the exact wording is re-checked on developers.google.com when the
-skill is written). So Pavedline does **classic, excellent SEO** and no "AI tricks". `llms.txt` is optional, for
-other agents only.
-
-| Step | What is done for the website and blog |
+| Step | Website and blog work |
 |---|---|
-| 1 Market | SEO research: competitors' sitemaps and page structure (Playwright MCP), the topics they cover, the queries and search intent from free sources (autocomplete, "people also ask", Google Trends), content gaps → `docs/business/SEO-STRATEGY.md` (topic clusters, pillar pages, a target query per page) |
-| 3 Spec | site map and URL structure (short, stable, readable; blog under `/blog`: call), every page's search intent and conversion goal |
-| 4 System design (must-ask, added to §5.2) | rendering: site and blog fully server-rendered, static or incremental (call) · content source: MDX in git, or a headless CMS for non-developer writers · languages and `hreflang` · analytics: Search Console only, or self-hosted Umami (MIT; a new service, so ask first) · image delivery (AVIF/WebP, fixed dimensions) · **AI-crawler policy** in robots.txt (allow or block each AI crawler: a business decision) |
-| 7 Figma | site and blog templates built for Core Web Vitals: space reserved for every image (CLS), one clear LCP element, font loading plan, readable article layout, an author box (real author and credentials), a social-share (Open Graph) image template |
-| 9 Build: **SEO gate** for `apps/site` (CI fails below it) | Lighthouse CI (Apache-2.0) on mobile: **SEO 100 · Performance ≥ 95 · Accessibility ≥ 95 · Best Practices ≥ 95**, lab LCP ≤ 2.5 s, CLS ≤ 0.1 (call: thresholds) · every page has a unique title and description, a canonical URL, Open Graph tags, and valid JSON-LD (Organization, WebSite, Article, BreadcrumbList) · `sitemap.xml` and `robots.txt` are generated (Next.js `sitemap.ts` / `robots.ts`) and tested · redirects map, real 404/410 · broken-link check (lychee, Apache-2.0) · alt text on every image · **staging is never indexable** (a `noindex` header + robots block, tested) |
-| 10 Deploy | only production is indexable · sitemap submitted to Google Search Console and Bing Webmaster Tools (founder signups) · after the first deploy, check that staging is still blocked |
+| 1 | SEO research → `SEO-STRATEGY.md` (§6.2) |
+| 3 | the site map, short stable URLs (blog under `/blog`: default), each page's intent and conversion goal |
+| 4 | the SEO row of §6.3 |
+| 7 | templates built for Core Web Vitals: space reserved for images, one clear LCP element, a font loading plan, readable articles, an author box (real author and credentials), an Open Graph image template |
+| 9 | **The SEO gate** for `apps/site`, run on the **local production build** (never on staging, which is `noindex` by design): Lighthouse CI on mobile with **SEO 100, Performance ≥ 95, Accessibility ≥ 95, Best Practices ≥ 95** (default thresholds); lab LCP ≤ 2.5 s and CLS ≤ 0.1; unique titles and descriptions, canonical URLs, Open Graph tags, valid JSON-LD (Organization, WebSite, Article, BreadcrumbList); generated and tested `sitemap.xml` and `robots.txt`; redirects and real 404/410 pages; a lychee link check; alt text everywhere; a test that staging sends `noindex` |
+| 12 | only production is indexable; sitemaps submitted to Google Search Console and Bing Webmaster Tools (founder) |
 
-**The operation process: "Grow", a standing loop beside the waves (call).** A new `growth` agent (the 9th) with the new
-skills `seo-foundation` (the technical items above) and `content-ops` (the publishing loop), plus Anthropic's marketing
-plugin (`seo-audit`, `content-creation`, `draft-content`, `performance-report`, Apache-2.0):
-1. **Publish:** brief (target query, intent, outline) → draft → **human edit and fact-check; the founder approves**
-   (generic AI text is the main risk named in Google's guidance) → SEO checklist → PR → deploy → request indexing.
-2. **Weekly:** content calendar in `docs/growth/calendar.md`.
-3. **Monthly:** Search Console review (queries, click rate, impressions, pages not indexed, real-user Core Web Vitals)
-   + `seo-audit` → `docs/growth/YYYY-MM.md` with actions.
-4. **Quarterly:** refresh posts that are losing traffic, merge or remove thin ones, re-check internal links.
+**Grow, a standing loop after launch (default).** The `growth` agent runs it with the new skills `seo-foundation` and
+`content-ops`, plus Anthropic's marketing plugin (`seo-audit`, `content-creation`, `draft-content`,
+`performance-report`):
+1. **Publish:** brief (query, intent, outline) → draft → **human edit and fact-check; the founder approves** →
+   SEO checklist → PR → deploy → request indexing.
+2. **Weekly:** the content calendar, `docs/growth/calendar.md`.
+3. **Monthly:** a Search Console review plus `seo-audit` → `docs/growth/YYYY-MM.md`.
+4. **Quarterly:** refresh, merge or remove posts; re-check internal links.
 
-### 5.6 Step 11: Go to production (cloud), asked once, at the end (founder)
+`STATE.md ▶ GROW DUE` records the next due date, so a fresh session knows when the loop is due.
 
-**Principle:** build everything on local Kubernetes and bind to the cloud **once**, at the end. Steps 0–10 make
-only **portable** decisions ("Postgres 16, S3-compatible storage, Kubernetes with Gateway API, one region plus a
-backup copy"). Step 11 maps them onto real infrastructure. Decisions that change the *design* stay early (step 0:
-database in Kubernetes or managed; step 4: multi-region, data residency); only "where exactly" waits for step 11.
+### 6.7 Waves, the integration wave, and feature-complete
 
-**Accounts are asked for just in time, never all at the start:** Figma at step 7, Clerk development keys at the
-first auth slice, Apple and Google developer accounts before the first mobile build, production accounts at step 11.
-The README lists all of them up front, so nothing is a surprise.
+- **Wave order (default):** the first wave is a **thin vertical slice through every layer**: one core user journey,
+  end to end, on web and API, deployed to local. Mobile and the website follow in later waves. Each wave adds whole
+  journeys, never a layer in isolation.
+- **Feature-complete:** every acceptance test in `SPEC.md` is mapped to a merged slice (checked by `plan-graph`) and
+  passes on local.
+- **Integration wave (default), before step 12:** provider **test modes** (payments, SMS, email, Clerk), real
+  webhooks delivered to the local cluster through a tunnel (chosen and verified when the skill is written), and a
+  TestFlight / internal-track mobile build. Step 12 is never the first contact with a real provider or a real store.
 
-**Step 11, in order:**
-1. **The question:** "Everything works on local Kubernetes. Is it time to go to production in the cloud?" Nothing
-   moves until the founder says go.
-2. **Infra intake, "what do you already have?"** Cloud account and provider · existing cluster or new · regions
-   (from the step-4 multi-region decision) · domain and DNS (Cloudflare?) · container registry · secrets store ·
-   object storage · managed database (if step 4 chose one) · email sending domain · budget ceiling. Output:
-   `docs/production/INFRA.md` + an ADR per binding.
-3. **"What I need from you":** `docs/production/NEEDS.md`. Each item also goes into `STATE.md ▶ WAITING ON YOU`:
-   accounts to create, logins, approvals, every `terraform apply` (always the founder's), and secrets placed directly
-   in the vault, **never pasted into chat**.
-4. **Provision:** the agent fills the infra profile (Terraform). The founder applies it, and an applied plan shows
-   `0 to destroy`. ArgoCD is bootstrapped.
-5. **Cloud staging first (founder):** deployed through the same GitOps path and verified against everything local
-   could not prove: real DNS and TLS, Cloudflare Tunnel, cloud IAM and vault, a backup **and a real restore**, the
-   two alerts (§10.9), email deliverability (SPF/DKIM/DMARC), and running pods on the release SHA. Staging holds
-   generated data only and is never indexable.
-6. **Production:** promoted from the verified staging SHA through a GitOps PR, verified the same way. Then the
-   mobile store submissions, the Search Console and Bing sitemap submissions, and the legal pages live.
-7. **Launch checklist** (`docs/production/LAUNCH.md`), then the founder's final **"go live"**. The Grow loop (§5.5)
-   starts.
+### 6.8 Accounts just in time
 
-After launch, waves continue: build → local → cloud staging → production, each promotion by PR.
+Figma at step 7 · Clerk development keys at the first auth slice · provider test accounts at the integration wave ·
+Apple and Google developer accounts when the lead-time register says (they take time) · production accounts at step
+12. The README lists all of them up front.
 
-**Stack packs (`stacks/<name>/`), applied at step 6 once step 4 has decided the stack:** one directory per supported stack, holding its Dockerfiles, Helm values, CI jobs,
-test/typecheck commands, `RUN.md` fragment and the list of stack skills it switches on. v1 ships **`nextjs-fastapi`** (name kept short; it includes the mobile app). It is a monorepo:
-`apps/web` (Next.js web app), `apps/site` (Next.js website + MDX blog; a separate deployment so the public site
-caches and releases independently of the app: call), `apps/mobile` (Expo), `services/api` (FastAPI), and
-`packages/` (shared TypeScript API client generated from the OpenAPI contract, design tokens exported from Figma,
-glossary strings).
-- **Mobile: Expo (React Native).** Verified 2026-11-07: reactnative.dev says "if you're building a new app with React
-  Native, we recommend using a Framework" and calls Expo "a production-grade React Native Framework". React Native
-  docs default to v0.88. Same language (TypeScript) and same component model as the web, so tokens, API client and
-  glossary are shared. Builds run in GitHub Actions (macOS runners for iOS). **Expo's hosted EAS build service is a
-  new paid-tier service and is not used unless the founder approves it (call; ask-before-new-service rule).** Mobile
-  ships through the App Store and Google Play, not GitOps: the store submission is a founder step.
-- Next.js **≥ 16.3**. Verified: from 16.3, `next dev` generates `AGENTS.md`/`CLAUDE.md` and bundles version-matched
-  docs in `next/dist/docs/`, which is why Vercel retired its `next-best-practices` skill. Latest is v16.4.5,
-  2026-11-03. Its generated agent file lives in the Next.js app folder, not the repo root, so the root `CLAUDE.md`
-  stays at about 150 lines (where `next dev` writes it is to be verified in the build).
-- Next.js workflow skills from `vercel/next.js/skills` (MIT; includes a Claude plugin manifest): `next-dev-loop`,
-  `next-bundle-optimizer`, `next-cache-components-adoption`/`-optimizer`, `next-partial-prefetching-*`.
-- `vercel-labs/agent-skills`: `react-best-practices`, `composition-patterns`, `web-design-guidelines`,
-  `react-view-transitions`, and `react-native-skills` (always: every product has a mobile app). There is no licence file detected, so
-  install only, never vendor. The Vercel-deploy skills are excluded, because deploys go through GitOps.
-- new `fastapi-service` skill (no well-established FastAPI agent skill exists, checked 2026-11-07), written from the
-  Python tooling proven in production: uv workspace, ruff, pyright strict, Pydantic v2, import-linter
-  boundaries, Alembic with explicit-SQL invariants, an in-image boot check, and money as `int`/`Decimal`, never float.
-- optional: `vercel/next-devtools-mcp` (no licence file detected; optional only).
+### 6.9 Stack packs
 
-**Light path (call):** a small change (a bug fix, a copy edit) skips steps 1–8 and runs step 9 only. Ceremony
-scales with size.
+`stacks/<name>/` holds one stack's Dockerfiles, Helm values, CI jobs, lint and format configs, test and typecheck
+commands, the `RUN.md` fragment, and the list of skills it enables. It is applied at step 6, after step 4 has decided
+the stack. v1 ships **`nextjs-fastapi`**, a monorepo:
+- `apps/web` (Next.js web app), `apps/site` (Next.js website + MDX blog, deployed separately so it caches and
+  releases independently: default), `apps/mobile` (Expo), `services/api` (FastAPI), and `packages/` (a TypeScript
+  API client generated from OpenAPI, design tokens, glossary strings).
+- **Next.js ≥ 16.3.** From 16.3, `next dev` generates `AGENTS.md`/`CLAUDE.md` and bundles version-matched docs, and
+  Vercel moved its Next.js agent skills into the framework repo (checked 2026-11-07). Workflow skills from
+  `vercel/next.js/skills`: `next-dev-loop`, `next-bundle-optimizer`, `next-cache-components-*`,
+  `next-partial-prefetching-*`. From `vercel-labs/agent-skills`: `react-best-practices`, `composition-patterns`,
+  `web-design-guidelines`, `react-view-transitions`, `react-native-skills`. Deploy-to-Vercel skills are excluded;
+  deploys go through GitOps.
+- **Mobile: Expo.** React Native's docs recommend a framework for new apps and call Expo "a production-grade React
+  Native Framework" (checked 2026-11-07). Builds run in GitHub Actions (`mobile-build`: `expo prebuild`, Xcode on
+  macOS runners, Gradle on Linux). Signing material (`.p12`, provisioning profiles or an App Store Connect API key,
+  the Android keystore) lives in **GitHub encrypted secrets**, is imported into a temporary keychain per job and
+  deleted afterwards; its owner and rotation are in `SERVICES.md`. Expo's hosted EAS service is used only if the
+  founder approves it as a new service. Store submission is a founder step.
+- **`fastapi-service`** (new): uv workspace, ruff, pyright strict, Pydantic v2, import-linter boundaries, Alembic
+  with explicit-SQL invariants, an in-image boot check, money as `int` or `Decimal`, never float.
+- Lint and format configs ship from the first commit (§9.2).
 
-## 6. Memory and records: how a fresh session resumes
+### 6.10 Step 12: go to production, once, at the end (decided)
 
-**Files, in reading order** (product repo):
+Steps 0–11 make only **portable** decisions ("Postgres 16, S3-compatible storage, Kubernetes with Gateway API, one
+region plus a backup copy"). Step 12 binds them to real infrastructure:
+1. **"Everything works on local Kubernetes and the integration wave passed. Is it time to go to production?"**
+2. **Infra intake, "what do you already have?"** Cloud account and provider · an existing cluster or a new one ·
+   regions · domain and DNS · container registry · secrets store · object storage · managed database (if chosen) ·
+   email domain · budget ceiling → `docs/production/INFRA.md` + ADRs.
+3. **"What I need from you"** → `NEEDS.md`, each item also in `WAITING.md`: accounts, logins, approvals, every
+   `terraform apply` (always the founder's), and secrets placed directly in the vault, never pasted into chat.
+4. **Provision:** the agent fills the infra profile (§11.8); the founder applies it; an applied plan shows `0 to
+   destroy`. ArgoCD is bootstrapped.
+5. **Cloud staging first (decided):** deployed through GitOps and **verified (cloud)** (§5). Then **one buffer
+   wave** for whatever real infrastructure reveals.
+6. **Production:** promoted from the verified staging SHA by PR and verified (cloud). Then the store submissions
+   and the sitemap submissions.
+7. **`LAUNCH.md`, a blocking checklist.** "Go live" is refused until every item is ticked or carries a recorded
+   exception: processor agreements signed · payment and SMS providers approved for live use · store approvals ·
+   legal pages live · compliance confirmed once more (§6.1) · a restore tested in the cloud · the load targets of
+   §6.3 met · an accessibility audit passed (automated plus one manual screen-reader pass) · the three alerts tested
+   · the observability decision recorded (install the observability extension, or accept the risk in an ADR).
+8. **The founder's "go live".** The Grow loop starts.
 
-1. `CLAUDE.md`, about 150 lines or fewer: what the project is, the authority chain, the commands, and pointers. No
-   history.
-2. `STATE.md`, **hard cap 60 lines (hook-enforced):** `STEP` · `LAST` · `NEXT` · `LEFT BEHIND` (red/unrun tests,
-   unfixed defects, carried findings) · `WAITING ON YOU` (only steps the agent cannot take; removed only on the
-   founder's word) · `OWNER` (the single writer) · `MODE` (solo | team; a missing MODE is treated as review-only).
-3. `decisions/NNNN-title.md`: ADRs. Dated, append-only. A superseded ADR gets `Superseded by NNNN` and is
-   never edited.
-4. `GLOSSARY.md`: one name per concept, used in the UI, API, database and code. The gate-2 reviewer checks it.
-5. `handoff/<branch>.md`: one file per working branch. The owner folds it into `STATE.md` on merge, then deletes it.
-   Never a shared file that every lane edits.
-6. `docs/archive/`: history moves here automatically. A hook moves overflow from `STATE.md` instead of letting it
-   grow.
+## 7. Memory and records
 
-**Rules:** one writer for `STATE.md` and the decision index (solo: the main session; team: the person or session on
-the `OWNER` line). Other sessions work in their own `git worktree` and write only their hand-off file. Timestamps come
-from `date`, never estimated. Every state-changing turn commits and pushes. Records merge at milestones, not every
-turn. A session start prints a short **opening block** (state, recommended next step, what needs approval). A session
-end prints a short **closing block** (done, changed, next, waiting on you, clear-safe yes/no).
+**Every session reads, in this order:**
+1. `CLAUDE.md` (≤ 150 lines): what the project is, where the rules live, the commands. No history.
+2. `PRODUCT.md`: the one-paragraph product statement.
+3. `STATE.md` (**≤ 60 lines, hook-enforced**): `STEP` · `WAVE` · `SLICES IN FLIGHT` (branch, worktree, owner) ·
+   `LAST` · `NEXT` · `LEFT BEHIND` (red or unrun tests, unfixed defects, carried findings) · `STALE` · `GROW DUE` ·
+   `OWNER` · `MODE` (solo | team; missing means review-only).
+4. `WAITING.md`: every step only the founder can take. Removed only on the founder's word. No size cap.
+5. `decisions/NNNN-*.md`: ADRs, dated, append-only, superseded by number.
+6. `GLOSSARY.md`: one name per concept across the UI, API, database and code (a gate-2 check).
+7. `handoff/<branch>.md`: one per working branch, folded into `STATE.md` on merge.
+8. `docs/archive/`: overflow and history, moved there automatically.
+9. `docs/rules-index.md`: where each rule lives.
 
-**Wave protocol (kept from the source workflow):** one approval starts one wave. The wave ends by verifying, updating the
-records, stating the next recommended wave, and **stopping**. The next wave is re-derived from the files, not
-inherited.
+**Rules.** One writer for `STATE.md` (solo: the main session; team: the person on `OWNER`). Other sessions work in
+their own `git worktree` and write only their hand-off. Timestamps come from `date`. Every state-changing step
+commits and pushes; records merge at milestones. A session starts with a short opening block (state, recommended
+next step, what needs approval) and ends with a closing block (done, changed, next, waiting on you, clear-safe).
+Before redoing work, a session checks the remote: a stalled agent may already have pushed.
 
-**Team mode differences (call):** approvals move to GitHub (PR reviews, `CODEOWNERS`, required checks,
-branch protection). Tickets are GitHub issues created from the spec. `WAITING ON YOU` names a person per item.
+**Wave protocol.** One approval starts one wave. The wave ends by verifying, updating the records, stating the next
+recommended wave, and **stopping**. The next wave is re-derived from the files.
 
-## 7. Agents and model policy
+**Team mode.** Parallel lanes, each in its own worktree with its own hand-off. Approvals move to GitHub (PR reviews,
+`CODEOWNERS`, required checks). `start` prints the `gh` commands for branch protection and runs them only after the
+founder says yes. Switching between solo and team is an ADR that updates `MODE`, `OWNER` and `CODEOWNERS`.
 
-Nine agents (`plugins/pavedline/agents/`; `growth` added by §5.5), each with one job. Every subagent prompt is self-contained (mode, branch,
-files to read, the question, report format).
+## 8. Agents and model policy
 
-| Agent | Job | Default mode |
+Nine agents (`plugins/pavedline/agents/`), one job each. Every subagent prompt is self-contained (mode, branch,
+files to read, the question, the report format). Read-only agents are restricted with `tools` / `disallowedTools`,
+because plugin agents ignore `permissionMode` (plugin docs, checked 2026-11-07).
+
+| Agent | Job | Access |
 |---|---|---|
-| researcher | market, competitor and vendor facts; cites a URL for every claim; definite / inferred / unknown | read-only |
-| architect | data, API, system and Helm/GitOps design | writes docs only |
-| designer | Figma design system + screens | writes Figma + design docs |
-| design-verifier | blind check of words, data, states and accessibility; never approves visuals | read-only |
-| builder | implements one slice, in its own worktree | execute (approval quoted in the prompt) |
-| reviewer | blind gate 2 + 3: reads the diff, never the summary; `VERDICT: APPROVE / REJECT` | read-only |
-| adversary | blind gate 3b: tries to break the code with concrete inputs; required on security-sensitive slices | read-only |
-| deployer | opens the GitOps PR, syncs, verifies the running state | execute |
-| growth | SEO foundation, content publishing loop, monthly Search Console review (§5.5) | writes content drafts; publishing needs the founder |
+| researcher | market, competitor and vendor facts; a URL per claim; definite / inferred / unknown | read-only + web |
+| architect | system, data, API, Helm and GitOps design | docs only |
+| designer | the Figma design system and screens | Figma + design docs |
+| design-verifier | a blind check of words, data, states and accessibility; never approves visuals | read-only |
+| builder | one slice, in its own worktree | execute (approval quoted in the prompt) |
+| reviewer | blind gates 2 and 3: reads the diff, never the summary; `APPROVE` / `REJECT` | read-only |
+| adversary | blind gate 3b: breaks the code with concrete inputs | read-only |
+| deployer | GitOps PRs, syncs, verification | execute |
+| growth | SEO foundation, the publishing loop, the monthly review | content drafts; publishing needs the founder |
 
-**Model policy lives in one file:** `plugins/pavedline/config/models.yaml` (call). Default: orchestrator and designer
-`opus`, everyone else `sonnet`, never `haiku` (this matches the founder's current rule). Each report's first line records
-the model that actually ran. A subagent that fails is re-dispatched once. Third-party reviewer agents are never used,
-because their own model settings would bypass `models.yaml`. Their skills may be used as checklists.
+**Model policy lives in one file, `config/models.yaml`.** Default: the main session and the designer use `opus`; all
+other agents use `sonnet`; `haiku` is never used. Agent frontmatter `model:` is static, so a script **generates**
+each agent's `model:` line from `models.yaml`, and CI fails on drift. Each report's first line records the model
+that ran. A failed subagent is re-dispatched once. Third-party reviewer agents are not used, because their own model
+settings would bypass `models.yaml`; their skills may be used as checklists.
 
-## 8. Quality gates (per build slice)
+## 9. Quality gates
 
-Kept from the source workflow, enforced by `quality-gates` + a PR check:
+### 9.1 The five gates (per slice)
 1. **TDD:** red first.
-2. **Code review:** a blind reviewer reads the diff. A reject means re-work, never arguing past it.
-3. **Security review:** tenancy, auth, secrets, injection, sensitive data in logs.
-3b. **Adversarial review:** required when a slice touches auth, tenancy, IAM, infra, CI, secrets, input parsing,
-   money or migrations. The threat model and stop rule are given in the first prompt. A fix round gets **one narrow
-   re-check**, and a full new review only when a high-severity finding was fixed.
-4. **Verification:** typecheck and the tests of the touched packages. The **full suite runs once, at the merge
-   gate**, on a branch up to date with main. Migrations are applied to a throwaway Postgres in CI. **Every image boots
-   in CI** before it ships. Lint counts as evidence only if a lint config exists.
-5. **Merge:** squash, on the remote. Then post-merge verification at deploy (§10.4).
+2. **Code review:** a blind reviewer reads the diff and checks architecture, layering, duplication, error handling,
+   types, naming, complexity, dead code and the glossary. A reject means rework, never arguing past it.
+3. **Security review:** the built-in `security-review`, briefed with tenancy, auth, secrets, injection and
+   sensitive-data checks. **3b. Adversarial review** is required when a slice touches auth, tenancy, IAM, infra, CI,
+   secrets, input parsing, payments or migrations. The threat model and the stop rule are in its first prompt; a fix
+   round gets one narrow re-check, and a full new review only after a high-severity fix.
+4. **Verification:** typecheck, lint, the touched packages' tests, migrations on a throwaway Postgres, the
+   **accessibility checks** (axe on web app pages; the mobile accessibility linter and screen-reader labels), and
+   every image booting in CI. The full suite runs once, at the merge gate, on a branch up to date with main.
+5. **Merge:** squash on the remote; then deploy to local and verify (step 10).
 
-PR line (CI fails if it is missing or malformed):
+The PR line (CI fails if it is missing or malformed):
 `Gates: TDD ✓ · review ✓ (n found, m fixed) · security ✓ · adversarial ✓|n/a · verification ✓`.
-`✗` is not a valid value. Every unfixed finding is listed as `accepted — <reason>`.
+`✗` is not a valid value; every unfixed finding is listed as `accepted — <reason>`.
 
-### 8.1 The automated layer under gates 2 and 3
+### 9.2 The automated layer
+A failing scanner fails CI like a failing test, and reviewers receive the scanner output with the diff. Licences
+checked 2026-11-07.
 
-The AI reviewers judge design, logic and tenant safety. **Tools that never get tired** catch the rest. All are free
-(licences checked on GitHub, 2026-11-07). **A failing scanner fails CI, exactly like a failing test**, and the
-reviewers receive the scanner output with the diff.
-
-| Layer | Tool (licence) | Catches |
+| Layer | Tool | Catches |
 |---|---|---|
-| Code quality, TypeScript | Biome (Apache-2.0) or ESLint, plus `tsc` strict | style, likely bugs, unused code, type errors |
-| Code quality, Python | ruff + pyright strict + import-linter boundaries | lint, type errors, layering violations |
-| Security of first-party code | CodeQL (GitHub code scanning, free for public repos) and Semgrep (LGPL-2.1, used as a tool, not linked) | injection, unsafe patterns, taint flows |
-| Dependencies | **Renovate** (AGPL-3.0, run as a CI tool) for updates; Dependabot security alerts (GitHub built-in) + Trivy (Apache-2.0) for known vulnerabilities | outdated and known-vulnerable packages, images, charts, actions |
-| Containers | Trivy | vulnerable base images and OS packages |
-| Infrastructure as code | Checkov (Apache-2.0) | insecure Terraform, Kubernetes manifests and Helm values |
-| Running application | OWASP ZAP baseline (Apache-2.0) against the local cluster | missing security headers, exposed endpoints |
-| Secrets | gitleaks (MIT) | committed keys and tokens |
-| Tenancy | the RLS schema check + cross-tenant leak fixture (§11) | a table or path that escapes tenant isolation |
+| TypeScript quality | Biome (Apache-2.0) or ESLint, plus `tsc` strict | style, likely bugs, type errors |
+| Python quality | ruff + pyright strict + import-linter | lint, types, layering |
+| First-party code security | **Semgrep** (LGPL-2.1, run as a tool) by default; **CodeQL** where available (free for public repos; private repos need GitHub's Code Security licence) | injection, unsafe patterns |
+| Dependency updates | **Renovate** (AGPL-3.0, run as a CI tool, §11.9) | outdated packages, images, charts, actions |
+| Known vulnerabilities | Dependabot security alerts + Trivy (Apache-2.0) | vulnerable packages and images |
+| Infrastructure as code | Checkov (Apache-2.0) | insecure Terraform, manifests and Helm values |
+| Running app | OWASP ZAP baseline (Apache-2.0), against the local cluster | missing headers, exposed endpoints |
+| Secrets | gitleaks (MIT) | committed keys |
+| Tenancy | the RLS schema check + the leak fixture (§12.3) | isolation gaps |
+| Accessibility | axe (web app), Lighthouse (site), the mobile accessibility linter | WCAG 2.2 AA failures |
 
-**The lint and format configs ship with the stack pack from the first commit.** A lint step without a config does
-not run, so it cannot count as evidence. Gate 4 cites lint only when its config exists and CI ran it.
+Lint counts as evidence only when its config exists and CI ran it; the stack pack ships the configs.
 
-## 9. Diagrams
+### 9.3 Hooks versus CI
+**CI is the authoritative enforcer.** Plugin hooks run in interactive and `claude -p` sessions when the plugin is
+loaded; they do **not** run under `--bare`, outside Claude, or when hooks are disabled (checked 2026-11-07). So hooks
+are early warnings, **except** the secret and `.env` guards and the cluster-context guard, which block. Each of these
+also has a CI backstop (gitleaks; the deny-list scan).
 
-- Every folder that holds architecture has `ARCHITECTURE.dot`: repo root, `infra/`, `infra/k8s/`,
-  `infra/terraform/`, each service, `docs/data/` (`erd.dot`), `docs/architecture/`. **Every plan has its own `.dot`.**
-- GitHub does **not** render `.dot` (verified: GitHub's diagram docs list Mermaid, GeoJSON, TopoJSON and ASCII STL).
-  So CI runs `dot -Tcanon -o /dev/null` (validate; exits 1 on a syntax error. `-Tnull` is not available in every Graphviz build: verified absent in Graphviz 16.1.0, 2026-11-07) and `dot -Tsvg` (render), and commits the SVG next to the source. READMEs
-  embed the SVG with light and dark variants.
-- **Drift check (hook + CI):** a change under a folder that has an `ARCHITECTURE.dot`, with no change to that `.dot`,
-  fails. The fix is to update the diagram, or to state `diagram unchanged: <reason>` in the PR.
-- A shared style file (`docs/diagram-style.md` + a `.dot` snippet) keeps colours and shapes consistent.
+## 10. Diagrams
 
-## 10. Production architecture templates
+- Every folder that holds architecture has an `ARCHITECTURE.dot` (the repo root, `infra/`, `infra/k8s/`, each
+  service, `docs/architecture/`); `docs/data/erd.dot`; every plan has its own `.dot`.
+- GitHub does not render `.dot` (its diagram docs list Mermaid, GeoJSON, TopoJSON and ASCII STL). CI validates with
+  `dot -Tcanon -o /dev/null` (exit 1 on a syntax error; `-Tnull` is absent in some builds, e.g. Graphviz 16.1.0) and
+  renders with `dot -Tsvg`; the SVG is committed next to its source.
+- **Drift check:** a change under a folder that has an `ARCHITECTURE.dot`, with no change to that `.dot`, fails CI
+  unless the PR states `diagram unchanged: <reason>`.
+- A shared style file keeps colours and shapes consistent.
 
-### 10.1 GitOps: the backbone
-Git is the only way anything reaches a cluster. Infrastructure (Terraform), cluster add-ons, apps, Helm values and
-image tags all live in git. ArgoCD reconciles. The `deployer` agent opens PRs and never runs `kubectl apply` or
-`helm upgrade` by hand. A rollback of code and manifests is a git revert; migrations and mobile need more (§10.4b). Kept from the source workflow:
-- **ApplicationSets** over `k8s/addons/*`, auto-sync + self-heal.
-- **ApplicationSets** over `k8s/apps/*`, **manual sync** with `preserveResourcesOnDeletion: true`, so that renaming a
-  folder can never delete a database.
-- CI builds the image and commits the tag bump; it never syncs.
+## 11. Production architecture
 
-### 10.2 Helm base chart (`templates/infra/helm/base-chart/`, a library chart)
-Every workload gets these defaults: liveness/readiness/startup probes · resource requests and limits · a
-PodDisruptionBudget · an optional HPA · topology spread across nodes · non-root, read-only root filesystem, dropped
-capabilities, a seccomp profile · a dedicated least-privilege ServiceAccount per workload · NetworkPolicy
-default-deny + explicit allows · a priorityClass · migrations as an ArgoCD **PreSync Job**, so the schema exists
-before the new image starts · per-environment values (`values-staging.yaml`, `values-production.yaml`). Covered by
-`helm lint` + `helm template` + a schema test in CI.
+### 11.1 GitOps
+Git is the only way anything reaches a cluster: Terraform, add-ons, apps, Helm values, image tags. ArgoCD
+reconciles. ApplicationSets cover `k8s/addons/*` (auto-sync, self-heal) and `k8s/apps/*` (**manual sync**,
+`preserveResourcesOnDeletion: true`, so renaming a folder can never delete a database). CI builds images and commits
+the tag bump; it never syncs. The `deployer` opens PRs; it never runs `kubectl apply` or `helm upgrade` against a
+cloud cluster.
 
-### 10.3 Database: chosen at step 0 (founder)
-- **In Kubernetes:** a CloudNativePG cluster (verified current: v1.30.1, 2026-09-23). It has 3 instances with
-  synchronous replication and anti-affinity, and backups through the **Barman Cloud CNPG-I plugin** (verified:
-  `cloudnative-pg/plugin-barman-cloud` v0.15.1) to S3-compatible object storage. A PgBouncer pooler runs in
-  transaction mode. A **restore drill script** is included and is part of production readiness.
-- **Managed service:** the chart takes the connection string from a Kubernetes Secret, plus a network allow-list,
-  with nothing else in-cluster. The ADR records the provider, the backup policy and the restore test.
-- Both: a separate app DB role and migration DB role (least privilege), and reversible migrations.
+### 11.2 Helm base chart (a library chart)
+Probes · requests and limits · a PodDisruptionBudget · an optional HPA · topology spread · non-root, read-only root
+filesystem, dropped capabilities, seccomp · a dedicated least-privilege ServiceAccount per workload · NetworkPolicy
+default-deny with explicit allows · a priorityClass · migrations as an ArgoCD **PreSync Job** · per-environment values
+(`values-local.yaml`, `values-staging.yaml`, `values-production.yaml`). Tested with `helm lint`, `helm template`, a
+schema test and Checkov.
 
-### 10.4 Deploy and post-deploy verification (`deploy` skill)
-1. Migrations on staging, then production, **before** the image syncs.
-2. CI green, and the tag-bump commit matches the merge SHA.
-3. Manual sync of each changed app.
-4. **Verify the running state:** pods run the new SHA, 0 restarts, health endpoint ok, plus one change-specific
-   read-only check that the PR names.
-5. On failure: revert and record it. Before launch, "staging" is the local cluster; at step 11 a **cloud staging** environment is created first and every later release passes through it (founder).
+### 11.3 Database
+- **In Kubernetes:** CloudNativePG (v1.30.1, released 2026-09-23): 3 instances, synchronous replication,
+  anti-affinity, backups through the **Barman Cloud CNPG-I plugin** (v0.15.1) to S3-compatible storage, a PgBouncer
+  pooler in transaction mode, and a restore-drill script that is part of production readiness.
+- **Managed:** the chart reads the connection string from a Secret; the restore test is a **gate** before launch.
+- Both: separate owner (migration), runtime and admin roles (§12.3); reversible migrations.
 
-### 10.4b Release compatibility: why "rollback = git revert" is not enough
+### 11.4 Release compatibility ("rollback = git revert" is not enough)
+A revert rolls back code and manifests. It does not undo a migration that already ran, and it does not reach a
+mobile app already on people's phones.
+- **Expand / contract migrations:** a release only adds; removals ship later, once nothing uses the old shape. The
+  previous image always runs against the new schema. Every migration has a tested `down` path, rehearsed on local.
+- **API versioning:** `/v1`; a breaking change needs a new version and a deprecation window. CI diffs the OpenAPI
+  contract and fails on an unversioned breaking change.
+- **Mobile minimum version:** the API exposes it, and below it the app shows a blocking "please update" screen
+  (designed in step 7).
+- **Staged rollout and feature flags:** the stores' phased rollouts; risky web and API features behind flags (a flags
+  table first; a flag service only through the ask-first rule).
+- **Store lead time:** in the lead-time register (§6.3).
 
-A git revert rolls back **code and manifests**. It does **not** roll back a migration that already ran, and it does
-not reach mobile apps already on people's phones. So:
-- **Expand / contract migrations.** A release only **adds** (new columns, tables, nullable fields, and both shapes
-  accepted). Removal of the old shape ships in a **later** release, after nothing uses it. So the previous image
-  always runs against the new schema, and reverting the image is safe. Each migration also ships a tested `down` path,
-  and the rollback is rehearsed on the local cluster and staging.
-- **API versioning.** The public API is versioned (`/v1`). A breaking change needs a new version and a documented
-  deprecation window. The OpenAPI contract is diffed in CI, and a breaking diff without a version bump fails.
-- **Mobile minimum version.** The API exposes a minimum supported app version. The app checks it on start and shows
-  a blocking "please update" screen below it (designed in step 7). Old app versions must keep working until the
-  minimum is raised.
-- **Staged rollout.** Mobile releases use the stores' phased rollout. Risky web and API features go behind **feature
-  flags** (a simple flags table first; a flag service only via the ask-before-new-service rule).
-- **Store lead time.** The plan reserves time for App Store and Play review before any date that depends on mobile.
+### 11.5 Deploy and verification
+1. Migrations run first (PreSync) on the target environment.
+2. CI is green; the tag-bump commit matches the merge SHA; a CI run exists for the SHA (a skip-CI marker in a squash
+   message builds nothing).
+3. Each changed app is synced.
+4. **Verify the running state**, never the `Synced` label: "verified (local)" or "verified (cloud)" from §5, plus the
+   change-specific read-only check the PR names in its `Post-deploy check:` field.
+5. On failure: revert, record it, and apply §11.4.
 
-### 10.5 Infra profile: OCI/OKE (`templates/infra/terraform/profiles/oci-oke/`)
-Derived from a production OCI setup with **every identifier turned into a placeholder**: VCN, subnets, OKE (arm64
-Ampere node pools with labels/taints in native Terraform, no cloud-init), IAM, Vault → Kubernetes Secret, the
-object-storage backup bucket and its credentials. State-protection rules are in the profile README: an applied plan must show
-`0 to destroy` and nothing replaced, there are no state surgery commands, and removals are calculated item by item.
-Cloudflare Tunnel (`cloudflared` add-on) is the ingress: no load balancer, no inbound ports. Cluster access through
-Teleport is an optional add-on.
+### 11.6 Local Kubernetes: the test bed (decided)
+- **Facts (2026-11-07):** Apple Silicon is arm64, like OCI Ampere nodes, so production images run unchanged. kind
+  v0.33.0 (Apache-2.0), Colima v0.10.3 (MIT), Tilt v0.37.8 (Apache-2.0). **ingress-nginx is retired** by Kubernetes
+  (no security fixes after March 2026), so the templates use **Gateway API** (a controller chosen and pinned when the
+  skill is written) or port-forward.
+- **Machine:** 16 GB of memory minimum, 32 GB recommended; Colima started with 4 CPUs and 10 GB (default).
+- **The `local-cluster` skill** creates `kind-pavedline-<project>` with `extraPortMappings` and a **local image
+  registry** (the kind local-registry recipe), so every build pushes a unique tag and ArgoCD pulls it the way it
+  would from a real registry. It installs the same add-ons as production from the same manifests (ArgoCD, CNPG, the
+  apps). An S3-compatible store for the restore drill is chosen and verified when the skill is written. It tears
+  everything down afterwards.
+- **Two loops:** fast (Tilt live reload) and GitOps (ArgoCD in kind syncing from the branch).
+- **Safety:** on the local cluster the agent may apply and destroy freely; a hook blocks every mutating `kubectl`,
+  `helm` or `argocd` command whose context is not `kind-pavedline-*`, including a `--context` override.
+- **CI runs the same script** on GitHub's arm64 runners (free for public repos). "Verified in CI" is claimed only
+  after a real run passes.
+- **What local cannot prove:** real DNS and TLS, the tunnel, cloud IAM and vault, multi-node failure, real load and
+  real webhooks. The integration wave covers webhooks; step 12 covers the rest.
 
-### 10.5b Local Kubernetes: the main test bed (founder)
-- **Facts (2026-11-07):** Apple Silicon Macs are arm64, the same architecture as OCI Ampere nodes, so production
-  images run locally unchanged. kind v0.33.0 (Apache-2.0), Colima v0.10.3 (MIT), Tilt v0.37.8 (Apache-2.0).
-  **ingress-nginx is retired** by Kubernetes, with no security fixes after March 2026 (kubernetes.dev blog,
-  2025-11-12), so the templates use **Gateway API** or port-forward, never ingress-nginx.
-- **Default (call):** Colima as the container runtime + **kind** as
-  the cluster. Docker Desktop or OrbStack work too, if the user already has one.
-- **New `local-cluster` skill:** the agent creates `pavedline-<project>` and installs the **same** add-ons as
-  production from the **same** GitOps manifests (ArgoCD, CNPG, the apps). An S3-compatible store for the backup and
-  restore drill is chosen and verified when the skill is written. The skill tears the cluster down afterwards.
-- **Two loops:** *fast*, where Tilt rebuilds and live-reloads in seconds; *GitOps*, where ArgoCD inside the local
-  cluster syncs from the branch, proving the manifests deploy.
-- **Safety:** on the local cluster the agent may apply and destroy freely. **A hook blocks every mutating
-  `kubectl` / `helm` / `argocd` command whose context is not `kind-pavedline-*`**, which protects production.
-- **CI runs the same script** on GitHub's arm64 runners on every PR, so local and CI give the same result.
-- **What local cannot prove** (stated in the docs): Cloudflare Tunnel, real DNS/TLS, cloud IAM/Vault, real multi-node
-  failure, real load. These belong to the user's own staging cluster.
+### 11.7 CI templates
+arm64 image builds on native runners + the tag bump · unit tests, typecheck and lint · DB tests (a throwaway
+Postgres built from the migrations) at the merge gate · the local-cluster end-to-end job · `.dot` validate, render and
+drift · the scanners (§9.2) · Helm lint and template · the OpenAPI breaking-change diff · the gates-line check · the
+deny-list scan · Renovate. **Cost note:** GitHub-hosted runners are free for public repos. On private repos, Linux
+arm64 minutes and especially macOS minutes (mobile builds) are billed (GitHub runner pricing, checked 2026-11-07).
 
-### 10.9 Operations basics (minimum for a production SaaS)
-- **Backups for every datastore**, not only Postgres. Object-storage buckets get versioning and a lifecycle policy.
-  A managed database's restore test is a gate, not a note: the restore is run and recorded before launch.
-- **Email deliverability.** SPF, DKIM and DMARC on the sending domain, bounce and complaint handling, and an
-  unsubscribe link on every non-transactional email. Checked before the first real email.
-- **Secrets rotation.** Every secret has an owner and a rotation procedure in `SERVICES.md`. Break-glass access is
-  written down in `RUN.md`: who holds it and how it is audited.
-- **Staging never holds production data.** Staging is seeded with generated data. A copy of production into staging
-  is forbidden.
-- **Two alerts only (founder; the one exception to "observability is out of scope"):** an **uptime check** on the
-  public endpoints and an **alert when a backup fails**. Everything else waits for the observability agent.
-- **Cost guardrail.** A cloud budget alarm is configured with the infra profile. This is not a per-tenant cost model
-  (the founder ruled that out as blocking); it only stops a runaway bill.
+### 11.8 Infra profiles
+- **Bring your own Kubernetes (default, generic):** a kubeconfig context, the ArgoCD bootstrap and the add-ons. It
+  works on any conformant cluster with Gateway API.
+- **OCI/OKE (Terraform):** VCN, subnets, OKE with arm64 Ampere node pools (labels and taints in native Terraform, no
+  cloud-init), IAM, Vault → Kubernetes Secret, the backup bucket, a budget alarm. Every identifier is a placeholder.
+  State protection: an applied plan shows `0 to destroy` and nothing replaced; no state surgery; removals are
+  calculated item by item.
+- Cloudflare Tunnel as the ingress (no load balancer, no inbound ports) with a Gateway behind it. Teleport is optional.
+- Other clouds are contributions.
 
-### 10.6 CI templates (`templates/.github/workflows/`)
-- arm64 image build on native runners + tag bump
-- unit tests + typecheck on PRs
-- DB tests (throwaway Postgres built from the migrations) at the merge gate only
-- `.dot` validate/render + drift check
-- secret scan (gitleaks, MIT; call)
-- Renovate (self-run in CI, weekly) for every pinned version (§18.8)
-- Helm lint/template
-- the gates-line check
-- `claude plugin validate` (in Pavedline's own repo)
+### 11.9 Versions and updates
+Templates pin **exact** versions: images by digest, charts, CNPG and its plugin, Next.js, Python via `uv.lock`, and
+GitHub Actions by SHA. **Renovate** (AGPL-3.0; v44.222.2 on 2026-11-07; its managers include `argocd`,
+`helm-values`, `helmv3`, `kubernetes`, `dockerfile`, `github-actions`, `npm` and `pep621`, plus regex managers) runs
+**inside our own CI** through `renovatebot/github-action`. It needs a token: a personal access token (default) or
+the user's own GitHub App. `GITHUB_TOKEN` is not used, because PRs it opens do not trigger CI. The token is listed in
+`SERVICES.md` with a rotation procedure.
+- Weekly; minor and patch updates grouped; a dependency-dashboard issue.
+- **Auto-merge only** patch updates of development tooling, after CI is green.
+- **Never auto-merge** cluster add-ons, CNPG, ArgoCD, base images or Terraform providers. These open a PR that must
+  pass the local-cluster test and the five gates.
 
-### 10.7 Secrets
-Never in git. The OCI profile uses OCI Vault → Kubernetes Secret via Terraform, and the Vault value is authoritative.
-`SERVICES.md` records **where** each key lives, never the key. Hooks block reading `.env*` and writing anything that
-matches a secret pattern.
+### 11.10 Secrets
+Never in git. The vault is authoritative (OCI profile: OCI Vault → Kubernetes Secret via Terraform). Provider test
+keys for local live in a gitignored `.env.local` that only the local cluster's Secret generator reads; the hooks block
+agents from reading it. Mobile signing material lives in GitHub encrypted secrets (§6.9). `SERVICES.md` records
+**where** each secret lives, its owner and its rotation, never the value.
 
-## 11. Skills, dependencies, hooks and the cockpit mod
+### 11.11 Operations basics
+- **Backups for every datastore**, including bucket versioning and lifecycle rules.
+- **Email:** SPF, DKIM and DMARC, bounce and complaint handling, unsubscribe on non-transactional mail.
+- **Secrets rotation** and **break-glass** procedures in `RUN.md`.
+- **Staging never holds production data.**
+- **Three alerts (decided; the only exception to "observability is out of scope"):** (1) uptime of the public
+  endpoints; (2) a backup failed; (3) **a scheduled job failed or is late**.
+- **Cost guardrail:** a cloud budget alarm with the infra profile (not a per-tenant cost model).
 
-**Dependencies, installed, not copied (call: keeps licences clean and updates flowing). All verified on GitHub
-2026-11-07:**
+## 12. Skills, dependencies, hooks and the cockpit
 
-| Plugin / tool | Licence | Used for |
-|---|---|---|
-| obra/superpowers (v7.0.2) | MIT | build discipline (TDD, plans, worktrees, review, verification) |
-| mattpocock/skills | MIT | grilling, grill-with-docs, to-tickets, retro |
-| anthropics/knowledge-work-plugins (product-management) | Apache-2.0 | competitive-brief, synthesize-research |
-| nextlevelbuilder/ui-ux-pro-max-skill (v2.15.0, needs Python 3) | MIT | style/palette/font reference for step 7 |
-| Figma official plugin + MCP | Figma terms; **a Full seat is needed to write to the canvas** | step 7 |
-| microsoft/playwright-mcp | Apache-2.0 | competitor-site scraping (default) |
-| unclecode/crawl4ai | Apache-2.0 (attribution required) | optional bulk crawl |
-| pbakaus/impeccable | Apache-2.0 (verified 2026-11-07) | design critique |
+### 12.1 New skills (32)
+start · architecture-intake · compliance · state · doctor · competitor-teardown · pricing-model · market-size · spec ·
+system-design · backend-evaluate · domain-model · db-schema · multi-tenancy · api-contract · system-architecture ·
+helm-base-chart · gitops · threat-model · fastapi-service · design-system-contract · plan-graph · quality-gates ·
+deploy · local-cluster · mobile-build · go-to-production · lessons · seo-foundation · content-ops · diagram ·
+project-registry.
 
-**Borrowed with credit, not installed:** sickn33/agentic-awesome-skills `saas-multi-tenant` (MIT) is the base of
-`multi-tenancy`. supabase/agent-skills `supabase-postgres-best-practices` (MIT) is a reference for `db-schema`. ECC
-(MIT) is *ideas only*: project memory, session-summary hooks, the learning loop and guard hooks. ECC is **not
-installed**, because it overlaps superpowers and its agents declare their own models, which conflicts with the single model-policy file.
+`project-registry` keeps `RUN.md`, `SERVICES.md` and `LINKS.md` current. `diagram`, `project-registry` and `doctor`
+are used in every step. Each skill does one job, has a short `SKILL.md`, and keeps detail in `references/`. Skills
+that agents preload are **not** marked `disable-model-invocation`, because that flag prevents preloading.
 
-**New skills (30: + `seo-foundation`, `content-ops`, `local-cluster`, `go-to-production`; the earlier "21" was a miscount; `doctor` added by §18.4; `system-design` + `backend-evaluate` added with step 4):** start · architecture-intake · state · competitor-teardown ·
-pricing-model · market-size · spec · system-design · backend-evaluate · domain-model · db-schema · multi-tenancy · api-contract · system-architecture ·
-helm-base-chart · gitops · threat-model · fastapi-service (stack pack) · design-system-contract · plan-graph · quality-gates · deploy · lessons · seo-foundation · content-ops · local-cluster · go-to-production · diagram · project-registry
-· doctor (`diagram`, `project-registry` and `doctor` are cross-cutting). Each skill does one job, has a short `SKILL.md`, and keeps
-detail in `references/`.
+### 12.2 Dependencies (installed, never copied)
 
-**`multi-tenancy` + `db-schema`: lessons from production, added on top of the base:**
-- a tenant key on every tenant table, enforced by a migration CI check
-- row-level security as the backstop, set with **`SET LOCAL` inside a transaction**, because session `SET` and
-  session advisory locks break under PgBouncer transaction mode
-- a cross-tenant leak test at the merge gate
-- reversible migrations applied before the image
-- big sums read as text, never overflowing BIGINT
-- separate admin roles and routes
-- tenant provisioning in one transaction
-
-**Tenant isolation: the non-negotiable rules (enforced, not advised):**
-- The runtime database role **does not own** any table and **has no `BYPASSRLS`**. Migrations run under a separate
-  owner role. Admin and reporting access uses a third, audited role.
-- Every tenant table has `tenant_id NOT NULL`, **`ENABLE` and `FORCE ROW LEVEL SECURITY`**, and a policy on
-  `current_setting('app.tenant_id')`. **A CI check reads the real schema and fails if any tenant table lacks any of
-  these.** Global tables are listed explicitly in an allow-list.
-- The tenant is set with **`SET LOCAL` inside the transaction** for every request **and every background job,
-  webhook handler and scheduled task**. Session `SET` and session advisory locks are forbidden under PgBouncer
-  transaction mode.
-- File storage keys start with the tenant id, and signed URLs are issued only after the same tenant check.
-- **The cross-tenant leak test is a fixture, not a sample.** Two tenants with data; every API endpoint, every job
-  type and every file path is exercised as tenant A against tenant B's ids, and must fail. It runs at the merge gate.
-  A new endpoint or job without leak-test coverage fails CI.
-
-**Competitor scraping rules:** Playwright MCP by default. Respect robots.txt and each site's terms. **Review sites
-(G2, Capterra) only through manual export or official APIs.** G2's terms could not be verified, so the kit does not
-assume scraping is allowed. Firecrawl self-host is documented only, with an AGPL-3.0 warning.
-
-**Hooks (settings hooks; they work everywhere, including `claude -p` and CI):** block `.env*` reads and
-secret-pattern writes · `STATE.md` 60-line cap and auto-archive · `.dot` drift warning · `CLAUDE.md` size warning
-(about 150 lines) · gates-line check on PR creation · block `--no-verify` and force-push to main · session-start reads
-`STATE.md` and prints the opening block.
-
-**`pavedline-cockpit`, an optional mod (call).** Facts: mods run inside Claude Code (v2.1.287 or later), can draw a
-pane and add instant `/commands`, are **not sandboxed**, and draw nothing in `claude -p` or cloud sessions. So the
-cockpit is a **separate, optional plugin**: a pane showing step, next action, the open slice's gates and
-`WAITING ON YOU`, plus `/pavedline-status`. **Nothing depends on it.** Every rule is a settings hook.
-
-## 12. The public face: README and docs
-
-**README top to bottom:**
-1. Name + tagline + badges (licence, version, CI).
-2. **The flow diagram (SVG from `docs/flow.dot`), light and dark.**
-3. "Why Pavedline": the gap is that no open kit takes a serious product through a complete, real SDLC to verified
-   production through GitOps. Three or four lines, then the thirteen steps.
-4. "What you get": skills, agents, hooks, templates and infra, as a short table with links.
-5. **"This is for serious projects": requirements, shown plainly:**
-
-| You need | Why | Cost note |
-|---|---|---|
-| GitHub account (+ GHCR) | repo, CI, images | free tier works for public repos |
-| Claude Code (v2.1.287+ for the optional cockpit) | runs the factory | Claude plan or API |
-| Figma, **Full seat** | step 7 writes to the canvas | paid |
-| **Apple Developer Program** | publish the iOS app | yearly fee |
-| **Google Play Console** | publish the Android app | one-time fee |
-| Google Search Console + Bing Webmaster Tools | submit sitemaps, monthly SEO review | free |
-| A Kubernetes cluster: OCI/OKE profile included (or bring your own) | runs staging + production | cloud bill |
-| A domain + Cloudflare account | DNS, TLS, Tunnel ingress | domain cost |
-| S3-compatible object storage | database backups | small |
-| Local tools: git, gh, Node 22, Python 3 + uv, Graphviz, Docker, kubectl, helm, terraform | build, test, diagrams | free |
-| Optional: managed Postgres, Teleport | per step-0 answer | varies |
-
-6. Quick start: install → `/pavedline:start` → what happens in the first hour.
-7. **"Who's behind this":** Marwan Ghubein: DevOps, DevSecOps, AI platform engineering and **AI architecture**
-   experience. Pavedline is built from running a production platform end to end (Kubernetes, GitOps, security,
-   agent-driven delivery). Link: [LinkedIn](https://www.linkedin.com/in/marwan-ghubein/). No employer is named
-   (founder, 2026-11-07).
-8. Licence, contributing, credits (every dependency and borrowed skill).
-
-### 12.1 Credits on GitHub (founder)
-
-The README carries a **"Built on the shoulders of"** section. It is a short table, near the top, after "What you get",
-so people see exactly what they are installing and who made it. `CREDITS.md` holds the full list. A
-`THIRD_PARTY_NOTICES.md` keeps the original copyright and licence text of anything *adapted* into this repo; MIT and
-Apache-2.0 both require that. A CI check fails if a dependency is added to the marketplace or `doctor` without a
-`CREDITS.md` row. Licences verified on GitHub on 2026-11-07:
-
-| Project | Author | Licence | How Pavedline uses it |
+| Plugin / tool | Licence | Used for | How it is installed |
 |---|---|---|---|
-| superpowers | Jesse Vincent (obra) | MIT | **installed**: the build-discipline backbone |
-| skills (grilling, grill-with-docs, to-tickets, retro) | Matt Pocock | MIT | **installed**: step 2 grill, team tickets, retros |
-| knowledge-work-plugins (product-management) | Anthropic | Apache-2.0 | **installed**: competitive brief, research synthesis |
-| ui-ux-pro-max-skill | nextlevelbuilder | MIT | **installed**: step 7 style reference |
-| impeccable | Paul Bakaus | Apache-2.0 | **installed**: design critique |
-| Figma plugin + MCP | Figma | Figma terms | **installed**: step 7 |
-| Next.js workflow skills | Vercel (vercel/next.js) | MIT | **installed** (stack pack) |
-| agent-skills (React, web design, React Native) | Vercel Labs | no licence file detected | **installed only, never copied** |
-| Clerk skills | Clerk | no licence file detected | **installed only, never copied** (stack pack) |
-| playwright-mcp | Microsoft | Apache-2.0 | **installed**: competitor research |
-| crawl4ai | unclecode | Apache-2.0 (attribution required) | **optional**: bulk crawl; README attribution line |
-| saas-multi-tenant skill | sickn33 (agentic-awesome-skills) | MIT | **adapted with credit** into `multi-tenancy` |
-| supabase-postgres-best-practices | Supabase | MIT | **reference with credit** for `db-schema` |
-| Everything Claude Code (ECC) | Affaan Mustafa | MIT | **ideas only**: project memory, session summaries, guard hooks, learning loop |
-| spec-kit | GitHub | MIT | **ideas only**: the constitution → spec → plan → tasks chain |
-| BMAD-METHOD | BMad Code | licence not machine-detected (to check before citing beyond "inspired by") | **ideas only**: right-size the process |
-| Argo CD · CloudNativePG + barman-cloud plugin · Trivy | Argo Project · CNPG · Aqua Security | Apache-2.0 | **used by the templates** |
-| gitleaks | Gitleaks | MIT | **used by CI** |
-| Graphviz | Graphviz authors | EPL (to confirm) | **used** for every `.dot` |
+| obra/superpowers | MIT | build discipline | plugin dependency |
+| mattpocock/skills | MIT | grilling, grill-with-docs, to-tickets, retro | plugin dependency |
+| anthropics/knowledge-work-plugins (product-management, marketing) | Apache-2.0 | competitive brief, research synthesis, SEO audit, content | plugin dependency |
+| nextlevelbuilder/ui-ux-pro-max-skill | MIT | style reference (step 7) | plugin dependency |
+| pbakaus/impeccable | Apache-2.0 | design critique | optional |
+| Figma plugin + MCP | Figma terms; a **Full seat** writes to the canvas | step 7 | plugin dependency |
+| Clerk skills | no licence file detected | auth (stack pack) | `npx skills`; `doctor` prints the command |
+| vercel/next.js skills · vercel-labs/agent-skills | MIT · no licence file detected | stack pack | `npx skills`; `doctor` prints the command |
+| microsoft/playwright-mcp | Apache-2.0 | competitor research | shipped in the plugin's `.mcp.json`, pinned |
+| unclecode/crawl4ai | Apache-2.0 (attribution required) | optional bulk crawl | optional |
 
-Wording rule: "installed" means the user installs it from its own source, and Pavedline only references it.
-"Adapted" means code or text was changed and included, with the original notice kept. "Ideas only" means no code
-or text was copied.
+Dependencies are declared in `plugin.json`, and `marketplace.json` allow-lists their marketplaces. The docs say the
+allow-list **permits** cross-marketplace installs; they do not say the other marketplace is added automatically. So
+the README's install section adds each dependency marketplace explicitly, and v0.1 tests the install on a clean
+profile before claiming more (§17). `doctor` checks everything that loaded and prints the exact command for anything
+missing.
 
-### 12.2 Installable, not just downloadable (verified against the Claude Code plugin docs, 2026-11-07)
+### 12.3 `multi-tenancy` and `db-schema`: the non-negotiable rules
+The base is sickn33's `saas-multi-tenant` skill (MIT, adapted with credit), with Supabase's Postgres best practices
+(MIT) as a reference. Enforced:
+- The runtime role **does not own** any table and has **no `BYPASSRLS`**. Migrations run as a separate owner role;
+  admin and reporting use a third, audited role.
+- Every tenant table has `tenant_id NOT NULL`, **`ENABLE` and `FORCE ROW LEVEL SECURITY`**, and a policy on
+  `current_setting('app.tenant_id')`. **CI reads the real schema and fails** if any tenant table lacks one. Global
+  tables are explicitly allow-listed.
+- The tenant is set with **`SET LOCAL` inside the transaction** for every request **and every job, webhook handler
+  and scheduled task**. Session `SET` and session advisory locks are forbidden under PgBouncer transaction mode.
+- Storage keys start with the tenant id; signed URLs are issued only after the same tenant check.
+- **The cross-tenant leak test is a fixture:** two tenants; every endpoint, every job type and every file path is
+  exercised as tenant A with tenant B's ids, and must fail. A new endpoint or job without coverage fails CI.
+- Reversible, expand/contract migrations; large sums read as text so they never overflow BIGINT; tenant creation in
+  one transaction.
 
-Pavedline is a **Claude Code plugin marketplace** hosted in its own GitHub repo (`Marwan-G/pavedline`, personal
-account: founder). Users **install** it. They do not download or copy it:
+### 12.4 Hooks (shipped by the plugin)
+**Block:** `.env*` reads (except `.example`, `.sample` and `.template`) and secret-pattern writes · mutating cluster
+commands outside `kind-pavedline-*` · `--no-verify` and force-pushes to main · a `STATE.md` write over 60 lines (with
+an archive instruction). **Warn:** `CLAUDE.md` over 150 lines · `.dot` drift · a PR body without the gates line.
+**SessionStart:** reads `STATE.md`, `WAITING.md` and `PRODUCT.md` and prints the opening block. A hook that receives
+malformed input exits 0 with a stderr note (fail open), except the secret guard, which fails closed whenever its
+target path is readable.
 
+### 12.5 The cockpit mod and the observability seam
+- **`pavedline-cockpit`** (optional, separate plugin): a pane showing the step, wave, next action, the open slice's
+  gates and `WAITING.md`, plus `/pavedline-status`. Mods run inside Claude Code (v2.1.287+), are not sandboxed, and
+  draw nothing in `claude -p`. Nothing depends on the cockpit.
+- **The observability seam:** a reserved `k8s/addons/` slot and `docs/extending.md`, for a future observability agent.
+
+### 12.6 The ask-before-adding rule (its one home)
+Before any new service or billable resource, even a free one, state what it is, what it will do, why nothing already
+in use does it, and its verified cost. The founder approves. This applies to every row of §6.3, to Renovate's token
+choice, to EAS, analytics, flag services and providers.
+
+## 13. The public face
+
+**README, top to bottom (default):** name and one-line promise · a status line ("v0.1: steps 0–3 usable; the rest in
+development") · the flow diagram · built for / not for · the install commands · why Pavedline exists (sourced quotes
+and figures) · what makes it different (each row marked with its release) · "is this waterfall?" · the flow table ·
+requirements (accounts, costs, machine) · the roadmap · built on the shoulders of (credits) · who's behind this ·
+licence. Claims are made only for what the current release does.
+
+**Requirements:** GitHub (+ GHCR) · Claude Code · a Figma Full seat · the Apple Developer Program (yearly fee) ·
+Google Play Console (one-time fee) · a Kubernetes cluster at step 12 (OCI profile or your own) · a domain and a
+Cloudflare account · S3-compatible object storage · Google Search Console and Bing Webmaster Tools (free) · local
+tools (git, gh, Node 22, Python 3 + uv, Graphviz, a container runtime, kind, kubectl, helm, terraform) · a Mac or
+Linux machine with 16 GB of memory (32 GB recommended).
+
+**Credits (`CREDITS.md`, `THIRD_PARTY_NOTICES.md`):** every dependency in §12.2 and every adapted source in §12.3,
+with author, link, licence and how it is used ("installed", "adapted", "ideas only"). Ideas only: ECC (MIT), GitHub
+spec-kit (MIT), and BMAD (licence not machine-detected; cited as inspiration only). Used by the templates: Argo CD,
+CloudNativePG, Trivy, Checkov and ZAP (Apache-2.0), gitleaks (MIT), Graphviz. A CI check fails if a dependency is
+added without a credit row.
+
+**Who's behind this:** Marwan Ghubein: DevOps, DevSecOps, AI platform engineering and AI architecture experience;
+built from running a production platform end to end. LinkedIn link. No employer named (decided).
+
+**Install (personal account, decided):**
 ```
 /plugin marketplace add Marwan-G/pavedline
 /plugin install pavedline@pavedline
-/plugin install pavedline-cockpit@pavedline      # optional status pane (a mod)
+/pavedline:start
 ```
+Releases are tagged `pavedline--v<version>` with `claude plugin tag`, and `/plugin update` updates. Anthropic's
+plugin directory is an option after v1.0. Contributors load a clone with `claude --plugin-dir`.
 
-- **Dependencies install with it.** `plugin.json` declares superpowers, Matt Pocock's skills, Anthropic's
-  knowledge-work-plugins and the others as `dependencies`. They install automatically because Pavedline's
-  `marketplace.json` lists their marketplaces in `allowCrossMarketplaceDependenciesOn` (verified behaviour). Skills
-  installed with `npx skills` (Vercel, Clerk) cannot be declared, so `/pavedline:doctor` detects them and prints the
-  exact install command.
-- **Updates.** Each release is a git tag `pavedline--v<version>` (made with `claude plugin tag`), so users update
-  with `/plugin update` and can pin a version. `CHANGELOG.md` says what changed.
-- **Starting a product.** In a new empty repo, `/pavedline:start` copies the templates (records, GitOps core) and
-  begins step 0. The stack-specific templates arrive at step 6.
-- **Later (optional):** submit to Anthropic's plugin directory, once v1.0 is proven.
-- **Also documented:** loading from a local clone with `claude --plugin-dir`, for contributors.
+**`docs/`:** one page per step, solo vs team, environments, lessons, extending, FAQ. Every folder has a short README
+and its diagram.
 
-**`docs/`** has one page per step (what goes in, what comes out, who approves, an example), plus solo vs team,
-lessons learned (§14), extending (new infra profile, the observability slot), and FAQ. **Every folder has a short
-README + its diagram.**
-
-## 13. Repository layout
+## 14. Repository layout
 
 ```
 pavedline/
-├── README.md · LICENSE · CHANGELOG.md · VERSION · CONTRIBUTING.md · SECURITY.md
+├── README.md · LICENSE · CHANGELOG.md · VERSION · CONTRIBUTING.md · SECURITY.md · CREDITS.md · THIRD_PARTY_NOTICES.md
 ├── ARCHITECTURE.dot/.svg
-├── .claude-plugin/marketplace.json        → pavedline, pavedline-cockpit
-├── plugins/pavedline/{.claude-plugin/plugin.json, skills/, agents/, commands/, hooks/, config/models.yaml}
-├── plugins/pavedline-cockpit/             optional mod
-├── stacks/nextjs-fastapi/                 the default stack pack: web app · website + blog · Expo mobile · FastAPI
-├── templates/                             copied into a product repo by /pavedline:start
-│   ├── CLAUDE.md · STATE.md · GLOSSARY.md · RUN.md · SERVICES.md · LINKS.md · decisions/ · handoff/
-│   ├── docs/{business,spec,data,api,architecture,design,plans,retros,archive}/
-│   ├── infra/{helm/base-chart, k8s/{applicationsets,addons,apps}, terraform/profiles/oci-oke}/
-│   └── .github/{workflows/, CODEOWNERS, pull_request_template.md}
-├── docs/  flow.dot/.svg · steps/ · solo-vs-team.md · lessons.md · extending.md · faq.md · superpowers/specs/
-└── tests/ hook tests · template render tests · skill evals (claude plugin eval) · helm tests
+├── .claude-plugin/marketplace.json            → pavedline, pavedline-cockpit
+├── plugins/pavedline/{.claude-plugin/plugin.json, .mcp.json, skills/, agents/, hooks/, scripts/, config/models.yaml}
+├── plugins/pavedline-cockpit/                 optional mod
+├── stacks/nextjs-fastapi/                     the default stack pack
+├── templates/                                 copied into a product repo by /pavedline:start (via ${CLAUDE_PLUGIN_ROOT})
+│   ├── CLAUDE.md · PRODUCT.md · STATE.md · WAITING.md · GLOSSARY.md · RUN.md · SERVICES.md · LINKS.md
+│   ├── decisions/ · handoff/ · docs/{business,spec,data,api,architecture,design,plans,retros,production,growth,archive}/
+│   ├── infra/{helm/base-chart, k8s/{applicationsets,addons,apps}, profiles/{byo-kubernetes,oci-oke}}/
+│   └── .github/{workflows/, CODEOWNERS, pull_request_template.md, renovate.json}
+├── docs/  flow.dot/.svg · steps/ · environments.md · solo-vs-team.md · lessons.md · extending.md · faq.md · superpowers/
+├── scripts/                                   deny-list scan, diagram tools, model-line generator, skill linter
+└── tests/                                     hooks · scripts · template copy · skill contracts · evals
 ```
 
-
-## 14. Lessons from production, and where each is enforced
+## 15. Lessons from production, and where each is enforced
 
 | Lesson | Enforced by |
 |---|---|
-| Merged ≠ deployed: verify running pods, not `Synced` | `deploy` skill step 4 |
-| Migrations before the image syncs | Helm PreSync Job + `deploy` |
-| Terraform: 0 destroy, 0 replace, no state surgery | OCI profile README + `deploy`/`gitops` skills |
-| Never design to a vendor's free tier; ask before adding any new service (state what, why, cost) | `architecture-intake`, `SERVICES.md` rule |
-| Vendor and infra facts verified on the web, never from memory | `researcher` agent rule |
-| Commit and push after every edit; never leave work local | `state` skill + closing block |
-| Reviewers never check out branches in the main working tree | reviewer agent prompt + worktree rule |
-| Timestamps from `date` | `state` skill |
-| Every image boots in CI | CI template |
-| Lanes green alone can fail together: rebase and re-prove before each merge | `quality-gates` (multi-lane merge) |
-| A skip-CI marker in a squash body builds nothing | `deploy` checks that a CI run exists for the SHA |
-| PgBouncer transaction mode breaks session state | `multi-tenancy` / `db-schema` |
-| Records bloat; rules accrete as amendments | size-cap hooks, one-place rules, ADR supersession |
-| A stalled agent may already have pushed | `state` skill: check the remote before redoing work |
+| Merged ≠ deployed: verify running pods, not `Synced` | `deploy` (§11.5) |
+| Migrations before the image; a revert does not undo a migration | the PreSync Job, expand/contract (§11.4) |
+| Terraform: 0 destroy, 0 replace, no state surgery | the infra profile README, `go-to-production` |
+| Never design to a vendor's free tier; ask before any new service | §12.6, `architecture-intake` |
+| Vendor and infra facts verified on the web, never from memory | `researcher` |
+| Commit and push after every edit | `state` + the closing block |
+| Reviewers never check out branches in the main working tree | reviewer prompts, worktrees |
+| Timestamps from `date` | `state` |
+| Every image boots in CI | the CI templates |
+| Lanes green alone can fail together: rebase and re-prove before each merge | `quality-gates` |
+| A skip-CI marker in a squash message builds nothing | `deploy` (§11.5) |
+| PgBouncer transaction mode breaks session state | §12.3 |
+| A lint step without a config never runs | the stack-pack configs (§9.2) |
+| Records bloat; rules accrete as amendments | size caps, `rules-index.md`, ADR supersession |
+| A stalled agent may already have pushed | `state` (§7) |
+| A local process once acted on production through a forgotten connection | the cluster-context hook (§12.4) |
 
-## 15. Constraints
+## 16. Constraints and sanitisation
 
-Public repo, MIT, no secrets, no private identifiers. Free and open-source tools only inside the factory
-(paid accounts in §12 are the user's own production accounts). Claude Code plugin format, distributed as a
-marketplace. Must work for solo and team. Observability excluded. Every vendor fact in docs is verified with a source
-link and date.
+Public repo, MIT, no secrets, no private identifiers. Free and open-source tools only **inside** the factory. Claude
+Code plugin format, distributed as a marketplace. Solo and team. Observability excluded except the three alerts.
+Every vendor fact carries a date and a source.
 
-## 16. Waiting on the founder
+**Sanitisation (CI):** a deny-list scan over **all tracked files, docs included** fails on generic patterns (cloud
+resource IDs such as `ocid1.`, private IP literals, key and token formats) and on the author's private identifiers,
+which live only in a gitignored local extension file. The source material (the author's private production
+workflow) stays outside the repo; it is ported and generalised, never copied.
 
-- **F1 (RESOLVED 2026-11-07, founder: no):** no employer is named anywhere; the README shows only the LinkedIn link.
-- **F2 (RESOLVED 2026-11-07, founder: personal account):** create the public GitHub repo `pavedline` (or approve that the agent creates it with `gh`) and choose the
-  owner: personal account or an org.
-- **F3 (RESOLVED 2026-11-07):** design approved; build the workflow and push to GitHub.
+## 17. Release plan and the v1 definition
 
-## 17. Left to the builder
+| Release | Contents |
+|---|---|
+| **v0.1** | steps 0–3 · memory files and hooks · `doctor` · `local-cluster` (cluster + ArgoCD + CNPG) · README, diagram, credits · the marketplace and plugin skeleton · CI (unit tests, deny-list scan, `.dot` checks, `claude plugin validate`, gitleaks, Renovate) · the clean-profile install test |
+| **v0.2** | steps 4–7: system design, compliance, data and API, architecture, Figma |
+| **v0.3** | steps 8–11: plan, the build gates and scanners, the stack pack, the Helm base chart, GitOps templates, deploy to local, learn |
+| **v0.4** | the integration wave, step 12 (profiles, cloud staging, production, `LAUNCH.md`), the cockpit mod |
+| **v1.0** | the end-to-end local-cluster job passes in CI on every PR, and an example product completes steps 0–11 on local |
 
-The exact hook script language (POSIX shell vs Node), the `models.yaml` schema, the wording of each `SKILL.md`, the
-Helm chart's value names, the cockpit's layout, the docs-site generator (none in v1, plain Markdown unless asked),
-and the order of the build plan. That order is a plan for the founder to approve after this document.
+**v1 is proven on local Kubernetes (decided):** the `local-cluster` job runs locally and in CI on every PR; no cloud
+run is required for v1. The repository stays **private until v0.1 installs and works**, then becomes public
+(default).
 
-## 18. Builder-check answers (2026-11-07)
+## 18. Left to the builder
 
-A fresh reviewer read this document as the builder would. It raised 8 questions. Each one is answered here:
-**(answered)** from the project or verified facts, **(call)** by the designer, **(founder)** for the one that only
-the founder can answer.
+The hook scripts' language (POSIX shell or Python stdlib), the `models.yaml` schema, each `SKILL.md`'s wording, the
+Helm chart's value names, the cockpit's layout, the Gateway API controller (pinned when chosen), the S3-compatible
+store for local restore drills, the webhook tunnel, and the order of tasks inside each release's plan.
 
-1. **Source material (answered).** The author's private production workflow (agent commands and definitions, k8s,
-   Terraform and CI) is kept **outside** this repo. Rule: **port and generalise; never copy verbatim**. **Sanitisation is
-   checked by CI**: a deny-list scan fails the build on
-   - built-in patterns: cloud resource IDs (e.g. `ocid1.`), private IP literals, key and token formats
-   - the author's private identifiers (usernames, internal domains, regions, product names), kept **only** in a
-     gitignored local file, never written in the repo
+## 19. Sources (checked 2026-11-07)
 
-   The committed deny-list holds only generic patterns. The scan covers docs as well as templates.
-2. **What "done" means for v1: see §19 (founder question).**
-3. **Release order: vertical slices (call).** Each release is usable on its own:
-   - v0.1: steps 0–3 + memory files + hooks + `doctor` + README/diagram.
-   - v0.2: steps 4–7 (system design, data, architecture, Figma).
-   - v0.3: steps 8–10 + Helm base chart + GitOps templates + CI.
-   - v0.4: step 11 (go to production: OCI profile, cloud staging, production) + step 12 + the cockpit mod.
-   - v1.0: the §19 proof passes.
-4. **Dependencies (answered, verified 2026-11-07 in the plugin docs).** `plugin.json` `dependencies` accepts
-   `"name@marketplace"`. Dependencies auto-install **only if** Pavedline's `marketplace.json` lists the other
-   marketplace in `allowCrossMarketplaceDependenciesOn`. Version ranges resolve only against
-   `<plugin>--v<version>` git tags, so dependencies are declared **without** ranges unless the upstream tags.
-   Skills installed with `npx skills` (vercel/next.js, vercel-labs/agent-skills) cannot be declared at all. So a new
-   **`doctor`** skill (24th) runs at `/pavedline:start` and on demand. It checks every dependency, plugin, MCP server
-   and CLI tool, and prints the exact install command for anything missing. Optional dependencies (impeccable, its
-   Apache-2.0; crawl4ai; next-devtools-mcp) degrade gracefully: skills name a fallback.
-5. **Hooks vs CI (call).** **CI is authoritative for every rule that can be checked on a PR**, because hooks are
-   bypassable and local. Hooks are early warnings, **except** the secret and `.env` guards, which **block**. Gates
-   line and `.dot` drift: a hook warns, CI fails. `STATE.md` cap: a hook blocks a write that would exceed 60 lines and
-   tells the agent to archive. Archiving moves the oldest *closed* items (LEFT BEHIND items marked done, old LAST
-   entries) into `docs/archive/state-YYYY-MM.md`, appended and dated. NEXT, WAITING ON YOU and open LEFT BEHIND items
-   never move.
-6. **Team mode in v1 (call).** It includes parallel lanes, each in its own worktree with its own
-   `handoff/<branch>.md`. `OWNER` is **a person** in team mode and **the main session** in solo mode. Branch
-   protection, CODEOWNERS and required checks: `start` *prints* the `gh` commands and runs them **only after the
-   founder says yes** in the session. They are never applied silently.
-7. **Deploy access (call).** Default access is the user's own kubeconfig context, named in `RUN.md`. Teleport is
-   optional. The `deployer` agent may run read-only `kubectl` / `argocd` to verify. It **syncs only after the founder
-   says "deploy" in the session**, with that approval quoted in its prompt. The change-specific check is written by the
-   builder into the PR template's `Post-deploy check:` field. A PR without it fails CI when it touches deployable paths.
-8. **Version pins and updates (call; Renovate added at the founder's request).** Templates pin **exact versions**
-   (images by digest, charts, CNPG, the Barman plugin, Next.js, Python packages via `uv.lock`, GitHub Actions by SHA).
-   **Renovate** keeps them current. Facts (2026-11-07): `renovatebot/renovate` is AGPL-3.0, v44.222.2. Its managers
-   include `argocd`, `helm-values`, `helmv3`, `kubernetes`, `dockerfile`, `github-actions`, `npm`, `pep621`, plus
-   custom regex managers for versions written in scripts. So it updates image tags inside Helm values and ArgoCD
-   manifests, which Dependabot version updates do not do generically. It **runs inside our own CI** through
-   `renovatebot/github-action`, not Mend's hosted app, so no third party gets repository access (no new service).
-   Running AGPL software as a CI tool creates no obligation for the product's code.
-   - Weekly schedule. Minor and patch updates are grouped. A dependency-dashboard issue lists everything pending.
-   - **Auto-merge only** patch updates of development tooling, after CI is green.
-   - **Never auto-merge** cluster add-ons, CNPG, ArgoCD, base images or Terraform providers. These open a PR that
-     must pass the local-cluster test and the five gates.
-   - GitHub's built-in **Dependabot security alerts** stay on as a second net.
-   - The template's dated facts are re-verified when each template is written, and the date goes into its README.
-
-## 19. How v1 is proven: RESOLVED by the founder, 2026-11-07
-
-**Ruled: local Kubernetes** (founder). v1 is proven by the §10.5b `local-cluster` script, run locally and in CI on every PR. **No OKE run is required for v1.** The README claims "verified end to end on Kubernetes (kind) in CI on every PR". The options below are kept as the record.
-
-
-The options considered:
-
-- **(A, recommended) A real end-to-end run.** Every PR in Pavedline's own CI runs the templates on a throwaway
-  **kind** cluster: install ArgoCD, sync the example app, run migrations, check that the pods run and that a CNPG
-  restore works. This is free and runs on GitHub's runners. **v1.0 additionally requires one live run on your OKE
-  cluster**: a throwaway example app (`pavedline-example`) in its own namespace and Argo project, deployed through the
-  full flow, verified running, then removed. Its cost is negligible on the existing nodes. Any `terraform apply` is
-  yours.
-- **(B) Templates only.** `helm lint`, `helm template`, `terraform validate` and kind smoke tests, with no live run.
-  This is cheaper, but the README could not claim "verified on a real cluster".
-
-## 20. Sources (checked 2026-11-07)
-
-Versions and behaviours change. Each template re-verifies its facts and records the date in its README.
-- Claude Code plugins, dependencies and mods: code.claude.com/docs/en/plugins/manifest-reference ·
-  code.claude.com/docs/en/plugins/dependencies · code.claude.com/docs/en/plugins/mods/overview
+Versions and behaviours change; each template re-verifies its facts and records the date in its README.
+- Claude Code plugins, dependencies, hooks, headless mode and mods: code.claude.com/docs/en/plugins/manifest-reference ·
+  /plugins/dependencies · /plugins/components · /hooks · /headless · /plugins/mods/overview
 - Core Web Vitals: web.dev/articles/vitals
-- Istio data-plane modes: istio.io/latest/docs/overview/dataplane-modes/ · istio.io/latest/docs/ambient/overview/
+- Istio data-plane modes: istio.io/latest/docs/overview/dataplane-modes/ · /docs/ambient/overview/
 - ingress-nginx retirement: kubernetes.dev/blog/2025/11/12/ingress-nginx-retirement
 - React Native framework recommendation: reactnative.dev/docs/environment-setup
-- Next.js agent skills moved into the framework: github.com/vercel-labs/next-skills (README)
-- Clerk Python SDK: github.com/clerk/clerk-sdk-python · Clerk JS SDKs: github.com/clerk/javascript
-- GitHub diagram rendering: docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams
-- Every other project in §11 and §12.1: its GitHub repository (licence, latest release) via the GitHub API.
+- Next.js agent skills: github.com/vercel-labs/next-skills (README) · github.com/vercel/next.js/tree/canary/skills
+- Clerk SDKs: github.com/clerk/clerk-sdk-python · github.com/clerk/javascript
+- GitHub: diagram rendering; hosted runners and pricing; code scanning availability (docs.github.com)
+- kind: kind.sigs.k8s.io/docs/user/known-issues/ · /docs/user/local-registry/
+- Renovate on GitHub: docs.renovatebot.com/modules/platforms/github/
+- Developer sentiment cited in the README: survey.stackoverflow.co/2025/ai · the Veracode GenAI Code Security
+  Report press release (2025-07-30) · the Hacker News items linked in the README
+- Every project in §12.2 and §13: its GitHub repository (licence, latest release), via the GitHub API.
