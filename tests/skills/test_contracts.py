@@ -136,5 +136,44 @@ class StepTwoThreeContracts(unittest.TestCase):
         self.assertIn("-Tsvg", t)
 
 
+def read_from(text_by_name, name):
+    return text_by_name[name]
+
+
+class FixRound1Contracts(unittest.TestCase):
+    """Each check takes a text getter so it can be run against older text (RED proof)."""
+    NAMES = ("competitor-teardown", "pricing-model", "market-size", "spec")
+    get = staticmethod(read)
+
+    def test_business_paths_everywhere(self):
+        bare = re.compile(r"(?<!docs/business/)\b(BRIEF\.md|SEO-STRATEGY\.md)")
+        for n in self.NAMES:
+            self.assertIsNone(bare.search(self.get(n)), n)
+        self.assertIn("docs/business/SEO-STRATEGY.md", self.get("competitor-teardown"))
+        self.assertNotIn("(repo root)", self.get("competitor-teardown"))
+
+    def test_teardown_waits_for_approval(self):
+        t = self.get("competitor-teardown")
+        self.assertIn("NEXT: waiting for the founder to approve docs/business/BRIEF.md", t)
+        self.assertLess(t.index("Only after an explicit go"), t.index("`STEP: 2 — Grill`"))
+
+    def test_step2_to_3_handoff_owned(self):
+        self.assertIn("`STEP: 3 — Spec`", self.get("competitor-teardown"))
+        sp = self.get("spec")
+        self.assertIn("`STEP: 2 — Grill`", sp)
+        self.assertIn("decisions are complete", sp)
+        self.assertIn("STEP: 4 — System design", sp)
+
+    def test_spec_updates_business_brief(self):
+        self.assertIn("edit the pricing section of `docs/business/BRIEF.md`", self.get("spec"))
+
+    def test_spec_fixed_surface_list_in_one_place(self):
+        self.assertTrue(re.search(r"\*\*Website\*\*, \*\*Blog\*\*, \*\*Web app\*\*, \*\*Mobile app\*\*",
+                                  self.get("spec")))
+
+    def test_review_export_location(self):
+        self.assertIn("docs/business/reviews/", self.get("competitor-teardown"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -39,7 +39,7 @@ All paths are in the product repository.
 
 - `docs/business/competitors/<name>.md`, one per competitor, kebab-case name. Sections: Summary (two lines) · Features · Pricing · Public complaints · Sources. Each bullet ends with its URL and `[definite]`, `[inferred]` or `[unknown]`.
 - `docs/business/landscape.dot`: one node per competitor and per product area, edges for overlap, a note for cross-cutting rails. Follow the `diagram` skill for style, validation and rendering.
-- `docs/business/SEO-STRATEGY.md` (repo root), with these sections:
+- `docs/business/SEO-STRATEGY.md` with these sections:
   1. Competitors' sitemaps and topics.
   2. Queries and search intent (informational, commercial, transactional, navigational).
   3. Topic clusters.
