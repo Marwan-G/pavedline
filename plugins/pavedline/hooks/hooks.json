@@ -9,6 +9,24 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/guard_secrets.py\""
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/guard_cluster.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/guard_git.py\""
+          }
+        ]
       }
     ]
   }

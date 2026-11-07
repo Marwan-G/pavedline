@@ -2,7 +2,6 @@
 """PreToolUse guard: block .env access and secret material in written content."""
 import os
 import re
-import shlex
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,13 +15,7 @@ PIECE_SPLIT = re.compile(r"[`$(){}<>\"';:=,\s]+")
 ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 
-def _tokens(command):
-    try:
-        lex = shlex.shlex(command, posix=True, punctuation_chars=True)
-        lex.whitespace_split = True
-        return list(lex)
-    except ValueError:
-        return re.split(r"\s+", command.replace(";", " ; ").replace("|", " | "))
+_tokens = _common.tokens
 
 
 def _names_env(token):
