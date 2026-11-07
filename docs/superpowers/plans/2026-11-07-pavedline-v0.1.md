@@ -110,10 +110,10 @@ chart 0.29.1 · kind node `kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8
   `\bghp_[A-Za-z0-9]{36}\b`, `\bsk-ant-[A-Za-z0-9_-]{20,}`, `\bAKIA[0-9A-Z]{16}\b`.
 
 - [ ] **Step 1: Write the failing tests:**
-  - `test_flags_ocid` (a temp file containing `ocid1.tenancy.oc1..aaaa` → one finding, line 1).
+  - `test_flags_ocid` (a temp file whose line 1 is an OCI tenancy resource ID — the `ocid1` prefix, a dot, then `tenancy.oc1..aaaa`; build the literal at runtime → one finding, line 1).
   - `test_local_extension_patterns_apply` (a temp `.sanitize-denylist.local` with `secretcorp` → flags it).
-  - `test_skips_binary` (a file containing `\x00` plus `ocid1.` → no findings).
-  - `test_scans_svg` (an `.svg` containing `ocid1.` → one finding).
+  - `test_skips_binary` (a file containing `\x00` plus an OCI resource-ID prefix → no findings).
+  - `test_scans_svg` (an `.svg` containing an OCI resource-ID prefix → one finding).
   - `test_clean_file_passes` → `[]`.
 - [ ] **Step 2:** run → FAIL.
 - [ ] **Step 3:** implement (NUL byte in the first 8 KB means binary).
@@ -173,7 +173,7 @@ chart 0.29.1 · kind node `kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8
     `test_blocks_nested_env` (`config/.env.production` → 2).
   - `test_allows_env_example` (`.env.example` → 0), `test_allows_normal_file` (`README.md` → 0).
   - `test_blocks_bash_cat_env` (`cat .env` → 2).
-  - `test_blocks_write_with_private_key` (content containing `-----BEGIN RSA PRIVATE KEY-----` → 2).
+  - `test_blocks_write_with_private_key` (content containing a PEM RSA private-key header, built at runtime → 2).
   - `test_malformed_stdin_fails_open` (empty stdin → 0, stderr non-empty).
 - [ ] **Step 3:** run → FAIL. **Step 4:** implement. **Step 5:** run → PASS.
 - [ ] **Step 6: Commit** `feat: secret and .env guard hook`.

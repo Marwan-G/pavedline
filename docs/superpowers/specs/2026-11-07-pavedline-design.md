@@ -664,7 +664,7 @@ Code plugin format, distributed as a marketplace. Solo and team. Observability e
 Every vendor fact carries a date and a source.
 
 **Sanitisation (CI):** a deny-list scan over **all tracked files, docs included** fails on generic patterns (cloud
-resource IDs such as `ocid1.`, private IP literals, key and token formats) and on the author's private identifiers,
+resource IDs such as OCI's `ocid1` prefix, private IP literals, key and token formats) and on the author's private identifiers,
 which live only in a gitignored local extension file. The source material (the author's private production
 workflow) stays outside the repo; it is ported and generalised, never copied.
 
