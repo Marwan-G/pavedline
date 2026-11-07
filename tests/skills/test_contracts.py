@@ -72,9 +72,19 @@ class StepZeroContracts(unittest.TestCase):
         self.assertIn("stay in", t)
         self.assertIn("repository", t)
 
-    def test_start_never_installs_and_privacy_first(self):
+    def test_agent_installs_after_announcing(self):
+        for name in ("start", "doctor"):
+            t = read(name)
+            self.assertNotIn("Never install", t, name)
+            self.assertIn("what it will install", t, name)
+            self.assertIn("why", t, name)
+            self.assertIn("exact command", t, name)
+            self.assertIn("permission prompt", t, name)
+            self.assertIn("sudo", t, name)
+            self.assertIn("WAITING.md", t, name)
+
+    def test_start_privacy_first(self):
         t = read("start")
-        self.assertIn("Never install", t)
         self.assertLess(t.index(PRIVACY), t.index("**What are you building?**"))
         self.assertIn("go?", t)
 

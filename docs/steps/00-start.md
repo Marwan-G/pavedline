@@ -5,7 +5,7 @@ Run once, in the repository of your new product: `/pavedline:start`.
 ## What it is for
 
 It checks your machine, asks the platform questions that are expensive to change later, and creates the files that
-carry the project's memory. Nothing is installed without your go.
+carry the project's memory. Pavedline tells you what it will install and why, then installs it; Claude Code asks your permission for each command.
 
 ## Inputs
 

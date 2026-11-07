@@ -17,7 +17,7 @@ Run:
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py"
 ```
 
-Relay each fix exactly as printed. If the last line says a required check failed, stop here and tell the user to fix it and run `/pavedline:start` again. Never install anything without the user's go.
+If the last line says a required check failed, follow the `doctor` skill's install rule: tell the user what it will install, why (which Pavedline step needs it) and the exact command, then run it; Claude Code's permission prompt is the user's approval point. Never use `sudo`. Re-run the checker afterwards. Stop here only if the user refuses an install (add it to `WAITING.md`) or a command fails; then tell the user to fix it and run `/pavedline:start` again.
 
 ## 2. Say the privacy line
 
@@ -82,7 +82,7 @@ Commit the new files in one commit. If the repository already has commits by som
 End with a short summary:
 
 - what was created (files and the decisions, one line each);
-- anything only the user can do (for example installing a tool `doctor` reported missing): add each to `WAITING.md` as `- Fn · what · where/how · what it unblocks` and list it here;
+- anything only the user can do (for example an install the user refused): add each to `WAITING.md` as `- Fn · what · where/how · what it unblocks` and list it here;
 - the next step: market and SEO research.
 
 Then ask: **go?** Step 1 starts only when the user says go. Do not start it on your own.

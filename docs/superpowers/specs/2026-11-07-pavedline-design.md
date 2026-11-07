@@ -552,6 +552,14 @@ unavailable and `doctor` cannot diagnose a missing dependency; `claude plugin li
 therefore requires the dependency marketplaces to be added before installing Pavedline, and tells the user to run
 `claude plugin list` if `/pavedline:start` is not found.
 
+**Doctor installs missing tools itself (2026-11-08, founder).** `doctor` does not only print commands. When a required
+tool or Claude Code plugin is missing, the agent installs it: first one short message saying what it will install,
+why (which Pavedline step needs it) and the exact command; then it runs the command (`brew install …`, `colima start
+--cpu 4 --memory 10` for the container runtime, `claude plugin marketplace add` and `claude plugin install
+<name>@<marketplace>` for plugins, followed by `/reload-plugins`). Claude Code's permission prompt is the user's
+approval point. Never silent, never `sudo`, nothing outside doctor's list. A refusal or a failed install stops the step
+and is recorded in `WAITING.md`. New paid services, accounts or spend stay under §12.6.
+
 ### 12.3 `multi-tenancy` and `db-schema`: the non-negotiable rules
 The base is sickn33's `saas-multi-tenant` skill (MIT, adapted with credit), with Supabase's Postgres best practices
 (MIT) as a reference. Enforced:
@@ -586,6 +594,7 @@ target path is readable.
 Before any new service or billable resource, even a free one, state what it is, what it will do, why nothing already
 in use does it, and its verified cost. The founder approves. This applies to every row of §6.3, to Renovate's token
 choice, to EAS, analytics, flag services and providers.
+Installing a tool or plugin on `doctor`'s list is not a new service; it follows the doctor rule in §12.2 (2026-11-08).
 
 ## 13. The public face
 

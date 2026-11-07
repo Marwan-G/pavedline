@@ -16,7 +16,7 @@ Every product built with Pavedline is deployed and verified on a local kind clus
 
 - A container runtime that answers `docker info`. On macOS, Colima works: `colima start --cpu 4 --memory 10`.
 - The machine needs 16 GB of memory at minimum; 32 GB is recommended.
-- `kind`, `kubectl`, `helm` and `docker` on the PATH. If any is missing, run `/pavedline:doctor` and tell the user what is missing. Never install software without the user's go.
+- `kind`, `kubectl`, `helm` and `docker` on the PATH. If any is missing, run `/pavedline:doctor` and follow its install rule: tell the user what it will install, why and the exact command, then install it (permission prompt, no `sudo`; a refusal goes to `WAITING.md`).
 
 ## The three commands
 
