@@ -92,5 +92,26 @@ class StepZeroContracts(unittest.TestCase):
         self.assertEqual(lint.check_skills(SKILLS), [])
 
 
+class StepOneContracts(unittest.TestCase):
+    def test_teardown_requires_sources(self):
+        t = read("competitor-teardown")
+        self.assertIn("URL", t)
+        self.assertIn("definite, inferred or unknown", t)
+
+    def test_review_sites_rule(self):
+        self.assertIn("manual export or official APIs", read("competitor-teardown"))
+
+    def test_seo_strategy_output(self):
+        t = read("competitor-teardown")
+        self.assertIn("SEO-STRATEGY.md", t)
+        self.assertIn("target query", t)
+
+    def test_market_size_marks_assumptions(self):
+        t = read("market-size")
+        self.assertIn("assumption", t)
+        self.assertIn("top-down", t)
+        self.assertIn("bottom-up", t)
+
+
 if __name__ == "__main__":
     unittest.main()
