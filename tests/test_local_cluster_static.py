@@ -144,6 +144,11 @@ class LocalClusterStatic(unittest.TestCase):
             self.assertIn(needle, text, needle)
         self.assertTrue(text.startswith("---\nname: local-cluster\n"))
 
+    def test_no_pipe_into_grep_q(self):
+        for path in SCRIPTS:
+            for line in command_lines(path):
+                self.assertNotRegex(line, r"\|\s*grep\s+-\w*q", f"{path.name}: {line}")
+
     def test_shellcheck_if_available(self):
         import shutil
         if not shutil.which("shellcheck"):

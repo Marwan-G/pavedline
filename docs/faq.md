@@ -19,7 +19,7 @@ minutes if your repository is private, and, much later, accounts such as Figma, 
 [requirements](../README.md#requirements) table says when each is asked for.
 
 **Does it collect data?**
-No. Pavedline collects nothing. Every answer stays in your own repository. It calls no service of its own.
+No. Pavedline collects nothing. Every answer stays in your own repository. Pavedline sends nothing to its author or to any Pavedline service. The only network use is what you install and run yourself, for example npx fetching the Playwright MCP, or marketplace clones.
 
 **Can teams use it?**
 Yes. Step 0 asks solo or team. Team mode means parallel sessions in their own worktrees, and approvals move to pull

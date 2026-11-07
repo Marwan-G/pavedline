@@ -33,7 +33,8 @@ if [ "$(docker inspect -f '{{.State.Running}}' "$REG_NAME" 2>/dev/null || true)"
 fi
 
 # 2. The cluster, from the rendered config.
-if kind get clusters 2>/dev/null | grep -qx "$CLUSTER"; then
+clusters="$(kind get clusters 2>/dev/null || true)"
+if grep -qx "$CLUSTER" <<<"$clusters"; then
   echo "cluster $CLUSTER already exists; reusing it"
 else
   CONFIG="$(mktemp)"

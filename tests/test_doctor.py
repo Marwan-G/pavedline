@@ -68,6 +68,34 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("/plugin install product-management@knowledge-work-plugins", c.fix)
         self.assertIn("/plugin marketplace add anthropics/knowledge-work-plugins", c.fix)
 
+    def test_inline_pavedline_enabled_is_ok(self):
+        ids = ALL_IDS[:3] + ["pavedline@inline"]
+        c = by_name(doctor.check_plugins(listing(ids)))["pavedline@pavedline"]
+        self.assertTrue(c.ok)
+        self.assertEqual(c.status, "ok")
+
+    def test_inline_pavedline_disabled_is_not_ok(self):
+        data = json.loads(listing(ALL_IDS[:3]))
+        data.append({"id": "pavedline@inline", "enabled": False})
+        c = by_name(doctor.check_plugins(json.dumps(data)))["pavedline@pavedline"]
+        self.assertFalse(c.ok)
+        self.assertEqual(c.status, "disabled")
+
+    def test_disabled_dependency_has_enable_fix(self):
+        data = json.loads(listing(ALL_IDS))
+        for p in data:
+            if p["id"] == "superpowers@claude-plugins-official":
+                p["enabled"] = False
+        c = by_name(doctor.check_plugins(json.dumps(data)))["superpowers@claude-plugins-official"]
+        self.assertFalse(c.ok)
+        self.assertEqual(c.status, "disabled")
+        self.assertEqual(c.fix, "/plugin enable superpowers@claude-plugins-official")
+
+    def test_absent_dependency_is_missing(self):
+        c = by_name(doctor.check_plugins(listing(ALL_IDS[1:])))["superpowers@claude-plugins-official"]
+        self.assertEqual(c.status, "missing")
+        self.assertIn("/plugin install", c.fix)
+
     def test_invalid_json_is_claude_failure(self):
         checks = doctor.check_plugins("not json")
         self.assertEqual([c.name for c in checks], ["claude"])

@@ -35,7 +35,7 @@ warns that Pavedline will not load. (Verified on a clean profile with `scripts/i
 `claude plugin list`, which shows the dependency warning, then add the missing marketplace or plugin with the commands
 above.
 
-`/pavedline:doctor` checks every tool and skill Pavedline needs and prints the exact command for anything missing.
+Once Pavedline loads, `/pavedline:doctor` checks every tool and skill Pavedline needs and prints the exact command for anything missing.
 Adding marketplaces, installing plugins and tools, and running the local cluster are your choices: Pavedline prints
 commands and asks first; it does not install software on its own.
 
@@ -52,7 +52,7 @@ commands and asks first; it does not install software on its own.
 - **`/pavedline:doctor`:** checks the machine and plugins, prints the fix for anything missing.
 - **Local cluster scripts:** a kind cluster with Argo CD, CloudNativePG and a local image registry, with `up`,
   `verify` and `down` scripts. See [environments](docs/environments.md).
-- **CI for the factory itself:** tests, secret scan, diagram checks and a cluster smoke test on every pull request.
+- **CI for the factory itself:** tests, secret scan, diagram checks and a cluster smoke test on every pull request (the smoke test has not yet run on GitHub; its first run happens on the first pull request).
 
 Questions: [FAQ](docs/faq.md).
 

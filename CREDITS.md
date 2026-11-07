@@ -28,9 +28,9 @@ only** (read for inspiration, no code or text used) · **used by templates or CI
 | [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) | bmad-code-org | licence not machine-detected | **Ideas only**, cited as inspiration |
 | [Graphviz](https://graphviz.org/) | Graphviz authors | see the project (not recorded here) | **Used by templates and CI**: renders every `.dot` diagram to SVG |
 | [gitleaks](https://github.com/gitleaks/gitleaks) | gitleaks contributors | MIT | **Used by CI**: secret scan |
-| [Renovate](https://github.com/renovatebot/renovate) | Renovate contributors | see the project (not recorded here) | **Used by CI**: dependency update pull requests |
+| [Renovate](https://github.com/renovatebot/renovate) | Renovate contributors | AGPL-3.0 | **Used by CI** as a tool: dependency update pull requests; no obligation on this repository's code |
 | [kind](https://github.com/kubernetes-sigs/kind) | Kubernetes SIGs | Apache-2.0 | **Used by the local cluster scripts and CI** |
-| [Helm](https://github.com/helm/helm) | Helm contributors | see the project (not recorded here) | **Used by the local cluster scripts and CI**: installs the add-ons |
+| [Helm](https://github.com/helm/helm) | Helm contributors | Apache-2.0 | **Used by the local cluster scripts and CI**: installs the add-ons |
 | [Argo CD](https://github.com/argoproj/argo-cd) | Argo Project | Apache-2.0 | **Used by the local cluster scripts and templates**: GitOps |
 | [CloudNativePG](https://github.com/cloudnative-pg/cloudnative-pg) | CloudNativePG contributors | Apache-2.0 | **Used by the local cluster scripts and templates**: Postgres on Kubernetes |
 

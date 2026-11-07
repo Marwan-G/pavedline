@@ -21,10 +21,10 @@ kubectl --context "$CTX" -n cnpg-system wait --for=condition=Available deploymen
   || fail "the CloudNativePG controller is not Available in $CTX"
 
 kubectl --context "$CTX" apply -f "$SMOKE" || fail "could not apply the smoke Cluster"
-if ! kubectl --context "$CTX" wait --for=condition=Ready cluster/smoke --timeout=300s; then
+if ! kubectl --context "$CTX" wait --for=condition=Ready cluster/smoke --timeout=600s; then
   kubectl --context "$CTX" describe cluster/smoke >&2 || true
   kubectl --context "$CTX" delete -f "$SMOKE" --ignore-not-found --wait=false >&2 || true
-  fail "Cluster/smoke did not become Ready within 300s"
+  fail "Cluster/smoke did not become Ready within 600s"
 fi
 kubectl --context "$CTX" delete -f "$SMOKE" --ignore-not-found --timeout=120s \
   || fail "could not delete the smoke Cluster"

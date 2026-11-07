@@ -19,6 +19,7 @@ class Check(NamedTuple):
     ok: bool
     required: bool
     fix: str
+    status: str = ""
 
 
 CLAUDE_FIX = "Install Claude Code: https://code.claude.com/docs/en/setup"
@@ -42,6 +43,7 @@ RUNTIME_FIX_MAC = "brew install colima docker && colima start --cpu 4 --memory 1
 RUNTIME_FIX_OTHER = "https://docs.docker.com/engine/install/ (then start the Docker daemon)"
 
 MP_CLAUDE = "claude-plugins-official"
+PAVEDLINE_ID = "pavedline@pavedline"
 PLUGINS = [
     ("superpowers@claude-plugins-official", "/plugin install superpowers@claude-plugins-official"),
     ("mattpocock-skills@claude-plugins-official", "/plugin install mattpocock-skills@claude-plugins-official"),
@@ -51,7 +53,7 @@ PLUGINS = [
         "/plugin install product-management@knowledge-work-plugins",
     ),
     (
-        "pavedline@pavedline",
+        PAVEDLINE_ID,
         "/plugin marketplace add Marwan-G/pavedline then /plugin install pavedline@pavedline",
     ),
 ]
@@ -88,8 +90,24 @@ def check_plugins(listing_json: str) -> List[Check]:
             raise ValueError("not a list")
     except (ValueError, TypeError):
         return [Check("claude", False, True, CLAUDE_FIX)]
-    enabled = {p.get("id") for p in data if isinstance(p, dict) and p.get("enabled") is True}
-    return [Check(pid, pid in enabled, True, fix) for pid, fix in PLUGINS]
+    present = {}
+    for p in data:
+        if isinstance(p, dict) and isinstance(p.get("id"), str):
+            present[p["id"]] = present.get(p["id"], False) or p.get("enabled") is True
+    checks: List[Check] = []
+    for pid, fix in PLUGINS:
+        if pid == PAVEDLINE_ID:
+            # Loaded via --plugin-dir the id is pavedline@inline, so accept any pavedline@ id.
+            ids = [i for i in present if i.startswith("pavedline@")]
+        else:
+            ids = [pid] if pid in present else []
+        if any(present[i] for i in ids):
+            checks.append(Check(pid, True, True, "", "ok"))
+        elif ids:
+            checks.append(Check(pid, False, True, f"/plugin enable {ids[0]}", "disabled"))
+        else:
+            checks.append(Check(pid, False, True, fix, "missing"))
+    return checks
 
 
 def fetch_listing() -> Optional[str]:
@@ -103,7 +121,7 @@ def fetch_listing() -> Optional[str]:
 def render(checks: List[Check]) -> List[str]:
     rows = [("name", "status", "level", "fix")]
     for c in checks:
-        rows.append((c.name, "ok" if c.ok else "missing", "required" if c.required else "optional", "" if c.ok else c.fix))
+        rows.append((c.name, "ok" if c.ok else (c.status or "missing"), "required" if c.required else "optional", "" if c.ok else c.fix))
     widths = [max(len(r[i]) for r in rows) for i in range(3)]
     return [
         "  ".join(r[i].ljust(widths[i]) for i in range(3)) + ("  " + r[3] if r[3] else "")
