@@ -175,6 +175,8 @@ build.
 | **Deliver** | 8 Plan · 9 Build · 10 Deploy to local · 11 Learn | waves of tested, reviewed slices running on a real cluster on your machine |
 | **Production** | 12 Go to production | cloud staging, then production, verified, behind a launch checklist. Asked once, when everything works |
 
+How Pavedline itself is built and checked: [architecture](docs/architecture.md).
+
 ## Requirements
 
 Asked for **just in time**, never all on day one:
