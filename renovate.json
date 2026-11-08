@@ -46,29 +46,25 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "argo-cd Helm chart version in versions.env",
+      "description": "argo-cd Helm chart (OCI, version and digest) in versions.env",
       "managerFilePatterns": [
         "/(^|/)versions\\.env$/"
       ],
       "matchStrings": [
-        "ARGOCD_CHART_VERSION=(?<currentValue>\\S+)"
+        "ARGOCD_CHART=oci://(?<depName>\\S+)\\nARGOCD_CHART_VERSION=(?<currentValue>\\S+)\\nARGOCD_CHART_DIGEST=(?<currentDigest>sha256:[a-f0-9]+)"
       ],
-      "datasourceTemplate": "helm",
-      "registryUrlTemplate": "https://argoproj.github.io/argo-helm",
-      "depNameTemplate": "argo-cd"
+      "datasourceTemplate": "docker"
     },
     {
       "customType": "regex",
-      "description": "cloudnative-pg Helm chart version in versions.env",
+      "description": "cloudnative-pg Helm chart (OCI, version and digest) in versions.env",
       "managerFilePatterns": [
         "/(^|/)versions\\.env$/"
       ],
       "matchStrings": [
-        "CNPG_CHART_VERSION=(?<currentValue>\\S+)"
+        "CNPG_CHART=oci://(?<depName>\\S+)\\nCNPG_CHART_VERSION=(?<currentValue>\\S+)\\nCNPG_CHART_DIGEST=(?<currentDigest>sha256:[a-f0-9]+)"
       ],
-      "datasourceTemplate": "helm",
-      "registryUrlTemplate": "https://cloudnative-pg.github.io/charts",
-      "depNameTemplate": "cloudnative-pg"
+      "datasourceTemplate": "docker"
     },
     {
       "customType": "regex",

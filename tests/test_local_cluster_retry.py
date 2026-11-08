@@ -78,7 +78,7 @@ class UpUsesRetry(unittest.TestCase):
         helm_net = [l for l in command_lines(LC / "up.sh")
                     if l.lstrip().startswith(("helm ", "retry helm "))
                     and (" repo " in l or " upgrade " in l)]
-        self.assertGreaterEqual(len(helm_net), 4, helm_net)
+        self.assertGreaterEqual(len(helm_net), 2, helm_net)
         for line in helm_net:
             self.assertTrue(line.lstrip().startswith("retry helm "), line)
 

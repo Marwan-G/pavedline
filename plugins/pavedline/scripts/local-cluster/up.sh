@@ -71,17 +71,12 @@ data:
 MANIFEST
 
 # 6. Argo CD and the CloudNativePG operator, at the pinned chart versions.
-# Chart downloads come from public release hosts; retry rides out a brief outage.
-retry helm repo add argo https://argoproj.github.io/argo-helm --force-update
-retry helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
-retry helm repo update argo cnpg
+# Charts are pulled as OCI artifacts by version and digest (helm refuses a digest mismatch); retry rides out a
+# brief registry or network failure.
+retry helm upgrade --install argocd "${ARGOCD_CHART}:${ARGOCD_CHART_VERSION}@${ARGOCD_CHART_DIGEST}" \
+  --kube-context "$CTX" --namespace argocd --create-namespace --wait --timeout 10m
 
-retry helm upgrade --install argocd argo/argo-cd \
-  --kube-context "$CTX" --namespace argocd --create-namespace \
-  --version "${ARGOCD_CHART_VERSION}" --wait --timeout 10m
-
-retry helm upgrade --install cnpg cnpg/cloudnative-pg \
-  --kube-context "$CTX" --namespace cnpg-system --create-namespace \
-  --version "${CNPG_CHART_VERSION}" --wait --timeout 10m
+retry helm upgrade --install cnpg "${CNPG_CHART}:${CNPG_CHART_VERSION}@${CNPG_CHART_DIGEST}" \
+  --kube-context "$CTX" --namespace cnpg-system --create-namespace --wait --timeout 10m
 
 echo "ready: context $CTX, registry localhost:${REGISTRY_PORT}, ports 8080->80 and 8443->443"

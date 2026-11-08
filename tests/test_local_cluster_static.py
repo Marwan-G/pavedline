@@ -47,6 +47,11 @@ class LocalClusterStatic(unittest.TestCase):
         self.assertRegex(v["KIND_NODE_IMAGE"], r"^kindest/node:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$")
         self.assertEqual(v["ARGOCD_CHART_VERSION"], "10.15.0")
         self.assertEqual(v["CNPG_CHART_VERSION"], "0.29.1")
+        # Charts come from OCI registries on ghcr.io, not GitHub release downloads, pinned by version and digest.
+        self.assertEqual(v["ARGOCD_CHART"], "oci://ghcr.io/argoproj/argo-helm/argo-cd")
+        self.assertEqual(v["CNPG_CHART"], "oci://ghcr.io/cloudnative-pg/charts/cloudnative-pg")
+        self.assertRegex(v["ARGOCD_CHART_DIGEST"], r"^sha256:[0-9a-f]{64}$")
+        self.assertRegex(v["CNPG_CHART_DIGEST"], r"^sha256:[0-9a-f]{64}$")
         self.assertEqual(v["REGISTRY_PORT"], "5001")
         text = (LC / "versions.env").read_text()
         self.assertIn("verified 2026-11-07", text)
@@ -108,10 +113,31 @@ class LocalClusterStatic(unittest.TestCase):
         text = (LC / "up.sh").read_text()
         for needle in ["kind-registry", "127.0.0.1:${REGISTRY_PORT}", "docker network connect", "hosts.toml",
                        "local-registry-hosting", "/etc/containerd/certs.d", "--wait",
-                       "https://argoproj.github.io/argo-helm", "https://cloudnative-pg.github.io/charts",
-                       "${ARGOCD_CHART_VERSION}", "${CNPG_CHART_VERSION}", "argocd", "cnpg-system"]:
+                       '"${ARGOCD_CHART}:${ARGOCD_CHART_VERSION}@${ARGOCD_CHART_DIGEST}"',
+                       '"${CNPG_CHART}:${CNPG_CHART_VERSION}@${CNPG_CHART_DIGEST}"', "argocd", "cnpg-system"]:
             self.assertIn(needle, text, needle)
         self.assertIn("docker info", text)
+        self.assertNotIn("helm repo", text, "charts are pulled by OCI reference; no classic repo")
+        self.assertNotIn("github.io", text)
+
+    def test_renovate_tracks_every_pin(self):
+        import json
+        env_text = (LC / "versions.env").read_text()
+        conf = json.loads((ROOT / "renovate.json").read_text())
+        found = {}
+        for m in conf["customManagers"]:
+            for pattern in m["matchStrings"]:
+                py = re.sub(r"\(\?<(\w+)>", r"(?P<\1>", pattern)  # JS named groups -> Python
+                hit = re.search(py, env_text)
+                self.assertIsNotNone(hit, f"Renovate rule matches nothing: {m['description']}")
+                found[m["description"]] = (m["datasourceTemplate"], hit.groupdict())
+        v = env_values()
+        docker_deps = {g.get("depName"): g for ds, g in found.values() if ds == "docker"}
+        for chart in ("ARGOCD", "CNPG"):
+            dep = v[f"{chart}_CHART"].removeprefix("oci://")
+            self.assertIn(dep, docker_deps, dep)
+            self.assertEqual(docker_deps[dep]["currentValue"], v[f"{chart}_CHART_VERSION"])
+            self.assertEqual(docker_deps[dep]["currentDigest"], v[f"{chart}_CHART_DIGEST"])
 
     def test_kind_config(self):
         text = (LC / "kind-config.yaml.tpl").read_text()
