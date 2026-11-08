@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Fail unless a PR body carries the gates line (design section 9.1)."""
+"""Fail unless a maintainer PR body carries the gates line (design section 9.1).
+
+A PR from a fork is a contributor's: the maintainer reviews and tests it locally and approves it on GitHub, so it
+needs no gates line here.
+"""
 import argparse
 import pathlib
 import re
@@ -29,13 +33,25 @@ def is_dependency_update(head_ref: str, changed: list, globs: list) -> bool:
     return all(dot_drift.matches_any(c, globs) for c in changed)
 
 
+def is_contributor_pr(head_repo, base_repo) -> bool:
+    """True when the PR comes from a fork (or a deleted fork). Without both flags, behave as a maintainer PR."""
+    if head_repo is None or not base_repo:
+        return False
+    return head_repo.strip().lower() != base_repo.strip().lower()
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--body-file", required=True)
     ap.add_argument("--head-ref", default="")
     ap.add_argument("--changed-files-file")
     ap.add_argument("--dependency-globs-file", default=str(DEPENDENCY_FILES))
+    ap.add_argument("--head-repo", help="owner/name of the PR's head repository")
+    ap.add_argument("--base-repo", help="owner/name of this repository")
     args = ap.parse_args(argv)
+    if is_contributor_pr(args.head_repo, args.base_repo):
+        print("pr_checks: contributor pull request from a fork; the maintainer's review and approval are the gate")
+        return 0
     if args.head_ref and args.changed_files_file:
         try:
             changed = pathlib.Path(args.changed_files_file).read_text(encoding="utf-8").split()
