@@ -34,6 +34,4 @@ You approve the spec.
 
 ## Hand-off to the next step
 
-`STATE.md` is set to `STEP: 4 — System design`. Step 4 ships in a later Pavedline release (v0.2), so the guided flow
-stops here for now: the spec, the brief and the decisions are the output of v0.1. They are plain files in your
-repository; nothing about them depends on Pavedline.
+`STATE.md` is set to `STEP: 4 — System design`; the next step is [step 4: system design](04-system-design.md).

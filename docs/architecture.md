@@ -9,8 +9,8 @@ puts in a project, and the gate every change to Pavedline passes.
 
 `/plugin marketplace add Marwan-G/pavedline` reads [`.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json),
 which lists one plugin. `/plugin install pavedline@pavedline` reads its
-[`plugin.json`](../plugins/pavedline/.claude-plugin/plugin.json) and installs its three dependencies from their own
-marketplaces: `superpowers`, `mattpocock-skills` and `product-management`. If a dependency is missing, Claude Code does
+[`plugin.json`](../plugins/pavedline/.claude-plugin/plugin.json) and installs its five dependencies from their own
+marketplaces: `superpowers`, `mattpocock-skills`, `product-management`, `figma` and `ui-ux-pro-max`. If a dependency is missing, Claude Code does
 not load Pavedline at all.
 
 ## 2. Inside the plugin
@@ -20,7 +20,7 @@ not load Pavedline at all.
 | **Templates** | the project memory files copied into a new project: `CLAUDE.md`, `PRODUCT.md`, `STATE.md`, `WAITING.md`, decision records, docs folders |
 | **6 hooks** | checks that run on every tool call: block reading `.env` files and writing secrets; block cluster commands outside the local `kind-pavedline-*` cluster; block `--no-verify` and force-pushes to the main branch; cap `STATE.md` at 60 lines; warn when `CLAUDE.md` grows past 150 lines; print the project state when a session starts |
 | **Scripts** | `doctor` (checks tools and plugins), `start_project` (copies the templates), and the local cluster's `up`, `verify` and `down` |
-| **12 skills, 1 agent, MCP** | the guided steps (start, market research, spec, …), a read-only `researcher` agent, and the Playwright MCP server for reading real web pages |
+| **21 skills, 5 agents, MCP** | the guided steps 0 to 7 (start, market research, spec, system design, data and API, architecture, design), five agents (`researcher`, `architect`, `reviewer`, `designer`, `design-verifier`), and the Playwright MCP server for reading real web pages |
 
 ## 3. In your project
 

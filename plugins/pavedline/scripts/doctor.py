@@ -7,6 +7,7 @@ line. Exits 1 if any required check fails. The script only reports; the doctor s
 installing (after announcing, with the user's permission). Never prints environment variables. Standard library only.
 """
 import json
+import os
 import platform as _platform
 import re
 import shutil
@@ -26,6 +27,8 @@ class Check(NamedTuple):
 
 CLAUDE_FIX = "Install Claude Code: https://code.claude.com/docs/en/setup"
 
+REDOCLY_PKG = "@redocly/cli@2.71.0"
+
 # name -> (binary, brew formula, docs url, required)
 TOOLS = [
     ("git", "git", "https://git-scm.com/downloads", True),
@@ -39,6 +42,8 @@ TOOLS = [
     ("colima", "colima", "https://github.com/abiosoft/colima#installation", False),
     ("uv", "uv", "https://docs.astral.sh/uv/getting-started/installation/", False),
     ("terraform", "terraform", "https://developer.hashicorp.com/terraform/install", False),
+    # optional, used by step 5 (API contract lint); installed from npm, pinned
+    ("redocly", REDOCLY_PKG, "https://redocly.com/docs/cli/installation", False),
 ]
 
 RUNTIME_FIX_MAC = "brew install colima docker && colima start --cpu 4 --memory 10"
@@ -54,11 +59,41 @@ PLUGINS = [
         "/plugin marketplace add anthropics/knowledge-work-plugins then "
         "/plugin install product-management@knowledge-work-plugins",
     ),
+    ("figma@claude-plugins-official", "/plugin install figma@claude-plugins-official"),
+    (
+        "ui-ux-pro-max@ui-ux-pro-max-skill",
+        "/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill then "
+        "/plugin install ui-ux-pro-max@ui-ux-pro-max-skill",
+    ),
     (
         PAVEDLINE_ID,
         "/plugin marketplace add Marwan-G/pavedline then /plugin install pavedline@pavedline",
     ),
 ]
+
+# optional plugins (design critique in step 7); never fail the doctor
+OPTIONAL_PLUGINS = [
+    (
+        "impeccable@impeccable",
+        "/plugin marketplace add pbakaus/impeccable then /plugin install impeccable@impeccable",
+    ),
+]
+
+
+def installed_node_version() -> Optional[str]:
+    try:
+        r = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def redocly_node_ok(version: Optional[str]) -> bool:
+    """Redocly CLI needs Node >=22.12 or >=20.19 <21 (see api-contract/references/sources.md)."""
+    v = parse_version(version)
+    if v is None:
+        return False
+    return (v >= (22, 12, 0)) or ((20, 19, 0) <= v < (21, 0, 0))
 
 
 def docker_info_ok() -> bool:
@@ -113,6 +148,7 @@ def check_tools(
     platform: Optional[str] = None,
     docker_ok: Callable[[], bool] = docker_info_ok,
     helm_version: Callable[[], Optional[str]] = installed_helm_version,
+    node_version: Callable[[], Optional[str]] = installed_node_version,
 ) -> List[Check]:
     mac = (platform or _platform.system()) == "Darwin"
     checks: List[Check] = []
@@ -124,11 +160,39 @@ def check_tools(
     runtime_ok = which("docker") is not None and docker_ok()
     checks.append(Check("container runtime", runtime_ok, True, RUNTIME_FIX_MAC if mac else RUNTIME_FIX_OTHER))
     for name, formula, url, required in TOOLS[8:]:
+        if name == "redocly":
+            checks.append(Check(name, which(name) is not None, required, f"optional: npx {formula} works without install, or npm install -g {formula}"))
+            continue
         checks.append(Check(name, which(name) is not None, required, f"brew install {formula}" if mac else url))
+    if which("node") is not None:
+        ok = redocly_node_ok(node_version())
+        checks.append(Check("node (for redocly)", ok, False,
+                            "optional: Redocly CLI needs Node 22.12+ (or 20.19+ below 21); " + ("brew upgrade node" if mac else "https://nodejs.org/en/download"),
+                            "ok" if ok else "too old"))
     return checks
 
 
-def check_plugins(listing_json: str) -> List[Check]:
+def loaded_from_plugin_dir(script: Path = Path(__file__), home: Optional[Path] = None,
+                           config_dir: Optional[Path] = None) -> bool:
+    """True when this script is not inside Claude Code's plugin store, i.e. Pavedline is loaded with --plugin-dir.
+
+    Docs (https://code.claude.com/docs/en/plugins-reference#environment-variables, checked 2026-11-08): the plugin
+    path variables are not present in the environment of commands run through the Bash tool, and no other signal is
+    documented. So the script's own location is used: installed plugins live under ~/.claude/plugins/, or under
+    $CLAUDE_CONFIG_DIR/plugins when it is set (https://code.claude.com/docs/en/settings, checked 2026-11-09:
+    CLAUDE_CONFIG_DIR makes Claude Code store settings, session history and plugins there instead).
+    """
+    if config_dir is None and os.environ.get("CLAUDE_CONFIG_DIR"):
+        config_dir = Path(os.environ["CLAUDE_CONFIG_DIR"])
+    store = (config_dir or (home or Path.home()) / ".claude") / "plugins"
+    try:
+        script.resolve().relative_to(store.resolve())
+        return False
+    except ValueError:
+        return True
+
+
+def check_plugins(listing_json: str, plugin_dir_load: bool = False) -> List[Check]:
     try:
         data = json.loads(listing_json)
         if not isinstance(data, list):
@@ -150,9 +214,25 @@ def check_plugins(listing_json: str) -> List[Check]:
             checks.append(Check(pid, True, True, "", "ok"))
         elif ids:
             checks.append(Check(pid, False, True, f"/plugin enable {ids[0]}", "disabled"))
+        elif pid == PAVEDLINE_ID and plugin_dir_load:
+            checks.append(Check(pid, True, True, "", "ok (loaded with --plugin-dir)"))
         else:
             checks.append(Check(pid, False, True, fix, "missing"))
     return checks
+
+
+def check_optional_plugins(listing_json: str) -> List[Check]:
+    try:
+        data = json.loads(listing_json)
+        if not isinstance(data, list):
+            raise ValueError("not a list")
+    except (ValueError, TypeError):
+        return []
+    enabled = {p["id"] for p in data if isinstance(p, dict) and isinstance(p.get("id"), str) and p.get("enabled") is True}
+    return [
+        Check(pid, True, False, "", "ok") if pid in enabled else Check(pid, False, False, fix, "missing")
+        for pid, fix in OPTIONAL_PLUGINS
+    ]
 
 
 def fetch_listing() -> Optional[str]:
@@ -179,7 +259,8 @@ def run(which=shutil.which, platform=None, docker_ok=docker_info_ok, helm_versio
     checks = check_tools(which=which, platform=platform, docker_ok=docker_ok, helm_version=helm_version)
     if listing_json is None and which("claude") is not None:
         listing_json = fetch_listing()
-    checks += check_plugins(listing_json if listing_json is not None else "")
+    checks += check_plugins(listing_json if listing_json is not None else "", plugin_dir_load=loaded_from_plugin_dir())
+    checks += check_optional_plugins(listing_json if listing_json is not None else "")
     for line in render(checks):
         out(line)
     failed = sum(1 for c in checks if c.required and not c.ok)

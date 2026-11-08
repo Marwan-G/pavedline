@@ -11,6 +11,15 @@ Thanks for your interest. Pavedline is a Claude Code plugin marketplace; contrib
 - Keep changes focused: one concern per pull request, with tests for new behavior.
 - Do not commit secrets, local paths, or identifiers that belong to a private project.
 
+## Trying a change locally
+
+- Install the dependency plugins first (`superpowers`, `mattpocock-skills`, `product-management`, `figma`,
+  `ui-ux-pro-max`; `/pavedline:doctor` lists them). With a dependency missing, `claude --plugin-dir plugins/pavedline`
+  silently loads nothing.
+- Headless runs (`claude -p`): add `--add-dir <plugin dir>` so skills can read their own `references/` files
+  ([permissions](https://code.claude.com/docs/en/permissions.md), checked 2026-11-08), and use
+  `--output-format stream-json --verbose` so the session id appears first. macOS has no `timeout` command; do not rely on it.
+
 ## Found a problem? Open an issue
 
 Use [New issue](https://github.com/Marwan-G/pavedline/issues/new/choose) and pick **Bug report** or

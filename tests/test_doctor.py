@@ -11,6 +11,8 @@ ALL_IDS = [
     "superpowers@claude-plugins-official",
     "mattpocock-skills@claude-plugins-official",
     "product-management@knowledge-work-plugins",
+    "figma@claude-plugins-official",
+    "ui-ux-pro-max@ui-ux-pro-max-skill",
     "pavedline@pavedline",
 ]
 
@@ -48,6 +50,12 @@ class DoctorTests(unittest.TestCase):
             self.assertFalse(checks[n].ok)
             self.assertFalse(checks[n].required)
 
+    def test_redocly_optional_for_step_5(self):
+        c = by_name(doctor.check_tools(which=fake_which({"redocly"}), platform="Darwin", docker_ok=lambda: True, helm_version=GOOD_HELM))["redocly"]
+        self.assertFalse(c.ok)
+        self.assertFalse(c.required)
+        self.assertIn("npm install -g @redocly/cli@2.71.0", c.fix)
+
     def test_container_runtime(self):
         checks = by_name(doctor.check_tools(which=fake_which(), platform="Darwin", docker_ok=lambda: False, helm_version=GOOD_HELM))
         c = checks["container runtime"]
@@ -57,7 +65,7 @@ class DoctorTests(unittest.TestCase):
 
     def test_plugins_detected(self):
         checks = doctor.check_plugins(listing(ALL_IDS))
-        self.assertEqual(len(checks), 4)
+        self.assertEqual(len(checks), 6)
         self.assertTrue(all(c.ok for c in checks))
 
     def test_disabled_plugin_not_present(self):
@@ -71,14 +79,36 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("/plugin install product-management@knowledge-work-plugins", c.fix)
         self.assertIn("/plugin marketplace add anthropics/knowledge-work-plugins", c.fix)
 
+    def test_step_7_plugins_have_install_fixes(self):
+        checks = by_name(doctor.check_plugins(listing(ALL_IDS[:3] + ALL_IDS[5:])))
+        f = checks["figma@claude-plugins-official"]
+        self.assertFalse(f.ok)
+        self.assertTrue(f.required)
+        self.assertIn("/plugin install figma@claude-plugins-official", f.fix)
+        u = checks["ui-ux-pro-max@ui-ux-pro-max-skill"]
+        self.assertFalse(u.ok)
+        self.assertIn("/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill", u.fix)
+        self.assertIn("/plugin install ui-ux-pro-max@ui-ux-pro-max-skill", u.fix)
+
+    def test_impeccable_is_optional_and_listed(self):
+        names = [n for n, _ in doctor.OPTIONAL_PLUGINS]
+        self.assertEqual(names, ["impeccable@impeccable"])
+        c = doctor.check_optional_plugins(listing(ALL_IDS))[0]
+        self.assertFalse(c.ok)
+        self.assertFalse(c.required)
+        self.assertIn("/plugin marketplace add pbakaus/impeccable", c.fix)
+        self.assertIn("/plugin install impeccable@impeccable", c.fix)
+        c = doctor.check_optional_plugins(listing(ALL_IDS + ["impeccable@impeccable"]))[0]
+        self.assertTrue(c.ok)
+
     def test_inline_pavedline_enabled_is_ok(self):
-        ids = ALL_IDS[:3] + ["pavedline@inline"]
+        ids = ALL_IDS[:5] + ["pavedline@inline"]
         c = by_name(doctor.check_plugins(listing(ids)))["pavedline@pavedline"]
         self.assertTrue(c.ok)
         self.assertEqual(c.status, "ok")
 
     def test_inline_pavedline_disabled_is_not_ok(self):
-        data = json.loads(listing(ALL_IDS[:3]))
+        data = json.loads(listing(ALL_IDS[:5]))
         data.append({"id": "pavedline@inline", "enabled": False})
         c = by_name(doctor.check_plugins(json.dumps(data)))["pavedline@pavedline"]
         self.assertFalse(c.ok)
@@ -148,6 +178,41 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("HELM_MIN_VERSION=4.2.2", env)
         self.assertIn("helm/helm/issues/32214", env)
         self.assertEqual(doctor.helm_min_version(), (4, 2, 2))
+
+    def test_plugin_dir_load_is_not_reported_missing(self):
+        # Docs (code.claude.com/docs/en/plugins-reference#environment-variables, checked 2026-11-08): the plugin path
+        # variables are not in the environment of commands run through the Bash tool, so the script's own location
+        # is the signal: a plugin installed by Claude Code lives under ~/.claude/plugins/.
+        home = pathlib.Path("/home/u")
+        self.assertTrue(doctor.loaded_from_plugin_dir(pathlib.Path("/work/pavedline/plugins/pavedline/scripts/doctor.py"), home))
+        self.assertFalse(doctor.loaded_from_plugin_dir(home / ".claude/plugins/cache/pavedline/pavedline/0.1.0/scripts/doctor.py", home))
+        c = by_name(doctor.check_plugins(listing(ALL_IDS[:5]), plugin_dir_load=True))["pavedline@pavedline"]
+        self.assertTrue(c.ok)
+        self.assertIn("--plugin-dir", c.status)
+        c = by_name(doctor.check_plugins(listing(ALL_IDS[:5]), plugin_dir_load=False))["pavedline@pavedline"]
+        self.assertFalse(c.ok)
+        self.assertEqual(c.status, "missing")
+
+    def test_config_dir_env_moves_the_plugin_store(self):
+        # CLAUDE_CONFIG_DIR: Claude Code then stores settings, history and plugins there (settings docs, 2026-11-09).
+        home = pathlib.Path("/home/u")
+        cfg = pathlib.Path("/cfg")
+        self.assertFalse(doctor.loaded_from_plugin_dir(cfg / "plugins/cache/p/0.1.0/scripts/doctor.py", home, cfg))
+        self.assertTrue(doctor.loaded_from_plugin_dir(home / ".claude/plugins/cache/p/scripts/doctor.py", home, cfg))
+
+    def test_node_range_for_redocly(self):
+        for v, ok in (("v22.12.0", True), ("v22.11.9", False), ("v24.1.0", True), ("v20.19.0", True),
+                      ("v20.18.0", False), ("v21.7.0", False), ("v18.0.0", False), (None, False)):
+            self.assertEqual(doctor.redocly_node_ok(v), ok, v)
+        checks = by_name(doctor.check_tools(which=fake_which(), platform="Darwin", docker_ok=lambda: True,
+                                            helm_version=GOOD_HELM, node_version=lambda: "v18.0.0"))
+        c = checks["node (for redocly)"]
+        self.assertFalse(c.ok)
+        self.assertFalse(c.required)
+        self.assertIn("22.12", c.fix)
+        checks = by_name(doctor.check_tools(which=fake_which(), platform="Darwin", docker_ok=lambda: True,
+                                            helm_version=GOOD_HELM, node_version=lambda: "v22.12.0"))
+        self.assertTrue(checks["node (for redocly)"].ok)
 
 
 if __name__ == "__main__":

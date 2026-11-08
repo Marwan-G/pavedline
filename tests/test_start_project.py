@@ -96,6 +96,17 @@ class StartProjectTests(unittest.TestCase):
         self.assertIn("conflict: docs", r.stdout)
         self.assertEqual([p.name for p in self.dir.iterdir()], ["docs"])
 
+    def test_step_4_7_folders_copied(self):
+        r = self.start()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for folder in ("architecture", "data", "api", "design", "production"):
+            readme = self.dir / "docs" / folder / "README.md"
+            self.assertTrue(readme.is_file(), folder)
+            self.assertLessEqual(len(readme.read_text().splitlines()), 10, folder)
+        index = (self.dir / "docs/rules-index.md").read_text()
+        for home in ("docs/architecture/", "docs/data/", "docs/api/", "docs/design/", "docs/production/LEAD-TIME.md"):
+            self.assertRegex(index, r"\|[^|\n]+\| `" + home + r"` \|", home)
+
     def test_template_sizes(self):
         self.assertLessEqual(len((TEMPLATES / "CLAUDE.md").read_text().splitlines()), 150)
         self.assertLessEqual(len((TEMPLATES / "STATE.md").read_text().splitlines()), 60)

@@ -17,7 +17,7 @@ class ManifestTests(unittest.TestCase):
         self.assertIn("./plugins/pavedline", sources)
         self.assertEqual(
             m["allowCrossMarketplaceDependenciesOn"],
-            ["claude-plugins-official", "knowledge-work-plugins"],
+            ["claude-plugins-official", "knowledge-work-plugins", "ui-ux-pro-max-skill"],
         )
 
     def test_plugin_manifest(self):
@@ -31,6 +31,8 @@ class ManifestTests(unittest.TestCase):
                 "superpowers@claude-plugins-official",
                 "mattpocock-skills@claude-plugins-official",
                 "product-management@knowledge-work-plugins",
+                "figma@claude-plugins-official",
+                "ui-ux-pro-max@ui-ux-pro-max-skill",
             ],
         )
 
