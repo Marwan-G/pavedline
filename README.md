@@ -8,10 +8,13 @@ local Kubernetes → cloud staging → production. Website, blog, web app and mo
 > **Status: v0.1.** Steps 0–3, project memory, hooks and the local Kubernetes cluster work today; later steps are on
 > the [roadmap](#roadmap). Every feature below is marked with the release that delivers it.
 
-<p align="center"><img src="docs/flow.svg" alt="The Pavedline flow: Discover, Design, Deliver on local Kubernetes, then Production once" width="100%"></p>
+<p align="center"><img src="docs/flow.svg" alt="The Pavedline flow in four bands: Discover (steps 0-3), Design (4-7), Deliver on local Kubernetes with GitOps (8-11, repeated per wave), then Production once (integration wave, step 12, launch, grow). You approve each step." width="100%"></p>
 
-> **Built for:** developers, tech leads, DevOps, DevSecOps and platform engineers building a real, multi-tenant
-> product that people will pay for and depend on.
+> **Built for:** people who have built and shipped software before (developers, tech leads, DevOps, DevSecOps and
+> platform engineers) building a real, multi-tenant product that people will pay for and depend on.
+>
+> **An advanced workflow.** It expects you to read a pull request, a Kubernetes manifest and a database schema, and to
+> make the decisions it puts in front of you. It is not a no-code tool.
 >
 > **Not for:** weekend demos, one-prompt apps, or anyone who wants an agent to merge code nobody reviewed.
 >

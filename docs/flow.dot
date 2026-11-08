@@ -1,64 +1,85 @@
 // Pavedline — the flow, idea to production. Source of truth for docs/flow.svg.
-// Validate: dot -Tcanon docs/flow.dot -o /dev/null   Render: dot -Tsvg docs/flow.dot -o docs/flow.svg
+// Layout: four phase bands, read like a snake (left→right, then right→left, …), so every arrow is short.
+// Each band title sits on the side its incoming arrow does not use.
+// Render: python3 scripts/dot_check.py   Check: python3 scripts/dot_check.py --check
 digraph pavedline {
-  graph [rankdir=TB, fontname="Helvetica", bgcolor="white", pad=0.4, nodesep=0.45, ranksep=0.55, newrank=true,
-         label="Pavedline — the GitOps software factory for Claude Code\nship a multi-tenant SaaS to production, not a demo · website + blog · web app · mobile app",
-         labelloc=t, fontsize=20, fontcolor="#0F172A"];
-  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#334155",
-         fillcolor="#FFFFFF", penwidth=1.2, width=2.6, height=1.0];
-  edge  [fontname="Helvetica", fontsize=10, color="#475569", arrowsize=0.7, penwidth=1.2, fontcolor="#B45309"];
+  graph [rankdir=TB, fontname="Helvetica", bgcolor="white", pad=0.3, nodesep=0.35, ranksep=0.42, newrank=true,
+         splines=spline, labelloc=t, labeljust=c, fontsize=22, fontcolor="#0F172A",
+         label=<<B>Pavedline</B> — idea to production, one paved path<BR/><FONT POINT-SIZE="13" COLOR="#475569">website + blog · web app · mobile app · multi-tenant from the first question · GitOps on Kubernetes from the first deploy</FONT><BR/> >];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=12, color="#94A3B8",
+         fillcolor="#FFFFFF", penwidth=1.3, width=2.55, height=0.95, margin="0.2,0.08"];
+  edge  [color="#475569", arrowsize=0.75, penwidth=1.4, fontname="Helvetica", fontsize=14, fontcolor="#D97706"];
 
+  // ── 1 · DISCOVER (left → right)
   subgraph cluster_discover {
-    label="DISCOVER"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
-    step0  [label="0 · Start\nwhat are you building? · multi-tenant?\ncompliance in mind? · solo/team · surfaces\nDB in Kubernetes or managed? · local runtime"];
-    step1  [label="1 · Market + SEO research\nyour similar sites → competitors\npricing · positioning · topics\n→ BRIEF · SEO-STRATEGY"];
-    step2  [label="2 · Grill\nrelentless interview\n→ decisions · GLOSSARY"];
-    step3  [label="3 · Spec\nusers · jobs · features per surface\nacceptance tests\n→ SPEC.md"];
+    label=<<B>DISCOVER</B>  ·  what to build and why>; labeljust=l; fontsize=13;
+    style="rounded,filled"; fillcolor="#EFF6FF"; color="#BFDBFE"; fontcolor="#1E3A8A";
+    s0 [label=<<B>0  Start</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">product · multi-tenant? · compliance?<BR/>surfaces · database · team</FONT>>];
+    s1 [label=<<B>1  Market + SEO</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">competitors · pricing<BR/>positioning · keywords</FONT>>];
+    s2 [label=<<B>2  Grill</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">hard questions until<BR/>every decision is made</FONT>>];
+    s3 [label=<<B>3  Spec</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">users · features per surface<BR/>acceptance tests</FONT>>];
   }
+
+  // ── 2 · DESIGN (right → left)
   subgraph cluster_design {
-    label="DESIGN"; style="rounded,filled"; fillcolor="#F5F3FF"; color="#C4B5FD"; fontcolor="#4C1D95"; fontsize=13;
-    step4  [label="4 · System design (must-ask)\nbackend · Clerk · security · tenancy\njobs · notifications · payments\nregions · mesh · SEO · lead times"];
-    step5  [label="5 · Data + API\ndomain · erd.dot · schema\nRLS forced · migrations\nOpenAPI first"];
-    step6  [label="6 · Architecture\nARCHITECTURE.dot · threats\nHelm chart · environments\nstack templates applied"];
-    step7  [label="7 · Figma (required)\ntokens · components\nsite · blog · web app · mobile\nevery screen · every state"];
+    label=<<B>DESIGN</B>  ·  decide the expensive things once>; labeljust=l; fontsize=13;
+    style="rounded,filled"; fillcolor="#F5F3FF"; color="#DDD6FE"; fontcolor="#4C1D95";
+    s7 [label=<<B>7  Figma</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">design system · every screen<BR/>in every state</FONT>>];
+    s6 [label=<<B>6  Architecture</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">diagrams · threat model<BR/>Helm · environments</FONT>>];
+    s5 [label=<<B>5  Data + API</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">schema · row-level security<BR/>OpenAPI first</FONT>>];
+    s4 [label=<<B>4  System design</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">backend · auth · security<BR/>jobs · payments · regions</FONT>>];
   }
+
+  // ── 3 · DELIVER (left → right), repeated per wave on local Kubernetes
   subgraph cluster_deliver {
-    label="DELIVER — each wave, on LOCAL Kubernetes"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B"; fontsize=13;
-    step8  [label="8 · Plan\nwave → slices\n→ plan.md + plan.dot"];
-    step9  [label="9 · Build (per slice)\nTDD → review → security\n→ adversarial → verify\n→ squash-merge PR"];
-    step10 [label="10 · Deploy to local\nGitOps → ArgoCD in kind\nmigrations first\nverify RUNNING pods"];
-    step11 [label="11 · Learn\nretro → lessons\nrule fixed in ONE place", fillcolor="#FFFBEB", color="#F59E0B"];
+    label=<<B>DELIVER</B>  ·  repeat 8 → 11 for every wave, on Kubernetes on your machine>; labeljust=r; fontsize=13;
+    style="rounded,filled"; fillcolor="#ECFDF5"; color="#A7F3D0"; fontcolor="#064E3B";
+    s8  [label=<<B>8  Plan</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">a wave of small slices</FONT>>];
+    s9  [label=<<B>9  Build</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">tests first · code review<BR/>security · adversarial · verify</FONT>>];
+    s10 [label=<<B>10  Deploy to local</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">Argo CD on kind<BR/>running pods verified</FONT>>];
+    s11 [label=<<B>11  Learn</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">retro · then the next wave<BR/>(back to 8)</FONT>>];
   }
-  integ [label="Integration wave\nprovider test modes · real webhooks\nTestFlight / internal track", fillcolor="#F0FDF4", color="#16A34A"];
+
+  // ── 4 · PRODUCTION (right → left), once, at the end
   subgraph cluster_prod {
-    label="PRODUCTION — once, at the end"; style="rounded,filled"; fillcolor="#FEF2F2"; color="#FCA5A5"; fontcolor="#7F1D1D"; fontsize=13;
-    step12 [label="12 · Go to production (cloud)\n\"time for production?\" → what infra do you have?\n→ NEEDS.md (what I need from you)\nyour terraform apply → CLOUD STAGING verified\n→ PRODUCTION verified → LAUNCH checklist → you: go live"];
+    label=<<B>PRODUCTION</B>  ·  once, when everything works>; labeljust=l; fontsize=13;
+    style="rounded,filled"; fillcolor="#FEF2F2"; color="#FECACA"; fontcolor="#7F1D1D";
+    grow [label=<<B>Grow</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">SEO + content loop<BR/>alerts: uptime · backup · jobs</FONT>>, fillcolor="#FFF7ED", color="#FDBA74"];
+    live [label=<<B>Launch</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">checklist passed<BR/>you go live</FONT>>];
+    s12  [label=<<B>12  Go to production</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">what infra do you have?<BR/>cloud staging → production</FONT>>];
+    integ[label=<<B>Integration wave</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">real webhooks<BR/>app store test tracks</FONT>>];
   }
 
-  { rank=same; step0; step1; step2; step3; }
-  { rank=same; step4; step5; step6; step7; }
-  { rank=same; step8; step9; step10; step11; }
+  { rank=same; s0; s1; s2; s3; }
+  { rank=same; s7; s6; s5; s4; }
+  { rank=same; s8; s9; s10; s11; }
+  { rank=same; grow; live; s12; integ; }
 
-  step0 -> step1 [xlabel="you confirm "];
-  step1 -> step2 [xlabel="you approve "];
-  step2 -> step3;
-  step3 -> step4 [xlabel="you approve "];
-  step4 -> step5 [xlabel="you answer + go "];
-  step5 -> step6 [xlabel="blind review +\nyou approve "];
-  step6 -> step7 [xlabel="you approve "];
-  step7 -> step8 [xlabel="blind check +\nyou approve visual "];
-  step8 -> step9 [xlabel="you approve wave "];
-  step9 -> step10 [xlabel="5 gates per slice "];
-  step10 -> step11 [xlabel="verified (local) "];
-  step11 -> step8 [label=" next wave", style=dashed, color="#059669", fontcolor="#059669", constraint=false];
-  step11 -> integ [xlabel="feature-complete ", color="#16A34A", fontcolor="#16A34A"];
-  integ -> step12 [xlabel="you say go ", color="#B91C1C", fontcolor="#B91C1C"];
+  // Column alignment: invisible edges keep each band's boxes stacked under the band above.
+  s0 -> s7 -> s8 -> grow  [style=invis];
+  s1 -> s6 -> s9 -> live  [style=invis];
+  s2 -> s5 -> s10 -> s12  [style=invis];
 
-  node [shape=note, style="filled", fillcolor="#F1F5F9", color="#64748B", fontsize=10, width=3.6, height=0.9];
-  mem   [label="MEMORY — files only; any fresh session resumes\nCLAUDE.md ≤150 · PRODUCT · STATE.md ≤60 (hook)\nWAITING · decisions/ · GLOSSARY · handoff/"];
-  git   [label="GITOPS — git is the only path to a cluster\nHelm · ArgoCD · image tags · Terraform\nrollback = revert + expand/contract migrations"];
-  guard [label="ENFORCED, NOT PROSE\nCI: tests · scanners · leak test · SEO + a11y gates\nhooks: secrets · cluster context · STATE cap"];
-  grow  [label="AFTER LAUNCH\nGrow loop (SEO + content) · three alerts:\nuptime · backup failed · job failed/late", fillcolor="#FFF7ED", color="#EA580C"];
-  { rank=same; mem; git; guard; grow; }
-  step12 -> mem [style=invis]; step12 -> git [style=invis]; step12 -> guard [style=invis]; step12 -> grow [style=invis];
+  // The path. ✓ = you approve before the next step starts.
+  s0 -> s1 [label="✓"];  s1 -> s2 [label="✓"];  s2 -> s3;
+  s3 -> s4 [label="  ✓"];
+  // Right-to-left bands: edges are written left→right (so the boxes stay in a straight row) and drawn backwards.
+  s5 -> s4 [label="✓", dir=back];
+  s6 -> s5 [label="✓", dir=back];
+  s7 -> s6 [label="✓", dir=back];
+  s7 -> s8 [label="  ✓"];
+  s8 -> s9 [label="✓"];  s9 -> s10;  s10 -> s11;
+  s11 -> integ [label="  all features done", fontsize=11, fontcolor="#047857", color="#059669"];
+  s12 -> integ [label="✓", dir=back, color="#B91C1C"];
+  live -> s12 [label="✓", dir=back, color="#B91C1C"];
+  grow -> live [dir=back];
+
+  // Foundations that hold for every step.
+  node [shape=box, style="rounded,filled", fillcolor="#F8FAFC", color="#CBD5E1", width=2.55, height=0.8];
+  mem   [label=<<B>Memory in files</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">any new session resumes<BR/>from your repository</FONT>>];
+  gitops[label=<<B>GitOps only</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">git is the only path<BR/>to a cluster</FONT>>];
+  gates [label=<<B>Enforced, not prose</B><BR/><FONT POINT-SIZE="10.5" COLOR="#475569">CI gates · scanners · hooks</FONT>>];
+  legend[label=<<FONT COLOR="#D97706"><B>✓</B></FONT>  you approve<BR/><FONT POINT-SIZE="10.5" COLOR="#475569">nothing moves on without you</FONT>>, color="#FCD34D", fillcolor="#FFFBEB"];
+  { rank=same; mem; gitops; gates; legend; }
+  grow -> mem [style=invis]; live -> gitops [style=invis]; s12 -> gates [style=invis]; integ -> legend [style=invis];
 }
