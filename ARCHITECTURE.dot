@@ -1,4 +1,4 @@
-// Pavedline — architecture of the factory itself. Source of truth for ARCHITECTURE.svg.
+// Pavedline — architecture of the factory itself. Source of truth for ARCHITECTURE.svg; explained in docs/architecture.md.
 // Validate + render: python3 scripts/dot_check.py   Check: python3 scripts/dot_check.py --check
 digraph architecture {
   graph [rankdir=TB, fontname="Helvetica", bgcolor="white", pad=0.4, nodesep=0.45, ranksep=0.6, newrank=true,
@@ -14,11 +14,12 @@ digraph architecture {
   subgraph cluster_plugin {
     label="PLUGIN — plugins/pavedline"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
     manifest  [label="plugin.json\nname · version · dependencies"];
-    skills    [label="Skills\nstart · grill · spec · design\nplan · build · deploy · learn"];
-    agents    [label="Agents\nrole per file\nmodel generated from config/models.yaml"];
-    hooks     [label="Hooks\nsecret guard · cluster-context guard\nSTATE.md cap"];
-    mcp       [label="MCP servers\n.mcp.json"];
-    templates [label="Templates\nCLAUDE.md · STATE.md\nARCHITECTURE.dot · Helm · CI"];
+    skills    [label="Skills (12)\nstart · spec · market research\ndoctor · state · local-cluster …"];
+    agents    [label="Agent\nresearcher (read-only)\nmodel generated from config/models.yaml"];
+    hooks     [label="Hooks (6)\nsecrets · cluster context · git\nSTATE.md cap · CLAUDE.md size · session start"];
+    mcp       [label="MCP server\nPlaywright (.mcp.json)"];
+    scripts   [label="Scripts\ndoctor · start_project\nlocal cluster: up · verify · down"];
+    templates [label="Templates\nCLAUDE.md · PRODUCT.md · STATE.md\nWAITING.md · decisions · docs"];
   }
 
   subgraph cluster_repo {
@@ -27,22 +28,24 @@ digraph architecture {
     dotcheck [label="dot_check.py\nvalidate · render · hash check"];
     dotdrift [label="dot_drift.py\ncode changed, diagram not?"];
     tests    [label="tests/\nunittest, stdlib only"];
+    prcheck  [label="pr_checks.py · lint_skills.py\ngates line · skill format"];
   }
 
   subgraph cluster_ci {
     label="CI — GitHub Actions"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B"; fontsize=13;
-    ci [label="Pull-request checks\nunit tests · scan · diagrams · drift"];
+    ci [label="8 required checks + CodeQL\nunit · lint · sanitize · gitleaks · diagrams\nplugin-validate · local-cluster · pr-body"];
   }
 
   user [label="Your project\n(repository you build in)", fillcolor="#FEF2F2", color="#FCA5A5"];
 
   market -> manifest [label=" lists "];
   manifest -> deps [label=" requires ", style=dashed];
-  manifest -> skills; manifest -> agents; manifest -> hooks; manifest -> mcp; manifest -> templates;
+  manifest -> skills; manifest -> agents; manifest -> hooks; manifest -> mcp; manifest -> templates; manifest -> scripts;
   templates -> user [label=" start copies ", color="#16A34A", fontcolor="#16A34A"];
   hooks -> user [label=" guard every tool call ", color="#B91C1C", fontcolor="#B91C1C"];
+  scripts -> user [label=" local cluster ", color="#1D4ED8", fontcolor="#1D4ED8"];
   skills -> agents [label=" dispatch ", style=dashed];
 
-  sanitize -> ci; dotcheck -> ci; dotdrift -> ci; tests -> ci;
+  sanitize -> ci; dotcheck -> ci; dotdrift -> ci; tests -> ci; prcheck -> ci;
   ci -> market [label=" gates every change ", style=dashed, color="#059669", fontcolor="#059669", constraint=false];
 }
