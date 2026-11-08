@@ -23,6 +23,21 @@ REG_NAME="kind-registry"
 for tool in docker kind kubectl helm; do
   command -v "$tool" >/dev/null 2>&1 || { echo "error: $tool is not installed. Run /pavedline:doctor; it tells you what it will install and why, then installs it with your permission." >&2; exit 1; }
 done
+# helm older than HELM_MIN_VERSION has a known bug that turns the Argo CD install into ~40 minutes; stop now instead.
+helm_v="$(helm version --template '{{.Version}}' 2>/dev/null || true)"
+if ! [[ "$helm_v" =~ ^v([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3}) ]]; then
+  echo "error: could not read the helm version (got: ${helm_v:-nothing}). Run /pavedline:doctor." >&2
+  exit 1
+fi
+have=$(( 10#${BASH_REMATCH[1]} * 1000000 + 10#${BASH_REMATCH[2]} * 1000 + 10#${BASH_REMATCH[3]} ))
+IFS=. read -r need_major need_minor need_patch <<<"$HELM_MIN_VERSION"
+need=$(( 10#$need_major * 1000000 + 10#$need_minor * 1000 + 10#$need_patch ))
+if [ "$have" -lt "$need" ]; then
+  echo "error: helm $helm_v is too old; Pavedline needs helm ${HELM_MIN_VERSION} or newer." >&2
+  echo "helm v4.2.1 waits the full timeout on every hook deletion, which makes the Argo CD install take ~40 minutes:" >&2
+  echo "https://github.com/helm/helm/issues/32214. Upgrade with: brew upgrade helm (macOS), or see https://helm.sh/docs/intro/install/" >&2
+  exit 1
+fi
 if ! docker info >/dev/null 2>&1; then
   echo "error: no container runtime answers. Start Docker or Colima (colima start --cpu 4 --memory 10)." >&2
   exit 1
