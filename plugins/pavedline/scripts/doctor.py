@@ -8,10 +8,12 @@ installing (after announcing, with the user's permission). Never prints environm
 """
 import json
 import platform as _platform
+import re
 import shutil
 import subprocess
 import sys
-from typing import Callable, List, NamedTuple, Optional
+from pathlib import Path
+from typing import Callable, List, NamedTuple, Optional, Tuple
 
 
 class Check(NamedTuple):
@@ -67,14 +69,57 @@ def docker_info_ok() -> bool:
         return False
 
 
+VERSIONS_ENV = Path(__file__).resolve().parent / "local-cluster" / "versions.env"
+HELM_URL = "https://helm.sh/docs/intro/install/"
+
+
+def parse_version(text: Optional[str]) -> Optional[Tuple[int, int, int]]:
+    m = re.match(r"^v?(\d{1,3})\.(\d{1,3})\.(\d{1,3})", text or "")
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+
+def helm_min_version() -> Tuple[int, int, int]:
+    """HELM_MIN_VERSION from versions.env, the one place up.sh also reads it from."""
+    for line in VERSIONS_ENV.read_text().splitlines():
+        if line.startswith("HELM_MIN_VERSION="):
+            v = parse_version(line.split("=", 1)[1].strip())
+            if v:
+                return v
+    raise ValueError("HELM_MIN_VERSION missing from versions.env")
+
+
+def installed_helm_version() -> Optional[str]:
+    try:
+        r = subprocess.run(["helm", "version", "--template", "{{.Version}}"], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def helm_check(version: Optional[str], mac: bool) -> "Check":
+    fix = "brew upgrade helm" if mac else HELM_URL
+    need = helm_min_version()
+    have = parse_version(version)
+    need_text = ".".join(map(str, need))
+    if have is None:
+        return Check("helm", False, True, fix, "version unreadable")
+    if have < need:
+        return Check("helm", False, True, fix, f"too old ({version}, need {need_text}+)")
+    return Check("helm", True, True, "", "ok")
+
+
 def check_tools(
     which: Callable[[str], Optional[str]] = shutil.which,
     platform: Optional[str] = None,
     docker_ok: Callable[[], bool] = docker_info_ok,
+    helm_version: Callable[[], Optional[str]] = installed_helm_version,
 ) -> List[Check]:
     mac = (platform or _platform.system()) == "Darwin"
     checks: List[Check] = []
     for name, formula, url, required in TOOLS[:8]:
+        if name == "helm" and which(name) is not None:
+            checks.append(helm_check(helm_version(), mac))
+            continue
         checks.append(Check(name, which(name) is not None, required, f"brew install {formula}" if mac else url))
     runtime_ok = which("docker") is not None and docker_ok()
     checks.append(Check("container runtime", runtime_ok, True, RUNTIME_FIX_MAC if mac else RUNTIME_FIX_OTHER))
@@ -129,8 +174,9 @@ def render(checks: List[Check]) -> List[str]:
     ]
 
 
-def run(which=shutil.which, platform=None, docker_ok=docker_info_ok, listing_json=None, out=print) -> int:
-    checks = check_tools(which=which, platform=platform, docker_ok=docker_ok)
+def run(which=shutil.which, platform=None, docker_ok=docker_info_ok, helm_version=installed_helm_version,
+        listing_json=None, out=print) -> int:
+    checks = check_tools(which=which, platform=platform, docker_ok=docker_ok, helm_version=helm_version)
     if listing_json is None and which("claude") is not None:
         listing_json = fetch_listing()
     checks += check_plugins(listing_json if listing_json is not None else "")

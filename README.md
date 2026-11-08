@@ -33,9 +33,10 @@ When your project reaches the local cluster, Pavedline creates:
 
 **What to expect:**
 - **It downloads.** The first run pulls a few GB of container images (the Kubernetes node, Argo CD, CloudNativePG,
-  Postgres). On GitHub's Linux runner the whole stack is up in about 1.5 minutes. On the test Mac it took about 41
-  minutes, almost all of it pulling Argo CD's images; your time depends on your connection to the image registries.
-  If a download fails, the scripts retry it, and re-running `up.sh` reuses whatever is already done.
+  Postgres). The whole stack is up in about a minute (56 s on the test Mac, about 1.5 minutes on GitHub's Linux
+  runner). If a download fails, the scripts retry it, and re-running `up.sh` reuses whatever is already done.
+- **It needs helm 4.2.2 or newer.** helm 4.2.1 has a [known bug](https://github.com/helm/helm/issues/32214) that
+  stretches the Argo CD install to about 40 minutes; `up.sh` and `/pavedline:doctor` stop and tell you to upgrade.
 - **It asks first.** Missing tools (a container runtime, `kind`, `kubectl`, `helm`) are installed by Pavedline only
   after it tells you what and why, and Claude Code asks your permission for each command. A hook blocks mutating
   cluster commands on any context that is not `kind-pavedline-*`, so your other clusters are safe.
