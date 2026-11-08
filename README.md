@@ -200,6 +200,12 @@ Asked for **just in time**, never all on day one:
 | **v0.4** | integration wave, step 12 (cloud staging, production, launch checklist), the optional cockpit pane |
 | **v1.0** | an example product completes steps 0–11 on local Kubernetes, proven in CI on every PR |
 
+## Contributing
+
+Found a problem or have an idea? [Open an issue](https://github.com/Marwan-G/pavedline/issues/new/choose); the form
+asks for what we need to reproduce it. Pull requests are welcome after an issue is agreed: see
+[CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Built on the shoulders of
 
 Pavedline installs its dependencies from their makers and does not copy them: [superpowers](https://github.com/obra/superpowers)

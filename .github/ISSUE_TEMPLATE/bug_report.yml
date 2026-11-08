@@ -1,0 +1,71 @@
+name: Bug report
+description: Something in Pavedline broke or behaved wrongly.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please **remove secrets, tokens and private names** from anything you paste.
+        Security problems go to [SECURITY.md](https://github.com/Marwan-G/pavedline/blob/main/SECURITY.md), not here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where did it happen?
+      options:
+        - Install or plugin loading
+        - /pavedline:doctor
+        - "Step 0: Start"
+        - "Step 1: Market + SEO"
+        - "Step 2: Grill"
+        - "Step 3: Spec"
+        - Local cluster (up.sh / verify.sh / down.sh)
+        - Hooks (a command was blocked or allowed wrongly)
+        - Memory files (STATE.md, WAITING.md, ...)
+        - Docs or README
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. /pavedline:start
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of /pavedline:doctor
+      description: Paste the table it prints. It shows your tools and plugin versions.
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error message or logs
+      description: The exact error text, or the last lines of the failing command.
+      render: shell
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Pavedline version, Claude Code version (`claude --version`), operating system and CPU (e.g. macOS 26 on Apple silicon, Ubuntu 24.04 x86_64).
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I removed secrets, tokens and private names from this report.
+          required: true
+        - label: I searched the open issues and this is not a duplicate.
+          required: true
