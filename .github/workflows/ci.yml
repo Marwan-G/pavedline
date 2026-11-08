@@ -103,15 +103,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install gitleaks v8.30.1 (checksum verified)
-        working-directory: ${{ runner.temp }}
-        run: |
-          base=https://github.com/gitleaks/gitleaks/releases/download/v8.30.1
-          curl --fail --silent --show-error --location -O "$base/gitleaks_8.30.1_linux_x64.tar.gz"
-          # Expected sha256 from $base/gitleaks_8.30.1_checksums.txt
-          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks_8.30.1_linux_x64.tar.gz" | sha256sum --check --strict
-          tar -xzf gitleaks_8.30.1_linux_x64.tar.gz gitleaks
-      - run: ${{ runner.temp }}/gitleaks dir . --no-banner --redact
+      # Official image (github.com/gitleaks/gitleaks README), pinned by digest: ghcr.io, not GitHub release downloads.
+      - name: Scan for secrets (gitleaks v8.30.1)
+        uses: docker://ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+        with:
+          args: dir /github/workspace --no-banner --redact
 
   local-cluster:
     runs-on: ubuntu-24.04-arm
@@ -124,14 +120,14 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: |
           base=https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0
-          curl --fail --silent --show-error --location -O "$base/kind-linux-arm64"
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O "$base/kind-linux-arm64"
           # Expected sha256 from $base/kind-linux-arm64.sha256sum
           echo "20022bee6cfcd5086cb7234d218e3454e6090022f2a8f55d1fa7fcf42c3867a2  kind-linux-arm64" | sha256sum --check --strict
           sudo install -m 0755 kind-linux-arm64 /usr/local/bin/kind
       - name: Install helm v4.3.1 (checksum verified)
         working-directory: ${{ runner.temp }}
         run: |
-          curl --fail --silent --show-error --location -O https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz
           # Expected sha256 from https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz.sha256sum
           echo "8cf8f66ecbc252ac8f7f06cca68aba88508ddfde3a6a34feb1678ad1694b4f88  helm-v4.3.1-linux-arm64.tar.gz" | sha256sum --check --strict
           tar -xzf helm-v4.3.1-linux-arm64.tar.gz linux-arm64/helm
