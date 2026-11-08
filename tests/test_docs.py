@@ -44,7 +44,23 @@ class Docs(unittest.TestCase):
                     self.assertIn(arg.rsplit("@", 1)[0], credits, arg)
 
     def test_readme_status_line(self):
-        self.assertIn("Status: in development", (ROOT / "README.md").read_text())
+        self.assertIn("Status: v0.1.", (ROOT / "README.md").read_text())
+
+    def test_readme_says_what_it_sets_up(self):
+        t = (ROOT / "README.md").read_text()
+        self.assertIn("## What it sets up on your machine", t)
+        self.assertLess(t.index("## What it sets up on your machine"), t.index("## Install"))
+        env = {}
+        for line in (ROOT / "plugins/pavedline/scripts/local-cluster/versions.env").read_text().splitlines():
+            if line.strip() and not line.startswith("#"):
+                k, _, v = line.partition("=")
+                env[k] = v
+        k8s = re.search(r"kindest/node:(v[\d.]+)@", env["KIND_NODE_IMAGE"]).group(1)
+        for needle in [f"Kubernetes {k8s}", f"Helm chart {env['ARGOCD_CHART_VERSION']}",
+                       f"Helm chart {env['CNPG_CHART_VERSION']}", f"localhost:{env['REGISTRY_PORT']}",
+                       "kind-pavedline-<project>", "loopback only", "down.sh <project> --all", "**Tested on:**"]:
+            self.assertIn(needle, t, needle)
+        self.assertNotRegex(t, r"@[A-Z_]+@", "unfilled README placeholder")
 
     def test_readme_privacy_and_install(self):
         t = (ROOT / "README.md").read_text()

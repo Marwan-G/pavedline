@@ -13,6 +13,8 @@ fi
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=versions.env
 . "$HERE/versions.env"
+# shellcheck source=retry.sh
+. "$HERE/retry.sh"
 
 CLUSTER="pavedline-${PROJECT}"
 CTX="kind-pavedline-${PROJECT}"
@@ -69,15 +71,16 @@ data:
 MANIFEST
 
 # 6. Argo CD and the CloudNativePG operator, at the pinned chart versions.
-helm repo add argo https://argoproj.github.io/argo-helm
-helm repo add cnpg https://cloudnative-pg.github.io/charts
-helm repo update argo cnpg
+# Chart downloads come from public release hosts; retry rides out a brief outage.
+retry helm repo add argo https://argoproj.github.io/argo-helm --force-update
+retry helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
+retry helm repo update argo cnpg
 
-helm upgrade --install argocd argo/argo-cd \
+retry helm upgrade --install argocd argo/argo-cd \
   --kube-context "$CTX" --namespace argocd --create-namespace \
   --version "${ARGOCD_CHART_VERSION}" --wait --timeout 10m
 
-helm upgrade --install cnpg cnpg/cloudnative-pg \
+retry helm upgrade --install cnpg cnpg/cloudnative-pg \
   --kube-context "$CTX" --namespace cnpg-system --create-namespace \
   --version "${CNPG_CHART_VERSION}" --wait --timeout 10m
 

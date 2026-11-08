@@ -5,8 +5,8 @@
 The GitOps software factory for serious builders: idea → market → spec → system design → Figma → tested code →
 local Kubernetes → cloud staging → production. Website, blog, web app and mobile app, built as one product.
 
-> **Status: in development.** v0.1 (steps 0–3, memory, hooks, local cluster) is being built. See the
-> [roadmap](#roadmap). Every feature below is marked with the release that delivers it.
+> **Status: v0.1.** Steps 0–3, project memory, hooks and the local Kubernetes cluster work today; later steps are on
+> the [roadmap](#roadmap). Every feature below is marked with the release that delivers it.
 
 <p align="center"><img src="docs/flow.svg" alt="The Pavedline flow: Discover, Design, Deliver on local Kubernetes, then Production once" width="100%"></p>
 
@@ -16,6 +16,32 @@ local Kubernetes → cloud staging → production. Website, blog, web app and mo
 > **Not for:** weekend demos, one-prompt apps, or anyone who wants an agent to merge code nobody reviewed.
 >
 > **Privacy:** Pavedline collects nothing. Every answer stays in your own repository.
+
+## What it sets up on your machine
+
+Most agent skill packs only write prompts and code. Pavedline also runs real infrastructure: from the first deploy,
+your product runs on a **complete local Kubernetes cluster with GitOps**, the same way it will run in production.
+When your project reaches the local cluster, Pavedline creates:
+
+| What | Details |
+|---|---|
+| **A Kubernetes cluster** | [kind](https://kind.sigs.k8s.io/) v0.33.0, Kubernetes v1.37.0 (node image pinned by digest). Cluster `pavedline-<project>`, kube context `kind-pavedline-<project>` |
+| **Argo CD** | Helm chart 10.15.0 in namespace `argocd`. Every deploy goes through Git, as in production |
+| **CloudNativePG** | Helm chart 0.29.1 in namespace `cnpg-system`. `verify.sh` brings up a one-instance Postgres to prove it works, then deletes it |
+| **A local image registry** | Container `kind-registry` on `localhost:5001` |
+| **Ports** | `127.0.0.1:8080` → 80 and `127.0.0.1:8443` → 443. Everything binds to loopback only; nothing is exposed to your network |
+
+**What to expect:**
+- **It downloads.** The first run pulls a few GB of container images (the Kubernetes node, Argo CD, CloudNativePG,
+  Postgres), and it can take a while on a home connection. @TIMING@
+- **It asks first.** Missing tools (a container runtime, `kind`, `kubectl`, `helm`) are installed by Pavedline only
+  after it tells you what and why, and Claude Code asks your permission for each command. A hook blocks mutating
+  cluster commands on any context that is not `kind-pavedline-*`, so your other clusters are safe.
+- **It removes cleanly.** `down.sh <project>` deletes the cluster; `down.sh <project> --all` also removes the
+  registry container.
+
+**Tested on:**
+@TESTED@
 
 ## Install
 
@@ -52,7 +78,7 @@ new paid service or account still needs your go first.
 - **`/pavedline:doctor`:** checks the machine and plugins; for anything missing it tells you what it will install and why, then installs it.
 - **Local cluster scripts:** a kind cluster with Argo CD, CloudNativePG and a local image registry, with `up`,
   `verify` and `down` scripts. See [environments](docs/environments.md).
-- **CI for the factory itself:** tests, secret scan, diagram checks and a cluster smoke test on every pull request (the smoke test has not yet run on GitHub; its first run happens on the first pull request).
+- **CI for the factory itself:** tests, secret scan, diagram checks and a full local-cluster smoke test (kind, Argo CD, CloudNativePG, Postgres) on Linux arm64, on every pull request.
 
 Questions: [FAQ](docs/faq.md).
 
