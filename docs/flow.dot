@@ -1,64 +1,82 @@
 // Pavedline — the flow, idea to production. Source of truth for docs/flow.svg.
-// Validate: dot -Tcanon docs/flow.dot -o /dev/null   Render: dot -Tsvg docs/flow.dot -o docs/flow.svg
+// Four phase bands read as a snake (left→right, then right→left, …) so every connector is short and straight.
+// Colour marks the phase only (card header and band title); everything else is neutral.
+// Render: python3 scripts/dot_check.py   Check: python3 scripts/dot_check.py --check
 digraph pavedline {
-  graph [rankdir=TB, fontname="Helvetica", bgcolor="white", pad=0.4, nodesep=0.45, ranksep=0.55, newrank=true,
-         label="Pavedline — the GitOps software factory for Claude Code\nship a multi-tenant SaaS to production, not a demo · website + blog · web app · mobile app",
-         labelloc=t, fontsize=20, fontcolor="#0F172A"];
-  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#334155",
-         fillcolor="#FFFFFF", penwidth=1.2, width=2.6, height=1.0];
-  edge  [fontname="Helvetica", fontsize=10, color="#475569", arrowsize=0.7, penwidth=1.2, fontcolor="#B45309"];
+  graph [rankdir=TB, fontname="Helvetica,Arial,sans-serif", bgcolor="white", pad="0.35,0.3", nodesep=0.32, ranksep=0.5,
+         newrank=true, splines=ortho, labelloc=t, labeljust=l, fontsize=24, fontcolor="#0F172A",
+         label=<<B>Pavedline</B><FONT COLOR="#64748B">  ·  idea to production, one paved path</FONT><BR ALIGN="LEFT"/><FONT POINT-SIZE="6"> </FONT><BR ALIGN="LEFT"/><FONT POINT-SIZE="12" COLOR="#64748B">Website, blog, web app and mobile app. Multi-tenant from the first question. GitOps on Kubernetes from the first deploy.</FONT><BR ALIGN="LEFT"/> >];
+  node  [shape=plain, fontname="Helvetica,Arial,sans-serif", fontsize=13, fontcolor="#0F172A"];
+  edge  [color="#94A3B8", penwidth=1.6, arrowsize=0.7, arrowhead=normal];
 
+  // ── 01 DISCOVER ─────────────────────────────────────────────── left → right
   subgraph cluster_discover {
-    label="DISCOVER"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
-    step0  [label="0 · Start\nwhat are you building? · multi-tenant?\ncompliance in mind? · solo/team · surfaces\nDB in Kubernetes or managed? · local runtime"];
-    step1  [label="1 · Market + SEO research\nyour similar sites → competitors\npricing · positioning · topics\n→ BRIEF · SEO-STRATEGY"];
-    step2  [label="2 · Grill\nrelentless interview\n→ decisions · GLOSSARY"];
-    step3  [label="3 · Spec\nusers · jobs · features per surface\nacceptance tests\n→ SPEC.md"];
+    label=<<FONT COLOR="#1D4ED8"><B>01  DISCOVER</B></FONT><FONT COLOR="#64748B">   what to build, for whom, and why</FONT>>;
+    fontsize=12; labeljust=l; style="rounded,filled"; fillcolor="#F8FAFC"; color="#E2E8F0"; penwidth=1;
+    s0 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#1D4ED8" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#1D4ED8"><B>STEP 00</B></FONT><BR ALIGN="LEFT"/><B>Start</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">product · tenancy · compliance</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s1 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#1D4ED8" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#1D4ED8"><B>STEP 01</B></FONT><BR ALIGN="LEFT"/><B>Market + SEO</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">competitors · pricing · keywords</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s2 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#1D4ED8" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#1D4ED8"><B>STEP 02</B></FONT><BR ALIGN="LEFT"/><B>Grill</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">every open decision answered</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s3 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#1D4ED8" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#1D4ED8"><B>STEP 03</B></FONT><BR ALIGN="LEFT"/><B>Spec</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">features · acceptance tests</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
   }
+
+  // ── 02 DESIGN ───────────────────────────────────────────────── right → left
   subgraph cluster_design {
-    label="DESIGN"; style="rounded,filled"; fillcolor="#F5F3FF"; color="#C4B5FD"; fontcolor="#4C1D95"; fontsize=13;
-    step4  [label="4 · System design (must-ask)\nbackend · Clerk · security · tenancy\njobs · notifications · payments\nregions · mesh · SEO · lead times"];
-    step5  [label="5 · Data + API\ndomain · erd.dot · schema\nRLS forced · migrations\nOpenAPI first"];
-    step6  [label="6 · Architecture\nARCHITECTURE.dot · threats\nHelm chart · environments\nstack templates applied"];
-    step7  [label="7 · Figma (required)\ntokens · components\nsite · blog · web app · mobile\nevery screen · every state"];
+    label=<<FONT COLOR="#6D28D9"><B>02  DESIGN</B></FONT><FONT COLOR="#64748B">   the expensive decisions, made once</FONT>>;
+    fontsize=12; labeljust=l; style="rounded,filled"; fillcolor="#F8FAFC"; color="#E2E8F0"; penwidth=1;
+    s7 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#6D28D9" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#6D28D9"><B>STEP 07</B></FONT><BR ALIGN="LEFT"/><B>Figma</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">every screen, every state</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s6 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#6D28D9" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#6D28D9"><B>STEP 06</B></FONT><BR ALIGN="LEFT"/><B>Architecture</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">diagrams · threats · Helm</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s5 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#6D28D9" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#6D28D9"><B>STEP 05</B></FONT><BR ALIGN="LEFT"/><B>Data + API</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">schema · row security · OpenAPI</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s4 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#6D28D9" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#6D28D9"><B>STEP 04</B></FONT><BR ALIGN="LEFT"/><B>System design</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">backend · auth · security</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
   }
+
+  // ── 03 DELIVER ──────────────────────────────────────────────── left → right, repeated per wave
   subgraph cluster_deliver {
-    label="DELIVER — each wave, on LOCAL Kubernetes"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#6EE7B7"; fontcolor="#064E3B"; fontsize=13;
-    step8  [label="8 · Plan\nwave → slices\n→ plan.md + plan.dot"];
-    step9  [label="9 · Build (per slice)\nTDD → review → security\n→ adversarial → verify\n→ squash-merge PR"];
-    step10 [label="10 · Deploy to local\nGitOps → ArgoCD in kind\nmigrations first\nverify RUNNING pods"];
-    step11 [label="11 · Learn\nretro → lessons\nrule fixed in ONE place", fillcolor="#FFFBEB", color="#F59E0B"];
+    label=<<FONT COLOR="#047857"><B>03  DELIVER</B></FONT><FONT COLOR="#64748B">   repeated for every wave, on Kubernetes on your machine</FONT>>;
+    fontsize=12; labeljust=r; style="rounded,filled"; fillcolor="#F8FAFC"; color="#E2E8F0"; penwidth=1;
+    s8  [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#047857" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#047857"><B>STEP 08</B></FONT><BR ALIGN="LEFT"/><B>Plan</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">a wave of small slices</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s9  [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#047857" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#047857"><B>STEP 09</B></FONT><BR ALIGN="LEFT"/><B>Build</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">tests first · five review gates</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s10 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#047857" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#047857"><B>STEP 10</B></FONT><BR ALIGN="LEFT"/><B>Deploy to local</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">Argo CD · running pods verified</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s11 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#047857" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#047857"><B>STEP 11</B></FONT><BR ALIGN="LEFT"/><B>Learn</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">retro, then the next wave</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
   }
-  integ [label="Integration wave\nprovider test modes · real webhooks\nTestFlight / internal track", fillcolor="#F0FDF4", color="#16A34A"];
+
+  // ── 04 PRODUCTION ───────────────────────────────────────────── right → left, once
   subgraph cluster_prod {
-    label="PRODUCTION — once, at the end"; style="rounded,filled"; fillcolor="#FEF2F2"; color="#FCA5A5"; fontcolor="#7F1D1D"; fontsize=13;
-    step12 [label="12 · Go to production (cloud)\n\"time for production?\" → what infra do you have?\n→ NEEDS.md (what I need from you)\nyour terraform apply → CLOUD STAGING verified\n→ PRODUCTION verified → LAUNCH checklist → you: go live"];
+    label=<<FONT COLOR="#B91C1C"><B>04  PRODUCTION</B></FONT><FONT COLOR="#64748B">   once, when everything works</FONT>>;
+    fontsize=12; labeljust=l; style="rounded,filled"; fillcolor="#F8FAFC"; color="#E2E8F0"; penwidth=1;
+    grow [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#B91C1C" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#B91C1C"><B>AFTER LAUNCH</B></FONT><BR ALIGN="LEFT"/><B>Grow</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">SEO and content · alerts</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    live [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#B91C1C" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#B91C1C"><B>LAUNCH</B></FONT><BR ALIGN="LEFT"/><B>Go live</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">launch checklist passed</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    s12  [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#B91C1C" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#B91C1C"><B>STEP 12</B></FONT><BR ALIGN="LEFT"/><B>Go to production</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">cloud staging, then production</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
+    integ[label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#CBD5E1" BGCOLOR="white" STYLE="rounded"><TR><TD BGCOLOR="#B91C1C" ALIGN="LEFT" WIDTH="190" HEIGHT="4" CELLPADDING="0"></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="9" COLOR="#B91C1C"><B>FEATURE-COMPLETE</B></FONT><BR ALIGN="LEFT"/><B>Integration wave</B><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#64748B">real webhooks · store test tracks</FONT><BR ALIGN="LEFT"/></TD></TR></TABLE>>];
   }
 
-  { rank=same; step0; step1; step2; step3; }
-  { rank=same; step4; step5; step6; step7; }
-  { rank=same; step8; step9; step10; step11; }
+  { rank=same; s0; s1; s2; s3; }
+  { rank=same; s7; s6; s5; s4; }
+  { rank=same; s8; s9; s10; s11; }
+  { rank=same; grow; live; s12; integ; }
 
-  step0 -> step1 [xlabel="you confirm "];
-  step1 -> step2 [xlabel="you approve "];
-  step2 -> step3;
-  step3 -> step4 [xlabel="you approve "];
-  step4 -> step5 [xlabel="you answer + go "];
-  step5 -> step6 [xlabel="blind review +\nyou approve "];
-  step6 -> step7 [xlabel="you approve "];
-  step7 -> step8 [xlabel="blind check +\nyou approve visual "];
-  step8 -> step9 [xlabel="you approve wave "];
-  step9 -> step10 [xlabel="5 gates per slice "];
-  step10 -> step11 [xlabel="verified (local) "];
-  step11 -> step8 [label=" next wave", style=dashed, color="#059669", fontcolor="#059669", constraint=false];
-  step11 -> integ [xlabel="feature-complete ", color="#16A34A", fontcolor="#16A34A"];
-  integ -> step12 [xlabel="you say go ", color="#B91C1C", fontcolor="#B91C1C"];
+  // Keep the four columns aligned across bands.
+  s0 -> s7 -> s8 -> grow [style=invis, weight=5];
+  s1 -> s6 -> s9 -> live [style=invis, weight=5];
+  s2 -> s5 -> s10 -> s12 [style=invis, weight=5];
+  s3 -> s4 -> s11 -> integ [style=invis, weight=5];
 
-  node [shape=note, style="filled", fillcolor="#F1F5F9", color="#64748B", fontsize=10, width=3.6, height=0.9];
-  mem   [label="MEMORY — files only; any fresh session resumes\nCLAUDE.md ≤150 · PRODUCT · STATE.md ≤60 (hook)\nWAITING · decisions/ · GLOSSARY · handoff/"];
-  git   [label="GITOPS — git is the only path to a cluster\nHelm · ArgoCD · image tags · Terraform\nrollback = revert + expand/contract migrations"];
-  guard [label="ENFORCED, NOT PROSE\nCI: tests · scanners · leak test · SEO + a11y gates\nhooks: secrets · cluster context · STATE cap"];
-  grow  [label="AFTER LAUNCH\nGrow loop (SEO + content) · three alerts:\nuptime · backup failed · job failed/late", fillcolor="#FFF7ED", color="#EA580C"];
-  { rank=same; mem; git; guard; grow; }
-  step12 -> mem [style=invis]; step12 -> git [style=invis]; step12 -> guard [style=invis]; step12 -> grow [style=invis];
+  // The path. Right-to-left bands are written left→right (straight rows) and drawn backwards.
+  // High weight keeps each band's cards in a straight row, in order.
+  edge [weight=20];
+  s0 -> s1; s1 -> s2; s2 -> s3;
+  s5 -> s4 [dir=back]; s6 -> s5 [dir=back]; s7 -> s6 [dir=back];
+  s8 -> s9; s9 -> s10; s10 -> s11;
+  s12 -> integ [dir=back]; live -> s12 [dir=back]; grow -> live [dir=back];
+  edge [weight=1];
+  s3 -> s4; s7 -> s8; s11 -> integ;
+
+  // Foundations, one bar under everything.
+  foot [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" BGCOLOR="#0F172A" STYLE="rounded"><TR>
+    <TD ALIGN="LEFT" WIDTH="80"><FONT POINT-SIZE="9" COLOR="#94A3B8"><B>ALWAYS<BR ALIGN="LEFT"/>ON</B></FONT></TD>
+    <TD ALIGN="LEFT" WIDTH="196"><FONT COLOR="white"><B>Memory in files</B></FONT><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#CBD5E1">a new session resumes from the repo</FONT><BR ALIGN="LEFT"/></TD>
+    <TD ALIGN="LEFT" WIDTH="196"><FONT COLOR="white"><B>GitOps only</B></FONT><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#CBD5E1">git is the only path to a cluster</FONT><BR ALIGN="LEFT"/></TD>
+    <TD ALIGN="LEFT" WIDTH="196"><FONT COLOR="white"><B>Enforced, not prose</B></FONT><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#CBD5E1">CI gates · scanners · hooks</FONT><BR ALIGN="LEFT"/></TD>
+    <TD ALIGN="LEFT" WIDTH="196"><FONT COLOR="white"><B>You approve</B></FONT><BR ALIGN="LEFT"/><FONT POINT-SIZE="10.5" COLOR="#CBD5E1">each step before the next starts</FONT><BR ALIGN="LEFT"/></TD>
+  </TR></TABLE>>];
+  live -> foot [style=invis]; s12 -> foot [style=invis];
 }
