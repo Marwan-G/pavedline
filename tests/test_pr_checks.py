@@ -59,5 +59,39 @@ class RenovateExemptionTests(unittest.TestCase):
         self.assertEqual(self.go("renovate/x", []), 1)
 
 
+class ContributorPrTests(unittest.TestCase):
+    """A PR from a fork is a contributor's: the maintainer's local review and approval are its gate, not this line."""
+
+    def go(self, body, head_repo, base_repo="Marwan-G/pavedline"):
+        with tempfile.TemporaryDirectory() as d:
+            b = Path(d) / "b.txt"
+            b.write_text(body, encoding="utf-8")
+            return subprocess.run([sys.executable, str(SCRIPT), "--body-file", str(b),
+                                   "--head-repo", head_repo, "--base-repo", base_repo],
+                                  capture_output=True, text=True)
+
+    def test_fork_pr_needs_no_gates_line(self):
+        r = self.go("Fixes a typo in the README.", "someone/pavedline")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("contributor pull request", r.stdout)
+
+    def test_deleted_fork_counts_as_contributor(self):
+        self.assertEqual(self.go("text", "").returncode, 0)
+
+    def test_same_repo_pr_still_needs_gates_line(self):
+        self.assertEqual(self.go("no gates", "Marwan-G/pavedline").returncode, 1)
+        self.assertEqual(self.go("no gates", "marwan-g/Pavedline").returncode, 1, "repo names compare case-insensitively")
+        self.assertEqual(self.go(GOOD, "Marwan-G/pavedline").returncode, 0)
+
+    def test_without_repo_flags_behaves_as_before(self):
+        self.assertEqual(run("no gates").returncode, 1)
+
+    def test_ci_passes_the_repos_through_env(self):
+        ci = (ROOT / ".github/workflows/ci.yml").read_text()
+        self.assertIn("HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}", ci)
+        self.assertIn("BASE_REPO: ${{ github.repository }}", ci)
+        self.assertIn('--head-repo "$HEAD_REPO" --base-repo "$BASE_REPO"', ci)
+
+
 if __name__ == "__main__":
     unittest.main()
