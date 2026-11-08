@@ -53,6 +53,32 @@ When your project reaches the local cluster, Pavedline creates:
   work; reports are welcome. On Linux, `/pavedline:doctor` points to each tool's official install page.
 - **Windows:** not supported (WSL 2 untested).
 
+## What you end up with
+
+When the flow is complete, your product lives in one repository like this. It is the **target layout**: v0.1 creates
+the memory files and `docs/`; `apps/`, `services/` and `infra/` arrive with the build steps (v0.3). Step 4 can change
+the backend or auth choice, and the tree follows it.
+
+```
+your-product/
+├── CLAUDE.md · PRODUCT.md · STATE.md · WAITING.md · GLOSSARY.md   memory: any session resumes from files
+├── RUN.md · SERVICES.md · LINKS.md          how to run it · every third party · every link used
+├── ARCHITECTURE.dot/.svg                    the whole system as a diagram
+├── apps/
+│   ├── site/        website + blog (Next.js, SEO-gated)
+│   ├── web/         web app (Next.js)
+│   └── mobile/      iOS + Android (Expo)
+├── services/api/    backend (FastAPI) + database migrations
+├── packages/        API client generated from OpenAPI · design tokens
+├── infra/
+│   ├── helm/        hardened base chart, values per environment
+│   ├── k8s/         Argo CD watches this: the only way anything reaches a cluster
+│   └── profiles/    your cloud, set up at step 12
+├── docs/            business · spec · data (ERD) · API · architecture · design · plans · production · growth
+├── decisions/       one record per decision, with the reason
+└── .github/         CI gates · scanners · Renovate
+```
+
 ## Install
 
 ```
@@ -159,7 +185,7 @@ Asked for **just in time**, never all on day one:
 | Claude Code | step 0 | your Claude plan or API |
 | A Mac or Linux machine, 16 GB memory (32 GB recommended), a container runtime | step 0 | — |
 | Figma, **Full seat** | step 7 | paid |
-| Clerk (authentication) | first auth slice | per Clerk pricing |
+| Authentication: Clerk by default, or the provider you choose at step 4 (for example Supabase) | first auth slice | per provider pricing |
 | Apple Developer Program · Google Play Console | before the first mobile build | yearly fee · one-time fee |
 | A Kubernetes cluster (OCI profile included, or your own) · domain + Cloudflare · S3-compatible storage | step 12 | your cloud bill |
 | Google Search Console · Bing Webmaster Tools | step 12 | free |
