@@ -157,7 +157,7 @@ notifications and payments), *reach* (accessibility, regions, mesh, website and 
 | Area | Questions |
 |---|---|
 | **Backend** | FastAPI is the preferred default (decided). `backend-evaluate` checks it against the spec with sources. Pass criteria: every must-have need has a supported, maintained path; no blocker in concurrency, real-time or background work; the team can run it. It names anything FastAPI would struggle with, compares alternatives only then, and recommends; the founder decides. **Next.js is frontend only (decided):** no business logic; the only server code allowed is a pass-through auth-cookie proxy, enforced by a CI boundary check |
-| **Auth: Clerk (decided)** | Clerk Organisation = tenant, with our `tenants` table keeping the Clerk org id, synced by verified webhooks · the tenant always comes from the verified token · roles: Clerk org roles or app permissions · FastAPI verifies each request with Clerk's Python SDK (`clerk-backend-api`, `authenticate_request`) · web and mobile sign-in through Clerk's Next.js and Expo SDKs · machine tokens for integrations · every Clerk call behind one wrapper · Clerk's cost at expected user counts, never designed to a free tier |
+| **Auth: Clerk by default** | Asked, not assumed (founder, 2026-11-08): *"Clerk (default), or do you need something else?"* Typical reasons to choose another: the product already uses Supabase; compliance or data residency needs self-hosted auth (e.g. Keycloak); enterprise SSO first. Any alternative is checked with sources against the spec (multi-tenant organisations, roles, SSO, MFA, mobile SDK, Python token verification, webhooks or another sync path, data residency, cost at expected users); the founder decides and an ADR records it. Tenancy is written against a small **auth contract**: tenant and roles from the verified token, membership sync, a reconciliation job; the chosen provider implements it. Clerk is the built-in, tested implementation; another provider is planned per project, not pre-built. **With Clerk:** Clerk Organisation = tenant, with our `tenants` table keeping the Clerk org id, synced by verified webhooks · the tenant always comes from the verified token · roles: Clerk org roles or app permissions · FastAPI verifies each request with Clerk's Python SDK (`clerk-backend-api`, `authenticate_request`) · web and mobile sign-in through Clerk's Next.js and Expo SDKs · machine tokens for integrations · every Clerk call behind one wrapper · Clerk's cost at expected user counts, never designed to a free tier |
 | **Security and compliance** | data classification · encryption in transit and at rest · secrets location · insert-only audit log · edge rate limits plus **per-tenant** quotas · least-privilege DB roles · security headers and CSP · upload malware scanning · break-glass access · if compliance is in scope: field-level encryption and access logging for sensitive records, data residency, and a **processor agreement (DPA) with every vendor that touches personal data** (auth, email, SMS, storage, analytics, billing) |
 | **Concurrency** | users, requests per second, peak · two people editing one record (locking or a version check) · idempotency keys · the background queue (Postgres job table with `FOR UPDATE SKIP LOCKED`, or Redis) |
 | **Time and scheduling** | timestamps in UTC; user and location timezones and DST · calendars, recurrence, slot generation · contention for the same slot (exclusion constraints or row locks, never session advisory locks under PgBouncer) |
@@ -187,8 +187,8 @@ Decided in step 4, designed in 5 and 7, built and tested in 9. Output: `docs/arc
 
 | Stage | Must be designed and tested |
 |---|---|
-| **Create** | sign-up → Clerk organisation → `tenants` row → default roles, settings and onboarding state, **in one transaction** |
-| **Sync and repair** | Clerk webhooks verified and idempotent; a scheduled **reconciliation job** repairs drift from missed events; covered by tests |
+| **Create** | sign-up → auth-provider organisation (Clerk by default) → `tenants` row → default roles, settings and onboarding state, **in one transaction** |
+| **Sync and repair** | auth-provider webhooks (or the provider's sync path) verified and idempotent; a scheduled **reconciliation job** repairs drift from missed events; covered by tests |
 | **Suspend / offboard** | suspension blocks sign-in and API keys but keeps data; offboarding starts the retention clock; both audited |
 | **Export** | tenant and individual (data-subject request) export in a documented machine-readable format |
 | **Delete** | live data and files removed; the ADR states how long deleted data survives in backups, and that restores re-apply deletions; the privacy policy says the same |
@@ -238,13 +238,13 @@ developers.google.com when the skill is written). So: classic, excellent SEO. `l
   journeys, never a layer in isolation.
 - **Feature-complete:** every acceptance test in `SPEC.md` is mapped to a merged slice (checked by `plan-graph`) and
   passes on local.
-- **Integration wave (default), before step 12:** provider **test modes** (payments, SMS, email, Clerk), real
+- **Integration wave (default), before step 12:** provider **test modes** (payments, SMS, email, auth), real
   webhooks delivered to the local cluster through a tunnel (chosen and verified when the skill is written), and a
   TestFlight / internal-track mobile build. Step 12 is never the first contact with a real provider or a real store.
 
 ### 6.8 Accounts just in time
 
-Figma at step 7 · Clerk development keys at the first auth slice · provider test accounts at the integration wave ·
+Figma at step 7 · auth-provider development keys (Clerk by default) at the first auth slice · provider test accounts at the integration wave ·
 Apple and Google developer accounts when the lead-time register says (they take time) · production accounts at step
 12. The README lists all of them up front.
 
