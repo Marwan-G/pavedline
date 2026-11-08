@@ -66,8 +66,21 @@ class Retry(unittest.TestCase):
         self.assertEqual(out.read_text(), "a b|c|")
 
     def test_rejects_bad_attempt_count(self):
-        r = run_retry("true", attempts="zero")
-        self.assertNotEqual(r.returncode, 0)
+        for bad in ("zero", "0", "07", "1000"):
+            r = run_retry("true", attempts=bad)
+            self.assertEqual(r.returncode, 2, bad)
+
+    def test_rejects_bad_delay(self):
+        for bad in ("08", "x", "-1", "100000"):
+            env = dict(os.environ, PAVEDLINE_RETRY_ATTEMPTS="2", PAVEDLINE_RETRY_DELAY=bad)
+            r = subprocess.run(["bash", "-c", f'set -euo pipefail; . "{RETRY}"; retry true'],
+                               capture_output=True, text=True, env=env)
+            self.assertEqual(r.returncode, 2, bad)
+
+    def test_final_message_does_not_assume_the_cause(self):
+        r = run_retry(self.flaky(99))
+        self.assertIn("read the error above", r.stderr)
+        self.assertNotIn("usually a network problem", r.stderr)
 
 
 class UpUsesRetry(unittest.TestCase):

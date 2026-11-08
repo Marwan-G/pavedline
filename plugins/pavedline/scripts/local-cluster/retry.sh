@@ -4,14 +4,15 @@
 # PAVEDLINE_RETRY_ATTEMPTS (default 4) and PAVEDLINE_RETRY_DELAY in seconds (default 15, doubling each time).
 retry() {
   local attempts="${PAVEDLINE_RETRY_ATTEMPTS:-4}" delay="${PAVEDLINE_RETRY_DELAY:-15}" n=1
-  if ! [[ "$attempts" =~ ^[1-9][0-9]*$ && "$delay" =~ ^[0-9]+$ ]]; then
-    echo "error: PAVEDLINE_RETRY_ATTEMPTS must be a positive integer and PAVEDLINE_RETRY_DELAY a whole number" >&2
+  # No leading zeros (bash would read them as octal) and small bounds (no arithmetic overflow).
+  if ! [[ "$attempts" =~ ^[1-9][0-9]?$ && "$delay" =~ ^(0|[1-9][0-9]{0,3})$ ]]; then
+    echo "error: PAVEDLINE_RETRY_ATTEMPTS must be 1-99 and PAVEDLINE_RETRY_DELAY 0-9999 seconds, without leading zeros" >&2
     return 2
   fi
   until "$@"; do
     if [ "$n" -ge "$attempts" ]; then
       echo "error: failed after $attempts attempts: $*" >&2
-      echo "This is usually a network problem. When the network is back, re-run up.sh; it reuses what is already done." >&2
+      echo "read the error above. If it was a download or network failure, re-run up.sh when the network is back; it reuses what is already done." >&2
       return 1
     fi
     echo "attempt $n of $attempts failed; retrying in ${delay}s: $*" >&2
