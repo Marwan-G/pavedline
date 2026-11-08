@@ -11,6 +11,8 @@ Step 3. The spec turns the decisions into something that can be built and tested
 
 `PRODUCT.md`, `docs/business/BRIEF.md`, `docs/business/SEO-STRATEGY.md`, every file in `decisions/`, `GLOSSARY.md`, `STATE.md`. Use the words of `GLOSSARY.md` exactly. If `STATE.md` says `STEP: 2 — Grill` and the founder confirms the decisions are complete, set `STEP: 3 — Spec` (fresh `date` timestamp in `LAST`) and continue. If step 2 is not finished (the `grilling` skill from `mattpocock-skills` has open questions, or `decisions/` has nothing beyond 0001–0007), say so and ask whether to continue; if the skill is missing, run `/pavedline:doctor`.
 
+Ask who may be a data subject (age limit) and the default retention period for personal data, unless a decision already says.
+
 Ask only what is undecided. Never re-ask a platform question (step 0) or a product decision (step 2).
 
 ## 2. Write `docs/spec/SPEC.md`
@@ -50,4 +52,4 @@ LAST: <timestamp> — step 3 done: docs/spec/SPEC.md written
 NEXT: step 4 — ask the system-design questions
 ```
 
-Commit. Say plainly that step 4 (system design) is built in a later Pavedline release, so the guided flow stops here for now: the spec, the brief and the decisions are the output of v0.1. Ask: **go?** The founder approves the spec first; do not move on without that.
+Commit. Step 4 is the `system-design` skill: the next session runs it (or say "continue: step 4"). Ask: **go?** The founder approves the spec first; do not move on without that.

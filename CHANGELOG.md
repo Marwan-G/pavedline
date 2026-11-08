@@ -6,6 +6,13 @@ All notable changes to Pavedline are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Steps 4-7: system design (with backend evaluation), data and API (domain model, schema, multi-tenancy, OpenAPI
+  contract), architecture (system architecture, threat model) and design (Figma, design-system contract); four new
+  agents (`architect`, `reviewer`, `designer`, `design-verifier`) and optional doctor checks for Redocly and impeccable.
+- Reviewers approve only when every required check ran; otherwise `REJECT — incomplete`.
+- `/pavedline:doctor` no longer reports Pavedline missing when it is loaded with `--plugin-dir`.
+
 ### Fixed
 - The local cluster needs helm 4.2.2 or newer. helm 4.2.1 waits the full timeout on every hook deletion
   ([helm#32214](https://github.com/helm/helm/issues/32214)), which made the Argo CD install take 40 minutes on the

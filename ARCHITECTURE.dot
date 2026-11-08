@@ -14,8 +14,8 @@ digraph architecture {
   subgraph cluster_plugin {
     label="PLUGIN — plugins/pavedline"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
     manifest  [label="plugin.json\nname · version · dependencies"];
-    skills    [label="Skills (12)\nstart · spec · market research\ndoctor · state · local-cluster …"];
-    agents    [label="Agent\nresearcher (read-only)\nmodel generated from config/models.yaml"];
+    skills    [label="Skills (21)\nsteps 0–7 · doctor · state\nlocal-cluster …"];
+    agents    [label="Agents (5)\nresearcher · architect · reviewer\ndesigner · design-verifier\nmodel generated from config/models.yaml"];
     hooks     [label="Hooks (6)\nsecrets · cluster context · git\nSTATE.md cap · CLAUDE.md size · session start"];
     mcp       [label="MCP server\nPlaywright (.mcp.json)"];
     scripts   [label="Scripts\ndoctor · start_project\nlocal cluster: up · verify · down"];

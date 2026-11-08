@@ -15,14 +15,15 @@ only** (read for inspiration, no code or text used) · **used by templates or CI
 | [product-management](https://github.com/anthropics/knowledge-work-plugins) (from knowledge-work-plugins) | Anthropic | Apache-2.0 | **Installed** (`plugin.json` dependency): competitive brief, research synthesis |
 | [@playwright/mcp](https://github.com/microsoft/playwright-mcp) | Microsoft | Apache-2.0 | **Shipped** in the plugin's `.mcp.json`, pinned: competitor research in a browser |
 | [crawl4ai](https://github.com/unclecode/crawl4ai) | unclecode | Apache-2.0 (attribution required) | **Optional**: bulk crawling, only if you have it installed |
-| [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | nextlevelbuilder | MIT | **Installed from v0.2** (step 7 style reference); not used in v0.1 |
-| [impeccable](https://github.com/pbakaus/impeccable) | Paul Bakaus | Apache-2.0 | **Optional**, from v0.2: design critique |
-| [Figma plugin and MCP](https://www.figma.com/) | Figma | Figma terms (a Full seat writes to the canvas) | **Installed from v0.2** (step 7); not used in v0.1 |
+| [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | nextlevelbuilder | MIT | **Installed** (`plugin.json` dependency, from v0.2): step 7 style reference, never copied |
+| [impeccable](https://github.com/pbakaus/impeccable) | Paul Bakaus | Apache-2.0 | **Optional**, from v0.2: design critique in step 7; `doctor` lists it as optional |
+| [Figma plugin and MCP](https://www.figma.com/) | Figma | Figma terms (a Full seat writes to the canvas) | **Installed** (`plugin.json` dependency, from v0.2): step 7, the only agent that writes to the canvas is the `designer` |
 | Clerk skills | Clerk | no licence file detected | **Later** (stack pack, v0.3): authentication; `doctor` will print the install command |
 | [next.js skills](https://github.com/vercel/next.js) | Vercel | MIT | **Later** (stack pack, v0.3) |
 | [agent-skills](https://github.com/vercel-labs/agent-skills) | Vercel Labs | no licence file detected | **Later** (stack pack, v0.3) |
-| saas-multi-tenant skill | sickn33 | MIT | **Adapted in v0.2** (`multi-tenancy` rules), with credit. Nothing is adapted in v0.1 |
-| Supabase Postgres best practices | Supabase | MIT | **Reference** for the v0.2 data rules; nothing copied |
+| [saas-multi-tenant skill](https://github.com/sickn33/agentic-awesome-skills/tree/main/skills/saas-multi-tenant) | sickn33 | MIT (checked 2026-11-08) | **Adapted** (`multi-tenancy` rules: tenant_id, forced RLS, SET LOCAL, global-table allow-list), with credit. Nothing is adapted in v0.1 |
+| [Supabase Postgres best practices](https://github.com/supabase/agent-skills) | Supabase | MIT (checked 2026-11-08) | **Reference** for the v0.2 data rules; nothing copied |
+| [Redocly CLI](https://github.com/Redocly/redocly-cli) | Redocly | MIT (npm metadata, 2026-11-08) | **Optional** (step 5): lints `openapi.yaml`, pinned in `doctor` and `api-contract` |
 | [ECC](https://github.com/affaan-m/ECC) | affaan-m | MIT | **Ideas only** |
 | [spec-kit](https://github.com/github/spec-kit) | GitHub | MIT | **Ideas only** |
 | [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) | bmad-code-org | licence not machine-detected | **Ideas only**, cited as inspiration |

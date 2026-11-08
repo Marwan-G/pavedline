@@ -84,13 +84,14 @@ your-product/
 ```
 /plugin marketplace add anthropics/claude-plugins-official
 /plugin marketplace add anthropics/knowledge-work-plugins
+/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill
 /plugin marketplace add Marwan-G/pavedline
 /plugin install pavedline@pavedline
 /pavedline:start
 ```
 
-Add both dependency marketplaces first: Pavedline's dependencies (`superpowers`, `mattpocock-skills`,
-`product-management`) install automatically only from marketplaces you have already added. Without them the install
+Add the dependency marketplaces first: Pavedline's dependencies (`superpowers`, `mattpocock-skills`,
+`product-management`, `figma`, `ui-ux-pro-max`) install automatically only from marketplaces you have already added. Without them the install
 warns that Pavedline will not load. (Verified on a clean profile with `scripts/install_test.sh`.)
 
 **If `/pavedline:start` is not found:** a missing dependency stops Pavedline from loading at all. Run

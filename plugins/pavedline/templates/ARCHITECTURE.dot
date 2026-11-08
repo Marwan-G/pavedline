@@ -1,4 +1,5 @@
 // {{PROJECT_NAME}} architecture. Source of truth for ARCHITECTURE.svg.
+// Root overview: step 6 updates the root overview; the system diagram is docs/architecture/ARCHITECTURE.dot.
 // Validate and render: python3 scripts/dot_check.py (from the Pavedline plugin) or dot -Tsvg ARCHITECTURE.dot
 digraph architecture {
   graph [rankdir=LR, fontname="Helvetica", bgcolor="white", pad=0.4, nodesep=0.45, ranksep=0.7,

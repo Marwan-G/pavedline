@@ -66,12 +66,32 @@ class Docs(unittest.TestCase):
         t = (ROOT / "README.md").read_text()
         self.assertIn("Pavedline collects nothing. Every answer stays in your own repository.", t)
         self.assertIn("/plugin marketplace add Marwan-G/pavedline", t)
-        self.assertNotIn("ui-ux-pro-max-skill\n", t.split("## Why Pavedline exists")[0].split("## Install")[1])
+        install = t.split("## Why Pavedline exists")[0].split("## Install")[1]
+        for s in ("/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill",
+                  "`figma`, `ui-ux-pro-max`"):
+            self.assertIn(s, install, s)
         self.assertIn("CREDITS.md", t)
 
     def test_third_party_notice(self):
-        self.assertIn("No third-party code is adapted into this repository in v0.1.",
-                      (ROOT / "THIRD_PARTY_NOTICES.md").read_text())
+        n = (ROOT / "THIRD_PARTY_NOTICES.md").read_text()
+        self.assertIn("saas-multi-tenant", n)
+        self.assertIn("Copyright (c) 2026 Antigravity User", n)
+
+
+    def test_contributing_headless_and_dependency_notes(self):
+        t = (ROOT / "CONTRIBUTING.md").read_text()
+        for s in ("silently loads nothing", "--add-dir", "--output-format stream-json --verbose", "no `timeout` command"):
+            self.assertIn(s, t, s)
+
+    def test_architecture_counts_match_tree(self):
+        t = (ROOT / "docs/architecture.md").read_text()
+        plug = ROOT / "plugins/pavedline"
+        skills = len([d for d in (plug / "skills").iterdir() if (d / "SKILL.md").is_file()])
+        agents = len(list((plug / "agents").glob("*.md")))
+        self.assertIn("**%d skills, %d agents, MCP**" % (skills, agents), t)
+        dot = (ROOT / "ARCHITECTURE.dot").read_text()
+        self.assertIn("Skills (%d)" % skills, dot)
+        self.assertIn("Agents (%d)" % agents, dot)
 
 
 if __name__ == "__main__":
