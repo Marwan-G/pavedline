@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem
+    url: https://github.com/Marwan-G/pavedline/blob/main/SECURITY.md
+    about: Report security problems privately, never in a public issue.
+  - name: Questions
+    url: https://github.com/Marwan-G/pavedline/blob/main/docs/faq.md
+    about: Read the FAQ first; if it does not answer you, open a bug report or feature request.

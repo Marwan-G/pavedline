@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest an improvement to the Pavedline flow.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem do you have?
+      description: Describe the real situation where Pavedline fell short. "It would be nice" is not a problem statement.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the flow?
+      options:
+        - Discover (steps 0-3)
+        - Design (steps 4-7)
+        - Deliver (steps 8-11)
+        - Production (step 12, launch, grow)
+        - Memory, hooks or doctor
+        - Local cluster
+        - Docs
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
