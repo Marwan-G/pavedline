@@ -6,6 +6,12 @@ All notable changes to Pavedline are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- The local cluster needs helm 4.2.2 or newer. helm 4.2.1 waits the full timeout on every hook deletion
+  ([helm#32214](https://github.com/helm/helm/issues/32214)), which made the Argo CD install take 40 minutes on the
+  test Mac. `up.sh` refuses an older helm before doing anything; `/pavedline:doctor` reports it with the upgrade
+  command. With helm 4.3.1 the same Mac brings the stack up in 56 s.
+
 ## 0.1.0 — 2026-11-08
 
 ### What works
@@ -27,6 +33,5 @@ All notable changes to Pavedline are recorded here. The format follows
   Linux arm64 (Ubuntu 24.04) in CI on every pull request.
 
 ### Known limits
-- On the test Mac the first Argo CD install took about 40 minutes (image pulls); in CI it takes under a minute.
 - Linux x86_64 is not yet tested; Windows is not supported.
 - Steps 4-12 arrive in later releases.
