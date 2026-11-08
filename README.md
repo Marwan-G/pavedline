@@ -33,7 +33,9 @@ When your project reaches the local cluster, Pavedline creates:
 
 **What to expect:**
 - **It downloads.** The first run pulls a few GB of container images (the Kubernetes node, Argo CD, CloudNativePG,
-  Postgres), and it can take a while on a home connection. @TIMING@
+  Postgres). On GitHub's Linux runner the whole stack is up in about 1.5 minutes. On the test Mac it took about 41
+  minutes, almost all of it pulling Argo CD's images; your time depends on your connection to the image registries.
+  If a download fails, the scripts retry it, and re-running `up.sh` reuses whatever is already done.
 - **It asks first.** Missing tools (a container runtime, `kind`, `kubectl`, `helm`) are installed by Pavedline only
   after it tells you what and why, and Claude Code asks your permission for each command. A hook blocks mutating
   cluster commands on any context that is not `kind-pavedline-*`, so your other clusters are safe.
@@ -41,7 +43,11 @@ When your project reaches the local cluster, Pavedline creates:
   registry container.
 
 **Tested on:**
-@TESTED@
+- **macOS 26 on Apple silicon (arm64) with Colima:** a full `up`, `verify`, `down` run passed on 2026-11-08.
+- **Linux arm64 (Ubuntu 24.04):** the same scripts run in CI on every pull request.
+- **Linux x86_64:** not tested yet. kind, Argo CD and CloudNativePG all publish amd64 images, so it is expected to
+  work; reports are welcome. On Linux, `/pavedline:doctor` points to each tool's official install page.
+- **Windows:** not supported (WSL 2 untested).
 
 ## Install
 

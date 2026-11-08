@@ -18,7 +18,15 @@ All notable changes to Pavedline are recorded here. The format follows
 - Clean-profile install test (`scripts/install_test.sh`): dependencies install automatically once their marketplaces
   are added.
 
+- Local cluster charts (Argo CD, CloudNativePG) are pulled as OCI artifacts from ghcr.io, pinned by version and
+  digest; chart downloads are retried, and re-running `up.sh` reuses what is already done.
+- README section "What it sets up on your machine".
+
+### Verified
+- Local cluster: a full up, verify, down run passed on macOS 26 (Apple silicon, Colima) on 2026-11-08, and runs on
+  Linux arm64 (Ubuntu 24.04) in CI on every pull request.
+
 ### Known limits
-- The local cluster scripts have not yet been run live (tools not installed on the build machine).
-- CI has not yet run on GitHub.
+- On the test Mac the first Argo CD install took about 40 minutes (image pulls); in CI it takes under a minute.
+- Linux x86_64 is not yet tested; Windows is not supported.
 - Steps 4-12 arrive in later releases.
