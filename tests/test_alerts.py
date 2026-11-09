@@ -207,6 +207,15 @@ class CheckerLogic(unittest.TestCase):
             self.assertNotIn("http://sink/heartbeat", fake.gets)
             self.assertEqual(fake.posts[0][0], "http://sink/notify")
 
+    def test_the_starter_proof_counts_the_ids_the_checker_sends(self):
+        # starter_check.sh --stage full counts sink log lines by check id; a renamed id once made it count 0 (CI, 2026-11-09).
+        script = (ROOT / "scripts/starter_check.sh").read_text()
+        fake = Fake(http={"http://sink/down": 503}, api=self.backup_api([("completed", 60)]))
+        self.run_main(dict(self.CFG, endpoints=[{"name": "down", "url": "http://sink/down"}]), fake)
+        cid = fake.posts[0][1]["check"]
+        pattern = re.search(r"count 'REQ POST /notify \.\*(endpoint[^']*)'", script).group(1)
+        self.assertRegex(cid, pattern)
+
     def test_a_backup_that_is_too_old_missing_or_failed_is_reported(self):
         cases = {
             "old": ([("completed", 40 * 3600)], True, "old"),

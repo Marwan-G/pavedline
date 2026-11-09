@@ -172,7 +172,7 @@ class StarterWorkflows(unittest.TestCase):
 
     def test_full_stage_drives_each_alert_red_against_a_sink(self):
         text = SCRIPT.read_text()
-        for needle in ("full-alerts", "f_alerts", "REQ POST /notify", "REQ GET /heartbeat", "endpoint-down",
+        for needle in ("full-alerts", "f_alerts", "REQ POST /notify", "REQ GET /heartbeat", "endpoint-0-down",
                        "backup-db-daily", "never-runs", "--from=cronjob/alerts-check", "backupMaxAge: 1s", "auth can-i"):
             self.assertIn(needle, text, needle)
 
