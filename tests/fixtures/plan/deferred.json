@@ -1,0 +1,1 @@
+{"format_version": "1.2", "resource_changes": [{"address": "oci_core_vcn.x", "type": "oci_core_vcn", "change": {"actions": ["create"]}}], "deferred_changes": [{"address": "oci_core_vcn.x", "type": "oci_core_vcn", "change": {"actions": ["delete"]}}]}

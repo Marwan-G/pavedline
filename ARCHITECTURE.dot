@@ -9,17 +9,17 @@ digraph architecture {
   edge  [fontname="Helvetica", fontsize=10, color="#475569", arrowsize=0.7, penwidth=1.2, fontcolor="#B45309"];
 
   market [label="Marketplace\n.claude-plugin/marketplace.json", fillcolor="#FFFBEB", color="#F59E0B"];
-  deps   [label="Dependencies\nsuperpowers · mattpocock-skills\nproduct-management", shape=note, fillcolor="#F1F5F9", color="#64748B"];
+  deps   [label="Dependencies\nsuperpowers · mattpocock-skills\nproduct-management · figma\noptional: ui-ux-pro-max · marketing", shape=note, fillcolor="#F1F5F9", color="#64748B"];
 
   subgraph cluster_plugin {
     label="PLUGIN — plugins/pavedline"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
     manifest  [label="plugin.json\nname · version · dependencies"];
-    skills    [label="Skills (29)\nsteps 0–11 · doctor · state\nlocal-cluster · gitops …"];
-    agents    [label="Agents (8)\nresearcher · architect · reviewer · designer\ndesign-verifier · builder · adversary · deployer\nmodel generated from config/models.yaml"];
-    hooks     [label="Hooks (10)\nsecrets · cluster context · git · STATE.md cap\nwarn: CLAUDE.md size · PR gates line · diagram drift\nsession start · compaction notes · records commit reminder"];
+    skills    [label="Skills (32)\nsteps 0–12 · integration wave · grow\ndoctor · state\nlocal-cluster · gitops …"];
+    agents    [label="Agents (9)\nresearcher · architect · reviewer · designer\ndesign-verifier · builder · adversary · deployer · growth\nmodel generated from config/models.yaml"];
+    hooks     [label="Hooks (11)\nsecrets · cluster context · git · STATE.md cap\nwarn: CLAUDE.md size · PR gates line · diagram drift\nsession start · compaction notes · records commit reminder\nbuilder report check"];
     mcp       [label="MCP server\nPlaywright (.mcp.json)"];
     scripts   [label="Scripts\ndoctor · start_project\napply_stack · plan_graph\nlocal cluster: up · verify · down"];
-    templates [label="Templates\nCLAUDE.md · PRODUCT.md · STATE.md\nWAITING.md · decisions · docs\ninfra · CI"];
+    templates [label="Templates\nCLAUDE.md · PRODUCT.md · STATE.md\nWAITING.md · decisions · docs\ninfra · profiles (BYO, OCI) · alerts · CI"];
     stack     [label="Stack pack · nextjs-fastapi\nfiles/ → product at step 6\nexample/ → starter check only"];
   }
 
@@ -37,6 +37,7 @@ digraph architecture {
     ci [label="8 required checks + CodeQL; starter runs on every PR\nunit · lint · sanitize · gitleaks · diagrams\nplugin-validate · local-cluster · pr-body"];
   }
 
+  cockpit [label="Second plugin: pavedline-cockpit\n(optional status pane)", fillcolor="#F8FAFC", color="#94A3B8", style="rounded,filled,dashed"];
   user [label="Your project\n(repository you build in)", fillcolor="#FEF2F2", color="#FCA5A5"];
 
   market -> manifest [label=" lists "];
@@ -46,6 +47,7 @@ digraph architecture {
   stack -> user [label=" step 6 copies ", color="#16A34A", fontcolor="#16A34A"];
   hooks -> user [label=" guard every tool call ", color="#B91C1C", fontcolor="#B91C1C"];
   scripts -> user [label=" local cluster ", color="#1D4ED8", fontcolor="#1D4ED8"];
+  market -> cockpit [label=" lists ", style=dashed];
   skills -> agents [label=" dispatch ", style=dashed];
 
   sanitize -> ci; dotcheck -> ci; dotdrift -> ci; tests -> ci; prcheck -> ci;

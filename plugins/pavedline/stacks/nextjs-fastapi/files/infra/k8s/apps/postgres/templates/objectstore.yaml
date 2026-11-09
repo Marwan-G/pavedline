@@ -1,0 +1,34 @@
+{{- if .Values.backup.enabled }}
+{{- $o := .Values.backup.objectStore }}
+{{- /* Backups that point at a placeholder would let WAL pile up on the volume until the database stalls: refuse. */}}
+{{- if or (regexMatch "(^|[^a-z0-9])(example|changeme|todo|replace)([^a-z0-9]|$)|[<>]" (lower (toString $o.endpointURL))) (regexMatch "(^|[^a-z0-9])(example|changeme|todo|replace)([^a-z0-9]|$)|[<>]" (lower (toString $o.destinationPath))) }}
+{{- fail "backup.enabled is true but the object store endpoint or bucket is still a placeholder (example, changeme, TODO, REPLACE, <...>): step 12 (go to production) fills in the real ones; keep backup.enabled: false until then" }}
+{{- end }}
+{{- if not $o.credentialsSecret }}
+{{- fail "backup.objectStore.credentialsSecret is empty: name the Secret holding access-key-id and secret-access-key; step 12 creates it" }}
+{{- end }}
+# Where the Barman Cloud plugin writes WAL and base backups. serverName stays empty here (the plugin's rule): the
+# Cluster names it. Credentials come from the Secret named in the values, never from this chart.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ $o.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  retentionPolicy: {{ .Values.backup.retention | quote }}
+  configuration:
+    destinationPath: {{ required "backup.objectStore.destinationPath is required when backup.enabled" $o.destinationPath | quote }}
+    endpointURL: {{ required "backup.objectStore.endpointURL is required when backup.enabled" $o.endpointURL | quote }}
+    s3Credentials:
+      accessKeyId:
+        name: {{ $o.credentialsSecret }}
+        key: access-key-id
+      secretAccessKey:
+        name: {{ $o.credentialsSecret }}
+        key: secret-access-key
+    wal:
+      compression: {{ $o.walCompression }}
+{{- end }}

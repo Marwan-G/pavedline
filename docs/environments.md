@@ -5,8 +5,8 @@ Pavedline uses these words with one meaning each.
 | Term | Meaning |
 |---|---|
 | **local** | the kind cluster on your machine. Every wave deploys and is verified here, through Argo CD |
-| **staging** | the cloud staging environment, created at step 12 before production. Generated data only; never indexable |
-| **production** | the live cloud environment, promoted from a verified staging SHA |
+| **staging** | the cloud staging environment, created at step 12 with an infra profile (bring your own Kubernetes, or OCI/OKE) before production. Generated data only; never indexable |
+| **production** | the live cloud environment, promoted by pull request from a verified staging SHA (`promote.py`) |
 | **verified (local)** | migrations applied, Argo CD synced, pods running the release SHA with 0 restarts, health endpoints OK, the slice's acceptance tests passing against the cluster |
 | **verified (cloud)** | verified (local) plus what local cannot prove: real DNS and TLS, the tunnel or ingress, cloud IAM and vault, a backup and a real restore, the three alerts fired in a test, email deliverability |
 | **wave** | a planned group of slices that ends with deploy and learn |

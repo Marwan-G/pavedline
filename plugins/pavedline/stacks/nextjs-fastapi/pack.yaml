@@ -11,6 +11,7 @@ surfaces:
       - scripts/rls_check.py
       - scripts/contract_check.py
       - scripts/local_secrets.sh
+      - scripts/restore_drill.sh
       - .env.local.example
     # Each folder is a Helm chart (an Argo CD Application, see the gitops skill). postgres is shared: it is copied
     # whenever this surface is chosen, because the API needs a database.
@@ -114,8 +115,23 @@ deploy:
   paths:
     - scripts/deploy_local.sh
     - scripts/release_check.py
+    - scripts/promote.py
     - scripts/post_deploy_check.py
     - infra/local-deploy.json
+
+# The PostgreSQL majors this pack pins (CloudNativePG images, multi-arch index digests). step 6 passes the product's
+# database decision to `apply_stack.py --postgres-major N`, which writes that image into infra/k8s/apps/postgres/values.yaml;
+# `cluster` is the CloudNativePG image, `test` the official image of the API test database in .github/workflows/ci-api.yml;
+# a major not listed here is refused. Facts and dates: skills/fastapi-service/references/sources.md.
+postgres:
+  default_major: 16
+  majors:
+    16:
+      cluster: ghcr.io/cloudnative-pg/postgresql:16.15-202610190958-standard-trixie@sha256:f105e137d731f6ac4f69667383f2373345ce8b72dadcc10ab6d385a7a32d6e7f
+      test: postgres:16.14@sha256:95206741a5b214807675e14165369d05b93a9cf692223b616d07cca227e74b0b
+    18:
+      cluster: ghcr.io/cloudnative-pg/postgresql:18.6-202610190957-standard-trixie@sha256:d72ace96f5803b12c341bb5dac48532e8c1f92f69e8a717a59d779bfc038dea9
+      test: postgres:18.4@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636
 
 # Copied with any surface. A product that already has these files keeps its own (apply_stack prints `kept: <path>`).
 common:

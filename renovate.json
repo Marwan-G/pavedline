@@ -38,7 +38,8 @@
     {
       "description": "Local-cluster pins are never automerged",
       "matchFileNames": [
-        "plugins/pavedline/scripts/local-cluster/versions.env"
+        "plugins/pavedline/scripts/local-cluster/versions.env",
+        "scripts/gitleaks.env"
       ],
       "automerge": false
     },
@@ -49,6 +50,27 @@
       ],
       "matchDatasources": [
         "docker"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "Never automerge the PostgreSQL images of the pack, and never move to another major (the database decision does that)",
+      "matchFileNames": [
+        "plugins/pavedline/stacks/**/pack.yaml"
+      ],
+      "matchPackageNames": [
+        "/postgres/",
+        "/postgresql/"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Never automerge the PostgreSQL images of the pack",
+      "matchFileNames": [
+        "plugins/pavedline/stacks/**/pack.yaml"
       ],
       "automerge": false
     }
@@ -131,6 +153,117 @@
       ],
       "depNameTemplate": "kubernetes-sigs/gateway-api",
       "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "gitleaks scanner image (tag and digest) in scripts/gitleaks.env",
+      "managerFilePatterns": [
+        "/(^|/)gitleaks\\.env$/"
+      ],
+      "matchStrings": [
+        "GITLEAKS_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "cert-manager Helm chart (OCI, version and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "CERT_MANAGER_CHART=oci://(?<depName>\\S+)\\nCERT_MANAGER_CHART_VERSION=(?<currentValue>\\S+)\\nCERT_MANAGER_CHART_DIGEST=(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Barman Cloud plugin release in versions.env (the sha256 is updated by hand)",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "BARMAN_PLUGIN_VERSION=(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "cloudnative-pg/plugin-barman-cloud"
+    },
+    {
+      "customType": "regex",
+      "description": "Barman Cloud plugin image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "BARMAN_PLUGIN_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Barman Cloud plugin sidecar image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "BARMAN_SIDECAR_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "SeaweedFS image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "SEAWEEDFS_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Mailpit image in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "MAILPIT_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "cloudflared image in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "CLOUDFLARED_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "SMS sink base image (the python pin of the API Dockerfile; keep them equal) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "SMS_SINK_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "PostgreSQL images of the stack pack (CloudNativePG cluster image and the CI test image), tag and digest, in pack.yaml; a major is chosen by the product's database decision, never by an update",
+      "managerFilePatterns": [
+        "/(^|/)pack\\.yaml$/"
+      ],
+      "matchStrings": [
+        "(?:cluster|test): (?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
     }
   ]
 }

@@ -41,7 +41,7 @@ TOOLS = [
     ("kind", "kind", "https://kind.sigs.k8s.io/docs/user/quick-start/#installation", True),
     ("colima", "colima", "https://github.com/abiosoft/colima#installation", False),
     ("uv", "uv", "https://docs.astral.sh/uv/getting-started/installation/", False),
-    ("terraform", "terraform", "https://developer.hashicorp.com/terraform/install", False),
+    ("tofu or terraform", "opentofu", "https://opentofu.org/docs/intro/install/", False),
     # optional, used by step 5 (API contract lint); installed from npm, pinned
     ("redocly", REDOCLY_PKG, "https://redocly.com/docs/cli/installation", False),
 ]
@@ -66,7 +66,8 @@ PLUGINS = [
     ),
 ]
 
-# optional plugins (design critique and style reference in step 7); never fail the doctor
+# optional plugins (design critique and style reference in step 7; the Grow loop's marketing skills after launch);
+# never fail the doctor. Optional, not dependencies: Claude Code does not load a plugin whose dependency is missing.
 OPTIONAL_PLUGINS = [
     (
         "impeccable@impeccable",
@@ -76,6 +77,11 @@ OPTIONAL_PLUGINS = [
         "ui-ux-pro-max@ui-ux-pro-max-skill",
         "/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill then "
         "/plugin install ui-ux-pro-max@ui-ux-pro-max-skill",
+    ),
+    (
+        "marketing@knowledge-work-plugins",
+        "/plugin marketplace add anthropics/knowledge-work-plugins then "
+        "/plugin install marketing@knowledge-work-plugins",
     ),
 ]
 
@@ -160,6 +166,10 @@ def check_tools(
     runtime_ok = which("docker") is not None and docker_ok()
     checks.append(Check("container runtime", runtime_ok, True, RUNTIME_FIX_MAC if mac else RUNTIME_FIX_OTHER))
     for name, formula, url, required in TOOLS[8:]:
+        if name == "tofu or terraform":
+            checks.append(Check(name, which("tofu") is not None or which("terraform") is not None, required,
+                                f"optional (step 12): brew install {formula}, or Terraform: https://developer.hashicorp.com/terraform/install" if mac else url))
+            continue
         if name == "redocly":
             checks.append(Check(name, which(name) is not None, required, f"optional: npx {formula} works without install, or npm install -g {formula}"))
             continue
@@ -192,17 +202,37 @@ def loaded_from_plugin_dir(script: Path = Path(__file__), home: Optional[Path] =
         return True
 
 
-def check_plugins(listing_json: str, plugin_dir_load: bool = False) -> List[Check]:
+def _in_scope(p: dict, cwd: Optional[Path]) -> bool:
+    """A listed plugin works here when it is user scope, or project/local scope for the current directory."""
+    scope = p.get("scope")
+    if scope == "user":
+        return True
+    if scope in ("project", "local") and isinstance(p.get("projectPath"), str):
+        here = (cwd or Path.cwd()).resolve()
+        root = Path(p["projectPath"]).resolve()
+        return here == root or root in here.parents
+    return False
+
+
+def _install_fix(pid: str) -> str:
+    return f"claude plugin install {pid} --scope user (or --scope project in this folder)"
+
+
+def check_plugins(listing_json: str, plugin_dir_load: bool = False, cwd: Optional[Path] = None) -> List[Check]:
     try:
         data = json.loads(listing_json)
         if not isinstance(data, list):
             raise ValueError("not a list")
     except (ValueError, TypeError):
         return [Check("claude", False, True, CLAUDE_FIX)]
-    present = {}
+    present = {}  # id -> enabled and usable here
+    elsewhere = set()  # ids enabled only at a scope that does not cover this directory
     for p in data:
         if isinstance(p, dict) and isinstance(p.get("id"), str):
-            present[p["id"]] = present.get(p["id"], False) or p.get("enabled") is True
+            usable = p.get("enabled") is True and _in_scope(p, cwd)
+            if p.get("enabled") is True and not usable:
+                elsewhere.add(p["id"])
+            present[p["id"]] = present.get(p["id"], False) or usable
     checks: List[Check] = []
     for pid, fix in PLUGINS:
         if pid == PAVEDLINE_ID:
@@ -212,6 +242,8 @@ def check_plugins(listing_json: str, plugin_dir_load: bool = False) -> List[Chec
             ids = [pid] if pid in present else []
         if any(present[i] for i in ids):
             checks.append(Check(pid, True, True, "", "ok"))
+        elif any(i in elsewhere for i in ids):
+            checks.append(Check(pid, False, True, _install_fix(pid), "not available here"))
         elif ids:
             checks.append(Check(pid, False, True, f"/plugin enable {ids[0]}", "disabled"))
         elif pid == PAVEDLINE_ID and plugin_dir_load:
@@ -221,18 +253,39 @@ def check_plugins(listing_json: str, plugin_dir_load: bool = False) -> List[Chec
     return checks
 
 
-def check_optional_plugins(listing_json: str) -> List[Check]:
+def check_optional_plugins(listing_json: str, cwd: Optional[Path] = None) -> List[Check]:
     try:
         data = json.loads(listing_json)
         if not isinstance(data, list):
             raise ValueError("not a list")
     except (ValueError, TypeError):
         return []
-    enabled = {p["id"] for p in data if isinstance(p, dict) and isinstance(p.get("id"), str) and p.get("enabled") is True}
+    enabled = {p["id"] for p in data if isinstance(p, dict) and isinstance(p.get("id"), str) and p.get("enabled") is True and _in_scope(p, cwd)}
+    other = {p["id"] for p in data if isinstance(p, dict) and isinstance(p.get("id"), str) and p.get("enabled") is True}
     return [
-        Check(pid, True, False, "", "ok") if pid in enabled else Check(pid, False, False, fix, "missing")
+        Check(pid, True, False, "", "ok") if pid in enabled
+        else Check(pid, False, False, _install_fix(pid), "not available here") if pid in other
+        else Check(pid, False, False, fix, "missing")
         for pid, fix in OPTIONAL_PLUGINS
     ]
+
+
+def check_env_local_ignored(cwd: Optional[Path] = None) -> List[Check]:
+    """Inside a git repo that has an .env.local.example, .env.local must be git-ignored (it holds secrets)."""
+    here = cwd or Path.cwd()
+    try:
+        top = subprocess.run(["git", "-C", str(here), "rev-parse", "--show-toplevel"], capture_output=True, text=True, timeout=30)
+        if top.returncode != 0:
+            return []
+        root = Path(top.stdout.strip())
+        if not (root / ".env.local.example").is_file():
+            return []
+        ig = subprocess.run(["git", "-C", str(root), "check-ignore", "-q", ".env.local"], capture_output=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if ig.returncode == 0:
+        return [Check(".env.local ignored by git", True, True, "", "ok")]
+    return [Check(".env.local ignored by git", False, True, "echo '.env.local' >> .gitignore", "not ignored")]
 
 
 def fetch_listing() -> Optional[str]:
@@ -261,6 +314,7 @@ def run(which=shutil.which, platform=None, docker_ok=docker_info_ok, helm_versio
         listing_json = fetch_listing()
     checks += check_plugins(listing_json if listing_json is not None else "", plugin_dir_load=loaded_from_plugin_dir())
     checks += check_optional_plugins(listing_json if listing_json is not None else "")
+    checks += check_env_local_ignored()
     for line in render(checks):
         out(line)
     failed = sum(1 for c in checks if c.required and not c.ok)

@@ -30,6 +30,12 @@ from tests.tokens import AUDIENCE, ISSUER, JWKS_URL, TokenFactory
 API_DIR = pathlib.Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = API_DIR.parent.parent / "scripts"
 ROLES_SQL = API_DIR / "db" / "roles.sql"
+WEBHOOK_OVERRIDES = (
+    "max_body_bytes",
+    "webhook_clerk_secret",
+    "webhook_stripe_secret",
+    "webhook_tolerance_seconds",
+)
 PASSWORDS = {"app_owner": "owner-pw", "app_runtime": "runtime-pw", "app_admin": "admin-pw"}
 
 
@@ -149,7 +155,7 @@ async def app_factory(database: Database, tokens: TokenFactory) -> AsyncIterator
     made: list[Any] = []
 
     def build(**kwargs: Any) -> Any:
-        overrides = {k: kwargs.pop(k) for k in ("max_body_bytes",) if k in kwargs}
+        overrides = {k: kwargs.pop(k) for k in WEBHOOK_OVERRIDES if k in kwargs}
         app = create_app(make_settings(database, **overrides), jwks_client=tokens.jwks_client(), **kwargs)
         made.append(app)
         return app

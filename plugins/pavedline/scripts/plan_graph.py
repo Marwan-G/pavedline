@@ -2,13 +2,18 @@
 """Plan graph: check that every acceptance test maps to a slice, report progress, draw a wave.
 
   plan_graph.py check  [--repo DIR]   plans against SPEC.md; exit 1 on a problem, 2 when SPEC.md is missing
-  plan_graph.py status [--repo DIR]   prints `feature-complete` (exit 0) only when every test maps to a merged slice
+  plan_graph.py status [--repo DIR]   prints `feature-complete` (exit 0) only when every test maps to a merged slice, and
+                                      always one line `integration wave: not due | due | planned | done`
   plan_graph.py dot PLAN.md           writes PLAN.dot (one cluster per wave) and validates it with dot -Tcanon
 
 A slice in a plan is a heading `### Slice <wave>.<n>: <title>` followed by the lines
 `Tests: AT-001, AT-004`, `Surfaces: web, api`, `Branch: <name>`, `Depends on: <slice ids | none>` and,
 for a later wave that proves an old test again, `Re-tests: AT-001`. Merged = a commit on the default
 branch whose subject or body names the slice (`Slice 1.2`). Standard library only.
+
+The integration wave is a plan whose header has the line `Wave: integration` and whose slices are `### Slice int.<n>: ...`;
+it is `done` when all its slices are merged and a line `Verified: local - <evidence>` (a dash or em dash) is in the plan's
+header block, the text before the first `### Slice`; a line inside a slice body does not count.
 """
 import argparse
 import pathlib
@@ -229,8 +234,11 @@ def status(repo):
     done = {t for s in slices if s["id"] in merged for t in s["tests"]}
     open_slices = [s["id"] for s in slices if s["id"] not in merged]
     open_tests = [t for t in tests if t not in done]
-    if tests and slices and not open_tests:
+    complete = bool(tests and slices and not open_tests)
+    state = integration_state(repo, complete, slices, merged)
+    if complete:
         print("feature-complete")
+        print("integration wave: " + state)
         return 0
     if open_slices:
         print("open: " + ", ".join(open_slices))
@@ -238,7 +246,27 @@ def status(repo):
         print("tests not yet in a merged slice: " + ", ".join(open_tests))
     if not slices:
         print("no slices found in docs/plans/")
+    print("integration wave: " + state)
     return 1
+
+
+INTEGRATION_RE = re.compile(r"^Wave:[ \t]*integration[ \t]*$", re.M | re.I)
+VERIFIED_RE = re.compile(r"^Verified:[ \t]*local[ \t]*[-\u2013\u2014:][ \t]*\S", re.M | re.I)
+
+
+def integration_state(repo, feature_complete, slices, merged):
+    """not due | due | planned | done. Step 12 (go to production) starts only on `done`."""
+    if not feature_complete:
+        return "not due"
+    plans = [p for p in sorted((repo / "docs/plans").glob("*.md"))
+             if p.name.lower() != "readme.md" and INTEGRATION_RE.search(p.read_text().split("\n### Slice ")[0])]
+    if not plans:
+        return "due"
+    for plan in plans:
+        mine = [s for s in slices if s["file"] == plan.name]
+        if mine and all(s["id"] in merged for s in mine) and VERIFIED_RE.search(plan.read_text().split("\n### Slice ")[0]):
+            return "done"
+    return "planned"
 
 
 def q(s):

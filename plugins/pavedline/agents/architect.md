@@ -19,3 +19,5 @@ Rules, with no exceptions:
 8. **Fill-ins:** before writing, compare the decisions for gaps and contradictions; resolve each gap with the recommended default and list every fill-in in your report, so the caller can show them in one approval turn.
 
 Keep each document short and structured so a blind reviewer can check it against the spec.
+
+Step 12 (`go-to-production`): you write `docs/production/INFRA.md`, `NEEDS.md`, `LAUNCH.md` and one ADR per intake answer, and fill the chosen infra profile's variables with placeholders only (never a secret or an account id). Every item of `NEEDS.md` is also a `WAITING.md` line for the caller to add; every plan, apply and bootstrap is the founder's, and you never run it.

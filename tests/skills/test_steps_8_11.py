@@ -176,7 +176,11 @@ class Lessons(unittest.TestCase):
         tail = t.split("## 6. Close step 11")[1]
         self.assertIn("STEP: 8 — Plan", tail)
         self.assertIn("NEXT: step 8 — plan wave", tail)
-        self.assertIn("NEXT: the integration wave (ships in a later release)", tail)
+        self.assertNotIn("later release", tail)
+        self.assertIn("integration wave:", tail)
+        for s in ("not due", "due", "planned", "done", "STEP: 12 — Go to production",
+                  "NEXT: run go-to-production", "NEXT: plan the integration wave (plan-graph §5b)"):
+            self.assertIn(s, tail)
         self.assertIn("go?", tail)
 
     def test_size(self):
@@ -188,9 +192,15 @@ class Lessons(unittest.TestCase):
         self.assertEqual(m.group(1), "11 — Learn")
         self.assertIn("STEP: " + m.group(1), (SKILLS / "lessons/SKILL.md").read_text())
 
+    def test_step_chain_11_to_12(self):
+        close = (SKILLS / "lessons/SKILL.md").read_text().split("## 6. Close step 11")[1]
+        self.assertIn("STEP: 12 — Go to production", close)
+        self.assertIn("Continue when `STATE.md` says `STEP: 12 — Go to production`",
+                      (SKILLS / "go-to-production/SKILL.md").read_text())
+
     def test_step_chain_11_to_8(self):
         close = (SKILLS / "lessons/SKILL.md").read_text().split("## 6. Close step 11")[1]
-        m = re.search(r"STEP: (\d+ — \S+)", close)
+        m = re.search(r"STEP: (\d+ — [A-Za-z]+)", close)
         self.assertIn("Continue when `STATE.md` says `STEP: %s`" % m.group(1), (SKILLS / "plan-graph/SKILL.md").read_text())
 
     def test_templates(self):

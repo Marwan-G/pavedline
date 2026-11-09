@@ -1,0 +1,62 @@
+name: profile-byo
+
+# The bring-your-own-Kubernetes profile on a second kind cluster (kind-pavedline-byo): bootstrap.sh installs the Gateway
+# API CRDs, Envoy Gateway, cert-manager, CloudNativePG, the Barman Cloud plugin and Argo CD, then Argo CD must report the
+# add-ons Healthy and the ApplicationSets must generate their Applications (scripts/profile_check.sh). Its own workflow
+# because a workflow-level path filter cannot sit inside ci.yml; it runs on pull requests that touch the profile, the
+# infra templates or the local-cluster scripts, on demand and weekly. Never mark it as a required check: a pull request
+# that touches none of those paths would wait for it forever.
+on:
+  pull_request:
+    paths:
+      - "plugins/pavedline/templates/infra/**"
+      - "plugins/pavedline/scripts/local-cluster/**"
+      - "scripts/profile_check.sh"
+      - ".github/workflows/profile-byo.yml"
+  push:
+    branches: [main, next]
+    paths:
+      - "plugins/pavedline/templates/infra/**"
+      - "plugins/pavedline/scripts/local-cluster/**"
+      - "scripts/profile_check.sh"
+      - ".github/workflows/profile-byo.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: profile-byo-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Release-host downloads (the Gateway API CRDs and the plugin manifest from GitHub) return 504 for minutes at a time.
+  PAVEDLINE_RETRY_ATTEMPTS: "7"
+
+jobs:
+  profile-byo:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install kind v0.33.0 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O "$base/kind-linux-arm64"
+          # Expected sha256 from $base/kind-linux-arm64.sha256sum
+          echo "20022bee6cfcd5086cb7234d218e3454e6090022f2a8f55d1fa7fcf42c3867a2  kind-linux-arm64" | sha256sum --check --strict
+          sudo install -m 0755 kind-linux-arm64 /usr/local/bin/kind
+      - name: Install helm v4.3.1 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz
+          # Expected sha256 from https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz.sha256sum
+          echo "8cf8f66ecbc252ac8f7f06cca68aba88508ddfde3a6a34feb1678ad1694b4f88  helm-v4.3.1-linux-arm64.tar.gz" | sha256sum --check --strict
+          tar -xzf helm-v4.3.1-linux-arm64.tar.gz linux-arm64/helm
+          sudo install -m 0755 linux-arm64/helm /usr/local/bin/helm
+      - run: scripts/profile_check.sh

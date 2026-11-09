@@ -12,6 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts/starter_check.sh"
 CI = ROOT / ".github/workflows/ci.yml"
 MOBILE = ROOT / ".github/workflows/starter-mobile.yml"
+FULL = ROOT / ".github/workflows/starter-full.yml"
 FIXTURE = ROOT / "tests/fixtures/starter-answers.json"
 USES = re.compile(r"^\s*-?\s*uses:\s*(\S+)", re.MULTILINE)
 
@@ -25,13 +26,21 @@ class StarterScript(unittest.TestCase):
 
     def test_has_every_stage_and_the_keep_flag(self):
         t = SCRIPT.read_text()
-        for needle in ("generate", "static", "unit", "cluster", "all", "--keep", "--stage"):
+        for needle in ("generate", "static", "unit", "cluster", "full", "all", "--keep", "--stage"):
             self.assertIn(needle, t)
 
     def test_unknown_stage_and_argument_are_refused(self):
         for args in (["--stage", "nope"], ["--bogus"]):
             r = subprocess.run([str(SCRIPT), *args], capture_output=True, text=True)
             self.assertEqual(r.returncode, 2, args)
+
+    def test_static_stage_runs_the_pinned_gitleaks_on_a_git_archive_export_under_home(self):
+        t = SCRIPT.read_text()
+        self.assertIn("static-gitleaks", t)
+        self.assertIn("git archive HEAD", t)
+        self.assertIn("$HOME", t)
+        self.assertIn("GITLEAKS_IMAGE", t)
+        self.assertIn("skipping gitleaks", t)
 
     def test_refuses_a_non_kind_context(self):
         t = SCRIPT.read_text()
@@ -153,6 +162,38 @@ class StarterWorkflows(unittest.TestCase):
         self.assertRegex(job, r'node-version: "\d+\.\d+\.\d+"')
         self.assertIn("pnpm@11.28.8", job)
 
+    def test_full_stage_runs_backups_and_the_drill(self):
+        text = SCRIPT.read_text()
+        for needle in ("--stage full", 'up.sh" "$PROJECT" --full', 'verify.sh" "$PROJECT" --full', "example-full",
+                       "full-instances", "full-backup", "full-restore-drill", "RESTORE DRILL PASS", "readyInstances"):
+            self.assertIn(needle, text, needle)
+        # `all` stays as it was: the full stage is separate
+        self.assertIn("all) run_static; run_unit; run_cluster ;;", text)
+
+    def test_full_stage_drives_each_alert_red_against_a_sink(self):
+        text = SCRIPT.read_text()
+        for needle in ("full-alerts", "f_alerts", "REQ POST /notify", "REQ GET /heartbeat", "endpoint-down",
+                       "backup-db-daily", "never-runs", "--from=cronjob/alerts-check", "backupMaxAge: 1s", "auth can-i"):
+            self.assertIn(needle, text, needle)
+
+    def test_full_is_a_known_stage(self):
+        text = SCRIPT.read_text()
+        self.assertIn("generate|static|unit|cluster|full|all|selftest) ;;", text)
+
+    def test_starter_full_workflow_has_filters_schedule_dispatch_and_the_stage(self):
+        t = FULL.read_text()
+        self.assertIn("starter-full:", t)
+        self.assertIn("ubuntu-24.04-arm", t)
+        for path in ("plugins/pavedline/stacks/**", "plugins/pavedline/templates/infra/**", "plugins/pavedline/scripts/local-cluster/**"):
+            self.assertIn(f'"{path}"', t, path)
+        self.assertIn("schedule:", t)
+        self.assertIn("workflow_dispatch:", t)
+        self.assertIn("scripts/starter_check.sh --stage full", t)
+        self.assertIn("PAVEDLINE_RETRY_ATTEMPTS", t)
+        for tool in ("kind v0.33.0", "helm v4.3.1"):
+            self.assertIn(tool + " (checksum verified)", t)
+        self.assertIn("required check", t)
+
     def test_mobile_jobs_have_filters_schedule_and_native_builds(self):
         t = MOBILE.read_text()
         self.assertIn("starter-mobile-android:", t)
@@ -167,7 +208,7 @@ class StarterWorkflows(unittest.TestCase):
         self.assertIn("required check", t)
 
     def test_actions_are_pinned_by_sha_and_credentials_not_persisted(self):
-        for path in (CI, MOBILE):
+        for path in (CI, MOBILE, FULL):
             text = path.read_text()
             for ref in USES.findall(text):
                 if ref.startswith("docker://"):

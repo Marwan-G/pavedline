@@ -13,7 +13,7 @@ def test_up_down_up() -> None:
     db = create_database()
     try:
         migrate_up(db)
-        assert {"tenants", "idempotency_keys", "alembic_version"} <= tables(db.admin_dsn)
+        assert {"tenants", "idempotency_keys", "webhook_events", "alembic_version"} <= tables(db.admin_dsn)
         migrate_down(db)
         assert tables(db.admin_dsn) == {"alembic_version"}
         migrate_up(db)

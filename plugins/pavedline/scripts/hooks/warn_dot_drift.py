@@ -38,7 +38,11 @@ def dot_changed(root, dot):
 
 
 def already_warned(session, folder):
-    base = os.path.join(tempfile.gettempdir(), "pavedline-dot-drift")
+    data = os.environ.get("CLAUDE_PLUGIN_DATA")
+    if data:  # kept across plugin updates; set for hook processes
+        base = os.path.join(data, "dot-drift")
+    else:
+        base = os.path.join(tempfile.gettempdir(), "pavedline-dot-drift")
     os.makedirs(base, exist_ok=True)
     key = hashlib.sha256(("%s\0%s" % (session, folder)).encode()).hexdigest()[:24]
     marker = os.path.join(base, key)

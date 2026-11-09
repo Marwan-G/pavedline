@@ -1,0 +1,8 @@
+# Namespace of the Cloudflare Tunnel connector. The Secret `cloudflared-token` (key `token`) is created in it by the
+# founder from the vault; it is never in Git. See ../README.md.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudflared
+  labels:
+    pod-security.kubernetes.io/enforce: restricted

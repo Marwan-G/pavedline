@@ -62,7 +62,8 @@ jobs:
     timeout-minutes: 30
     services:
       postgres:
-        # Same major as the CloudNativePG image of infra/k8s/apps/postgres (16.x), by digest; built 2026-08-05 (at least 14 days old).
+        # The same MAJOR as the CloudNativePG image of infra/k8s/apps/postgres, with its own minor, by digest. Both come from
+        # pack.yaml `postgres:` (step 6); Renovate bumps each on its own.
         image: postgres:16.14@sha256:95206741a5b214807675e14165369d05b93a9cf692223b616d07cca227e74b0b
         env:
           POSTGRES_PASSWORD: throwaway

@@ -1,6 +1,7 @@
 {{- $c := .Values.cluster -}}
-# CloudNativePG Cluster. PR 3 / step 12 (production readiness) adds backups (Barman Cloud plugin), the restore drill
-# and load-based sizing; until then this is a working database, not a production-ready one.
+# CloudNativePG Cluster. With backup.enabled it archives WAL and takes base backups through the Barman Cloud plugin
+# (ObjectStore + ScheduledBackup in this chart); scripts/restore_drill.sh proves a backup restores. Load-based sizing
+# is step 12's work.
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
@@ -17,14 +18,33 @@ spec:
     size: {{ $c.storage.size }}
   resources:
     {{- toYaml $c.resources | nindent 4 }}
-  {{- if gt (int $c.instances) 1 }}
+  {{- if or (gt (int $c.instances) 1) $c.nodeSelector $c.tolerations }}
   affinity:
+    {{- if gt (int $c.instances) 1 }}
     enablePodAntiAffinity: true
-    podAntiAffinityType: required
+    podAntiAffinityType: {{ $c.antiAffinity }}
+    {{- end }}
+    {{- with $c.nodeSelector }}
+    nodeSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $c.tolerations }}
+    tolerations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  {{- if gt (int $c.instances) 1 }}
   postgresql:
     synchronous:
       method: any
       number: 1
+  {{- end }}
+  {{- if .Values.backup.enabled }}
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ .Values.backup.objectStore.name }}
   {{- end }}
   bootstrap:
     initdb:

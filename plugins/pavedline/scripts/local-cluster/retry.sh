@@ -12,7 +12,7 @@ retry() {
   until "$@"; do
     if [ "$n" -ge "$attempts" ]; then
       echo "error: failed after $attempts attempts: $*" >&2
-      echo "read the error above. If it was a download or network failure, re-run up.sh when the network is back; it reuses what is already done." >&2
+      echo "read the error above. If it was a download or network failure, re-run ${RETRY_SCRIPT:-up.sh} when the network is back; it reuses what is already done." >&2
       return 1
     fi
     echo "attempt $n of $attempts failed; retrying in ${delay}s: $*" >&2

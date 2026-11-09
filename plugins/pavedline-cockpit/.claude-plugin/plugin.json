@@ -1,0 +1,15 @@
+{
+  "name": "pavedline-cockpit",
+  "displayName": "Pavedline cockpit",
+  "version": "0.1.0",
+  "description": "Optional pane and /pavedline-status for a Pavedline project: step, wave, next action, open slice gates, WAITING.md. Read-only.",
+  "author": {
+    "name": "Marwan Ghubein",
+    "url": "https://www.linkedin.com/in/marwan-ghubein/"
+  },
+  "homepage": "https://github.com/Marwan-G/pavedline",
+  "repository": "https://github.com/Marwan-G/pavedline",
+  "license": "MIT",
+  "keywords": ["gitops", "workflow", "cockpit", "mod"],
+  "types": "./types/index.d.ts"
+}

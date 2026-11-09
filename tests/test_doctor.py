@@ -45,10 +45,19 @@ class DoctorTests(unittest.TestCase):
         self.assertTrue(c.fix.startswith("https://"))
 
     def test_optional_tools_not_required(self):
-        checks = by_name(doctor.check_tools(which=fake_which({"uv", "colima", "terraform"}), platform="Darwin", docker_ok=lambda: True, helm_version=GOOD_HELM))
-        for n in ("uv", "colima", "terraform"):
+        checks = by_name(doctor.check_tools(which=fake_which({"uv", "colima", "tofu", "terraform"}), platform="Darwin", docker_ok=lambda: True, helm_version=GOOD_HELM))
+        for n in ("uv", "colima", "tofu or terraform"):
             self.assertFalse(checks[n].ok)
             self.assertFalse(checks[n].required)
+
+    def test_tofu_or_terraform_either_satisfies(self):
+        for have, missing in (("tofu", "terraform"), ("terraform", "tofu")):
+            checks = by_name(doctor.check_tools(which=fake_which({missing}), platform="Darwin", docker_ok=lambda: True, helm_version=GOOD_HELM))
+            self.assertTrue(checks["tofu or terraform"].ok, have)
+            self.assertFalse(checks["tofu or terraform"].required)
+        checks = by_name(doctor.check_tools(which=fake_which({"tofu", "terraform"}), platform="Darwin", docker_ok=lambda: True, helm_version=GOOD_HELM))
+        self.assertFalse(checks["tofu or terraform"].ok)
+        self.assertIn("opentofu", checks["tofu or terraform"].fix)
 
     def test_redocly_optional_for_step_5(self):
         c = by_name(doctor.check_tools(which=fake_which({"redocly"}), platform="Darwin", docker_ok=lambda: True, helm_version=GOOD_HELM))["redocly"]
@@ -65,8 +74,36 @@ class DoctorTests(unittest.TestCase):
 
     def test_plugins_detected(self):
         checks = doctor.check_plugins(listing(ALL_IDS))
-        self.assertEqual(len(checks), 5)
+        self.assertEqual(len(checks), 5)  # marketing moved to the optional list (2026-11-09)
         self.assertTrue(all(c.ok for c in checks))
+
+    def test_plugin_for_another_folder_is_not_available_here(self):
+        data = json.loads(listing(ALL_IDS))
+        for p in data:
+            if p["id"] == "superpowers@claude-plugins-official":
+                p.update(scope="local", projectPath="/elsewhere/other")
+        checks = by_name(doctor.check_plugins(json.dumps(data), cwd=pathlib.Path("/work/acme")))
+        c = checks["superpowers@claude-plugins-official"]
+        self.assertFalse(c.ok)
+        self.assertEqual(c.status, "not available here")
+        self.assertIn("claude plugin install superpowers@claude-plugins-official --scope user", c.fix)
+        self.assertIn("--scope project", c.fix)
+
+    def test_project_scope_counts_for_its_own_directory(self):
+        data = json.loads(listing(ALL_IDS))
+        for p in data:
+            if p["id"] == "superpowers@claude-plugins-official":
+                p.update(scope="project", projectPath="/work/acme")
+        for here, ok in (("/work/acme", True), ("/work/acme/api", True), ("/work/other", False)):
+            c = by_name(doctor.check_plugins(json.dumps(data), cwd=pathlib.Path(here)))["superpowers@claude-plugins-official"]
+            self.assertEqual(c.ok, ok, here)
+
+    def test_optional_plugin_for_another_folder_is_not_available_here(self):
+        data = json.loads(listing(ALL_IDS + ["impeccable@impeccable"]))
+        data[-1].update(scope="local", projectPath="/elsewhere")
+        c = doctor.check_optional_plugins(json.dumps(data), cwd=pathlib.Path("/work/acme"))[0]
+        self.assertFalse(c.ok)
+        self.assertEqual(c.status, "not available here")
 
     def test_disabled_plugin_not_present(self):
         checks = doctor.check_plugins(listing(ALL_IDS, enabled=False))
@@ -89,7 +126,7 @@ class DoctorTests(unittest.TestCase):
 
     def test_impeccable_is_optional_and_listed(self):
         names = [n for n, _ in doctor.OPTIONAL_PLUGINS]
-        self.assertEqual(names, ["impeccable@impeccable", UIUX])
+        self.assertEqual(names, ["impeccable@impeccable", UIUX, "marketing@knowledge-work-plugins"])
         c = doctor.check_optional_plugins(listing(ALL_IDS))[0]
         self.assertFalse(c.ok)
         self.assertFalse(c.required)
@@ -219,6 +256,22 @@ class DoctorTests(unittest.TestCase):
         checks = by_name(doctor.check_tools(which=fake_which(), platform="Darwin", docker_ok=lambda: True,
                                             helm_version=GOOD_HELM, node_version=lambda: "v22.12.0"))
         self.assertTrue(checks["node (for redocly)"].ok)
+
+    def test_env_local_must_be_git_ignored(self):
+        import subprocess
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            self.assertEqual(doctor.check_env_local_ignored(root), [])  # not a git repo: nothing to check
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            self.assertEqual(doctor.check_env_local_ignored(root), [])  # no .env.local.example: nothing to check
+            (root / ".env.local.example").write_text("KEY=\n")
+            c = doctor.check_env_local_ignored(root)[0]
+            self.assertFalse(c.ok)
+            self.assertTrue(c.required)
+            self.assertIn(".gitignore", c.fix)
+            (root / ".gitignore").write_text(".env.local\n")
+            self.assertTrue(doctor.check_env_local_ignored(root)[0].ok)
 
 
 if __name__ == "__main__":

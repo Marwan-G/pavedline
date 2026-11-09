@@ -28,6 +28,6 @@ A later retro may correct an earlier lesson; old retros are history and are not 
 
 ## Hand-off
 
-`STATE.md` is set to `STEP: 8 — Plan` for the next wave, or points to the integration wave when every acceptance test maps to a merged slice.
+`STATE.md` is set from `plan_graph.py status`'s `integration wave:` line: `STEP: 8 — Plan` for the next feature wave (`not due`) or for the [integration wave](integration-wave.md) (`due`), `STEP: 9 — Build` while its slices are open (`planned`), and `STEP: 12 — Go to production` once it is `done`.
 
 Next: [step 8](08-plan.md) plans the next wave.

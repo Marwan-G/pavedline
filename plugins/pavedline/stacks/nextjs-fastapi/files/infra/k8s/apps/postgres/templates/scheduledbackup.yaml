@@ -1,0 +1,21 @@
+{{- if .Values.backup.enabled }}
+# A base backup on a schedule, through the plugin. The first one runs as soon as the Cluster is ready (immediate), so a
+# fresh database is never without one.
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ .Values.cluster.name }}-daily
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  immediate: true
+  backupOwnerReference: self
+  method: plugin
+  cluster:
+    name: {{ .Values.cluster.name }}
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+{{- end }}

@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
 # Prove the whole stack pack works on a generated neutral product: render it, then build, test, boot and deploy it.
-# usage: scripts/starter_check.sh [--stage generate|static|unit|cluster|all] [--keep]
+# usage: scripts/starter_check.sh [--stage generate|static|unit|cluster|full|all] [--keep]
 #   generate  only build the tree and print its path (last stdout line); the tree is kept
-#   static    web boundary, deploy manifest vs charts, helm + Checkov, actionlint, the records scripts
+#   static    web boundary, deploy manifest vs charts, helm + Checkov, actionlint, the records scripts, gitleaks
+#             (the pin in scripts/gitleaks.env, over a git archive export under $HOME)
 #   unit      pnpm install, lint/typecheck/test, both next builds, Playwright + axe, generated-file checks,
 #             mobile lint/types/jest + expo prebuild, api uv sync, ruff, pyright, lint-imports, pytest on a
 #             throwaway Postgres, rls_check and contract_check against the migrated database
 #   cluster   kind cluster, deploy through Argo CD, curl every hostname, tear down
-#   all       static + unit + cluster (default)
+#   full      the cluster stage with the production shape of the database: three Postgres instances, backups to the
+#             local S3 store (SeaweedFS, up.sh --full: cert-manager + the Barman Cloud plugin), a completed backup and
+#             the restore drill (scripts/restore_drill.sh: restore into db-restore, read a marker row back)
+#             then the three alerts (full-alerts): the checker chart is deployed against a local sink and each alert is
+#             driven red (endpoint down, backup too old, scheduled job late); exactly one message each, heartbeat only
+#             when all green
+#   all       static + unit + cluster (default; full is separate, CI runs it in its own job)
 # Needs: python3, git, node + npx (or pnpm), uv, docker, helm, actionlint, dot (graphviz); kind + kubectl + curl for
 # the cluster stage. Native mobile builds (Gradle, Xcode) run only in CI. Never touches a context that is not
 # kind-pavedline-*. Exit 0 only if every step passed.
@@ -28,11 +35,11 @@ while [ $# -gt 0 ]; do
     --stage) STAGE="${2:-}"; shift 2 ;;
     --stage=*) STAGE="${1#--stage=}"; shift ;;
     --keep) KEEP=1; shift ;;
-    -h|--help) sed -n '2,14p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-case "$STAGE" in generate|static|unit|cluster|all|selftest) ;; *) echo "unknown stage: $STAGE (generate|static|unit|cluster|all)" >&2; exit 2 ;; esac
+case "$STAGE" in generate|static|unit|cluster|full|all|selftest) ;; *) echo "unknown stage: $STAGE (generate|static|unit|cluster|full|all)" >&2; exit 2 ;; esac
 [ "$STAGE" = generate ] && KEEP=1
 
 # Refuse any Kubernetes context that is not a Pavedline kind cluster, before anything is created.
@@ -50,7 +57,7 @@ for t in python3 git; do need "$t"; done
 case "$STAGE" in
   static) for t in helm docker actionlint dot; do need "$t"; done ;;
   unit) for t in uv docker node; do need "$t"; done ;;
-  cluster) for t in kind kubectl helm docker curl; do need "$t"; done ;;
+  cluster|full) for t in kind kubectl helm docker curl; do need "$t"; done ;;
   all) for t in uv docker node helm actionlint dot kind kubectl curl; do need "$t"; done ;;
 esac
 
@@ -153,6 +160,8 @@ generate() {
     --tenancy "$TENANCY" --name example
   # The example overlay is for this check only: a product never receives it.
   cp -R "$PACK/example/." "$T/"
+  # --stage full: the database in its production shape (three instances, backups to the local S3 store).
+  if [ "$STAGE" = full ]; then cp -R "$PACK/example-full/." "$T/"; fi
   git init -q
   git add -A
   git -c user.name=starter -c user.email=starter@example.invalid commit -q -m "starter"
@@ -217,6 +226,27 @@ s_helm_checkov() {
   return "$rc"
 }
 
+# The same pinned image CI runs (scripts/gitleaks.env), over a `git archive HEAD` export of the generated tree. The export
+# lives under $HOME: Colima and Docker Desktop VMs share the home directory, not /private/tmp.
+s_gitleaks() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "skipping gitleaks: docker is not installed"
+    return 0
+  fi
+  # shellcheck disable=SC1091
+  . "$ROOT/scripts/gitleaks.env"
+  local export_dir rc=0
+  export_dir="$(mktemp -d "$HOME/.pavedline-gitleaks.XXXXXX")"
+  if ! git archive HEAD | tar -x -C "$export_dir"; then
+    rm -rf "$export_dir"
+    echo "gitleaks: git archive export failed"
+    return 1
+  fi
+  docker run --rm -v "$export_dir:/repo:ro" "$GITLEAKS_IMAGE" dir /repo --no-banner --redact || rc=$?
+  rm -rf "$export_dir"
+  return "$rc"
+}
+
 s_actionlint() { actionlint -no-color .github/workflows/*.yml; }
 
 s_records() {
@@ -235,6 +265,7 @@ run_static() {
   step static-deploy-manifest s_deploy_manifest
   step static-helm-checkov s_helm_checkov
   step static-actionlint s_actionlint
+  step static-gitleaks s_gitleaks
   step static-records s_records
 }
 
@@ -352,11 +383,11 @@ c_up() {
   if kind get clusters 2>/dev/null | grep -qx "pavedline-$PROJECT"; then
     echo "a kind cluster pavedline-$PROJECT already exists; remove it (down.sh $PROJECT --all) and rerun"; exit 1
   fi
-  "$T/scripts/local-cluster/up.sh" "$PROJECT"
+  if [ "$STAGE" = full ]; then "$T/scripts/local-cluster/up.sh" "$PROJECT" --full; else "$T/scripts/local-cluster/up.sh" "$PROJECT"; fi
 }
 c_verify() {
   require_kind_context "$CTX"
-  "$T/scripts/local-cluster/verify.sh" "$PROJECT"
+  if [ "$STAGE" = full ]; then "$T/scripts/local-cluster/verify.sh" "$PROJECT" --full; else "$T/scripts/local-cluster/verify.sh" "$PROJECT"; fi
 }
 c_deploy() {
   require_kind_context "$CTX"
@@ -385,6 +416,164 @@ sys.exit(1 if bad else 0)
 PY
 }
 
+# --stage full: the database is production-shaped and its backups work.
+kc() { kubectl --context "$CTX" "$@"; }
+f_instances() {
+  require_kind_context "$CTX"
+  kc -n postgres wait --for=condition=Ready cluster/db --timeout=600s
+  local n
+  n="$(kc -n postgres get cluster db -o jsonpath='{.status.readyInstances}')"
+  [ "$n" = 3 ] || { echo "expected 3 ready instances, got ${n:-none}"; exit 1; }
+  echo "3 instances ready"
+  kc -n postgres get objectstore db-backups >/dev/null
+  kc -n postgres get cluster db -o jsonpath='{.spec.plugins[0].name} archiver={.spec.plugins[0].isWALArchiver}{"\n"}'
+}
+f_backup() {
+  require_kind_context "$CTX"
+  # The ScheduledBackup is immediate: its first Backup appears when the cluster is ready.
+  local deadline=$(( $(date +%s) + 600 )) name phase=""
+  while :; do
+    name="$(kc -n postgres get backup -o jsonpath='{range .items[?(@.spec.method=="plugin")]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' | grep ' completed$' | head -n 1 | cut -d' ' -f1 || true)"
+    [ -n "$name" ] && break
+    [ "$(date +%s)" -lt "$deadline" ] || { echo "no scheduled backup completed within 600s"; kc -n postgres get backup -o wide || true; exit 1; }
+    sleep 5
+  done
+  echo "backup $name completed"
+}
+f_drill() {
+  require_kind_context "$CTX"
+  "$T/scripts/restore_drill.sh" "$PROJECT" | tee "$LOGS/drill.out"
+  grep -q '^RESTORE DRILL PASS' "$LOGS/drill.out"
+}
+
+# The three alerts (spec 11.11) against a local sink: a pod that records every request. The checker chart is applied
+# straight from the tree (helm template | kubectl apply) into its own namespace; each alert is driven red and must
+# produce exactly one notify message, a second run inside the repeat window must produce none, and the heartbeat is
+# pinged only when everything is green.
+f_alerts() {
+  require_kind_context "$CTX"
+  local ns=alerts-proof chart=infra/k8s/addons/alerts image
+  [ -d "$chart" ] || { echo "no $chart in the generated tree"; exit 1; }
+  image="$(sed -n 's/^image: //p' "$chart/values.yaml")"
+  [ -n "$image" ] || { echo "no image in $chart/values.yaml"; exit 1; }
+  kc create namespace "$ns" >/dev/null
+  cat > "$LOGS/sink.py" <<'PY'
+import http.server, sys
+
+class H(http.server.BaseHTTPRequestHandler):
+    def _do(self):
+        n = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(n).decode() if n else ""
+        print("REQ", self.command, self.path, body, flush=True)
+        self.send_response(503 if self.path.startswith("/down") else 200)
+        self.send_header("Content-Length", "2")
+        self.end_headers()
+        self.wfile.write(b"ok")
+    do_GET = do_POST = _do
+    def log_message(self, *a): pass
+
+http.server.ThreadingHTTPServer(("", 8080), H).serve_forever()
+PY
+  kc -n "$ns" create configmap sink-script --from-file=sink.py="$LOGS/sink.py" >/dev/null
+  kc -n "$ns" apply -f - <<YAML
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: sink}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: sink}}
+  template:
+    metadata: {labels: {app: sink}}
+    spec:
+      containers:
+        - name: sink
+          image: ${image}
+          command: [python3, -u, /s/sink.py]
+          ports: [{containerPort: 8080}]
+          volumeMounts: [{name: s, mountPath: /s}]
+      volumes: [{name: s, configMap: {name: sink-script}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: sink}
+spec:
+  selector: {app: sink}
+  ports: [{port: 80, targetPort: 8080}]
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: never-runs}
+spec:
+  schedule: "0 0 1 1 *"
+  suspend: true
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers: [{name: c, image: ${image}, command: [python3, -c, "pass"]}]
+YAML
+  kc -n "$ns" rollout status deploy/sink --timeout=300s
+  kc -n "$ns" create secret generic alerts-targets \
+    --from-literal=NOTIFY_URL="http://sink.${ns}.svc/notify" --from-literal=HEARTBEAT_URL="http://sink.${ns}.svc/heartbeat" >/dev/null
+
+  count() { kc -n "$ns" logs deploy/sink | grep -c "$1" || true; }
+  deploy_checks() { # $1 = values file body
+    printf '%s\n' "enabled: true" "$1" > "$LOGS/alerts-values.yaml"
+    helm template alerts "$chart" --namespace "$ns" -f "$LOGS/alerts-values.yaml" | kc apply -f - >/dev/null
+  }
+  run_checker() {
+    local j="proof-$RANDOM"
+    kc -n "$ns" create job "$j" --from=cronjob/alerts-check >/dev/null
+    kc -n "$ns" wait --for=condition=complete "job/$j" --timeout=240s || { kc -n "$ns" logs "job/$j" || true; return 1; }
+    kc -n "$ns" logs "job/$j"
+    kc -n "$ns" delete job "$j" --wait=false >/dev/null
+  }
+  expect() { # $1 label, $2 what was counted, $3 expected, $4 got
+    [ "$3" = "$4" ] || { echo "FAIL $1: expected $3 $2, got $4"; kc -n "$ns" logs deploy/sink || true; exit 1; }
+    echo "ok   $1: $4 $2"
+  }
+  local ok="http://sink.${ns}.svc/ok" down="http://sink.${ns}.svc/down" n0 h0 n1 h1
+
+  # all green: the heartbeat is pinged, nothing is sent to notify
+  deploy_checks "checks: {endpoints: [{name: sink, url: \"$ok\"}], backupMaxAge: 36h}"
+  n0="$(count 'REQ POST /notify')"; h0="$(count 'REQ GET /heartbeat')"
+  run_checker
+  expect green-notify "notify messages" 0 $(( $(count 'REQ POST /notify') - n0 ))
+  expect green-heartbeat "heartbeat pings" 1 $(( $(count 'REQ GET /heartbeat') - h0 ))
+
+  # alert 1: an endpoint answers 503; a second run inside the repeat window stays silent
+  deploy_checks "checks: {endpoints: [{name: down, url: \"$down\"}], backupMaxAge: 36h}"
+  n0="$(count 'REQ POST /notify')"; h0="$(count 'REQ GET /heartbeat')"
+  run_checker; run_checker
+  expect endpoint-notify "notify messages for endpoint-down" 1 $(( $(count 'REQ POST /notify .*endpoint-down') ))
+  expect endpoint-total "notify messages" 1 $(( $(count 'REQ POST /notify') - n0 ))
+  expect endpoint-heartbeat "heartbeat pings" 0 $(( $(count 'REQ GET /heartbeat') - h0 ))
+
+  # alert 2: the newest backup is older than the limit (1s, the drill's backup is minutes old)
+  deploy_checks "checks: {endpoints: [{name: sink, url: \"$ok\"}], backupMaxAge: 1s}"
+  n0="$(count 'REQ POST /notify')"; h0="$(count 'REQ GET /heartbeat')"
+  run_checker; run_checker
+  expect backup-notify "notify messages for backup-db-daily" 1 "$(count 'REQ POST /notify .*backup-db-daily')"
+  expect backup-total "notify messages" 1 $(( $(count 'REQ POST /notify') - n0 ))
+  expect backup-heartbeat "heartbeat pings" 0 $(( $(count 'REQ GET /heartbeat') - h0 ))
+
+  # alert 3: a scheduled job that never ran within its window
+  sleep 3
+  deploy_checks "checks: {endpoints: [{name: sink, url: \"$ok\"}], backupMaxAge: 36h, jobs: [{namespace: $ns, name: never-runs, maxLate: 1s}]}"
+  n0="$(count 'REQ POST /notify')"; h0="$(count 'REQ GET /heartbeat')"
+  run_checker; run_checker
+  expect job-notify "notify messages for job-$ns-never-runs" 1 "$(count "REQ POST /notify .*job-$ns-never-runs")"
+  expect job-total "notify messages" 1 $(( $(count 'REQ POST /notify') - n0 ))
+  expect job-heartbeat "heartbeat pings" 0 $(( $(count 'REQ GET /heartbeat') - h0 ))
+
+  # least privilege, as the cluster sees it
+  kc auth can-i list backups.postgresql.cnpg.io -n postgres --as="system:serviceaccount:${ns}:alerts" | grep -qx yes
+  [ "$(kc auth can-i delete backups.postgresql.cnpg.io -n postgres --as="system:serviceaccount:${ns}:alerts" || true)" = no ]
+  [ "$(kc auth can-i get secrets -n postgres --as="system:serviceaccount:${ns}:alerts" || true)" = no ]
+  echo "alerts: green, endpoint, backup and job all behaved"
+}
+
 run_cluster() {
   if kind get clusters 2>/dev/null | grep -qx "pavedline-$PROJECT"; then
     step cluster-up c_up   # fails with the explanation; nothing of ours to tear down
@@ -398,7 +587,19 @@ run_cluster() {
     step cluster-verify c_verify
     if [ $? = 0 ]; then
       step cluster-deploy c_deploy
-      if [ $? = 0 ]; then step cluster-curl c_curl; fi
+      if [ $? = 0 ]; then
+        step cluster-curl c_curl
+        if [ "$STAGE" = full ]; then
+          step full-instances f_instances
+          if [ $? = 0 ]; then
+            step full-backup f_backup
+            if [ $? = 0 ]; then
+              step full-restore-drill f_drill
+              if [ $? = 0 ]; then step full-alerts f_alerts; fi
+            fi
+          fi
+        fi
+      fi
     fi
   fi
 }
@@ -406,7 +607,7 @@ run_cluster() {
 case "$STAGE" in
   static) run_static ;;
   unit) run_unit ;;
-  cluster) run_cluster ;;
+  cluster|full) run_cluster ;;
   all) run_static; run_unit; run_cluster ;;
 esac
 

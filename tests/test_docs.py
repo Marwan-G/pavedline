@@ -97,6 +97,30 @@ class Docs(unittest.TestCase):
         self.assertIn("Skills (%d)" % skills, dot)
         self.assertIn("Agents (%d)" % agents, dot)
 
+    def test_v04_step_pages(self):
+        pages = {
+            "docs/steps/integration-wave.md": ("plan-graph", "local-cluster", "tunnel.sh", "stripe listen", "integration wave: done"),
+            "docs/steps/12-go-to-production.md": ("go-to-production", "launch_check.py", "promote.py", "NEEDS.md", "integration wave: done", "restore drill"),
+            "docs/steps/grow.md": ("content-ops", "seo-foundation", "growth", "GROW DUE", "approval"),
+        }
+        for rel, needles in pages.items():
+            f = ROOT / rel
+            self.assertTrue(f.is_file(), rel)
+            t = f.read_text()
+            for n in needles:
+                self.assertIn(n, t, f"{rel}: {n}")
+        arch = (ROOT / "docs/architecture.md").read_text()
+        for s in ("pavedline-cockpit", "marketing", "growth", "11 hooks", "steps/12-go-to-production.md"):
+            self.assertIn(s, arch, s)
+        self.assertNotIn("four dependencies", arch)
+        self.assertNotIn("eight agents", arch)
+
+    def test_credits_cover_v04_components(self):
+        c = (ROOT / "CREDITS.md").read_text()
+        for s in ("Barman Cloud", "cert-manager", "SeaweedFS", "Mailpit", "cloudflared", "OpenTofu",
+                  "terraform-provider-oci", "terraform-provider-kubernetes", "Stripe CLI", "Svix"):
+            self.assertIn(s, c, s)
+
 
 if __name__ == "__main__":
     unittest.main()

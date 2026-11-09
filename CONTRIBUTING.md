@@ -6,6 +6,7 @@ Thanks for your interest. Pavedline is a Claude Code plugin marketplace; contrib
 
 - Python code uses the standard library only and targets Python 3.10+.
 - Run the tests with `python3 -m unittest discover -s tests -t .`.
+- Plugin evals (optional, real model calls on your account): `scripts/run_evals.sh` runs `plugins/pavedline/evals` once per case with a $5 cap.
 - Validate manifests with `claude plugin validate . --strict` and
   `claude plugin validate plugins/pavedline --strict`.
 - Keep changes focused: one concern per pull request, with tests for new behavior.

@@ -10,13 +10,20 @@ on:
     paths:
       - "plugins/pavedline/stacks/**"
       - "scripts/starter_check.sh"
+      - "plugins/pavedline/scripts/**"
+      - "plugins/pavedline/templates/**"
+      - "tests/fixtures/starter-answers.json"
       - ".github/workflows/starter-mobile.yml"
   push:
     branches: [main, next]
     paths:
       - "plugins/pavedline/stacks/**"
       - "scripts/starter_check.sh"
+      - "plugins/pavedline/scripts/**"
+      - "plugins/pavedline/templates/**"
+      - "tests/fixtures/starter-answers.json"
       - ".github/workflows/starter-mobile.yml"
+  workflow_dispatch:
   schedule:
     - cron: "17 4 * * 1"
 

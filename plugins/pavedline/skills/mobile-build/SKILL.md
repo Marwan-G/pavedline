@@ -73,6 +73,10 @@ rm -f "$RUNNER_TEMP/cert.p12" "$HOME/Library/MobileDevice/Provisioning Profiles/
 
 The signed archive and the signed Android bundle are the output of the release job (an artifact). Uploading them to a store is a **founder step** (rule 6).
 
+## TestFlight and the internal track (founder steps, not proven here)
+
+The integration wave proves **simulator and emulator builds only** (build design section 5: no Apple or Google developer accounts exist during the build). Putting a build in front of testers is the founder's: Apple Developer Program membership and App Store Connect (TestFlight internal testing), a Google Play Console account and an internal testing track. Both accounts have lead times (identity and payment checks); they are in `docs/production/LEAD-TIME.md` and `WAITING.md`. The agent lists the steps, uploads nothing and never creates an account; the signed archive and bundle come from the release job above and the founder submits them. Say "not proven (founder step)" in the PR line, never "verified".
+
 ## Steps
 
 1. Read `docs/spec/SPEC.md` (mobile features), the contract, `DESIGN.md` (screens, "please update" screen) and decision 0005. If mobile is not a surface, stop: nothing here applies.

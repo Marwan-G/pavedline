@@ -1,5 +1,7 @@
-# Production: three instances, anti-affinity and quorum synchronous replication. NOT production-ready until PR 3 /
-# step 12 adds backups (Barman Cloud to S3-compatible storage), the restore drill and the sizing from real load.
+# Production: three instances, anti-affinity, quorum synchronous replication; backups ship OFF until step 12.
+# The endpoint and bucket below are PLACEHOLDERS. Step 12 (go to production) fills in the real ones with the founder,
+# creates the db-backup-s3 Secret and sets enabled: true; the chart refuses to render enabled backups that still point
+# at a placeholder, so a sync can never start an archiver that cannot upload.
 cluster:
   instances: 3
   storage:
@@ -9,3 +11,8 @@ cluster:
     limits: {cpu: "2", memory: 2Gi}
 pooler:
   instances: 2
+backup:
+  enabled: false
+  objectStore:
+    destinationPath: s3://example-production-backups/db
+    endpointURL: https://s3.example.com

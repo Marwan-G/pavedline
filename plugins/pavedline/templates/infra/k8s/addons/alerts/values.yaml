@@ -1,0 +1,37 @@
+# The three alerts (spec section 11.11): (1) uptime of the public endpoints, (2) a backup failed or is too old,
+# (3) a scheduled job failed or is late. One CronJob runs a small checker (Python standard library only).
+#
+# OFF until the product has a notify target: step 12 (go-to-production) turns it on after the founder has chosen where
+# alerts go and created the Secret below. Nothing secret lives in this file; the URLs are in the Secret.
+enabled: false
+
+# Same image family the API image already pins (python slim, by digest). The checker needs only the standard library.
+image: python:3.14.9-slim@sha256:35caba83af2fe6da9a5d922f9b0156f21d1246a48278c58a08bd253303ba42e8
+
+schedule: "*/5 * * * *"      # how often the checks run
+
+# A Secret in this namespace with two keys: NOTIFY_URL (one JSON message is POSTed per failing check) and
+# HEARTBEAT_URL (GET on every all-green run; an external dead-man's switch alerts when the pings stop). Created by
+# the founder or the vault sync at step 12, never in Git. A missing Secret makes the Job fail loudly.
+secretName: alerts-targets
+
+checks:
+  # Public endpoints: each must answer 2xx within endpointTimeout. [{name: web, url: "https://app.<domain>/healthz"}]
+  endpoints: []
+  endpointTimeout: 10s
+  # Backups: the named ScheduledBackup must exist, its cluster's newest completed Backup must be younger than
+  # backupMaxAge, and no newer Backup may have failed. Empty scheduledBackup switches this check off.
+  backup:
+    namespace: postgres
+    scheduledBackup: db-daily
+  backupMaxAge: 36h
+  # Scheduled jobs: [{namespace: api, name: nightly-report, maxLate: 26h}]. Its lastSuccessfulTime must be within
+  # maxLate and its newest Job must not have failed.
+  jobs: []
+  # A failing check is reported once, then again only after this long (or at once after it turned green and failed
+  # again). State lives in the ConfigMap alerts-state.
+  repeatEvery: 6h
+
+resources:
+  requests: {cpu: 20m, memory: 48Mi}
+  limits: {cpu: 200m, memory: 128Mi}

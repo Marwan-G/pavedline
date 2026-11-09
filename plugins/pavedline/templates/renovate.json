@@ -105,6 +105,26 @@
         "docker"
       ],
       "automerge": false
+    },
+    {
+      "description": "Never move the database chart's PostgreSQL image to another major, and never automerge it",
+      "matchFileNames": [
+        "infra/k8s/apps/postgres/values.yaml"
+      ],
+      "matchPackageNames": [
+        "/postgresql/"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Never automerge the database chart's PostgreSQL image",
+      "matchFileNames": [
+        "infra/k8s/apps/postgres/values.yaml"
+      ],
+      "automerge": false
     }
   ],
   "customManagers": [
@@ -185,6 +205,17 @@
       ],
       "depNameTemplate": "kubernetes-sigs/gateway-api",
       "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "PostgreSQL image of the database chart (tag and digest) in infra/k8s/apps/postgres/values.yaml; a major is chosen by the database decision, never by an update",
+      "managerFilePatterns": [
+        "/(^|/)infra/k8s/apps/postgres/values\\.yaml$/"
+      ],
+      "matchStrings": [
+        "(?m)^image: (?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
     }
   ]
 }

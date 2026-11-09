@@ -2,12 +2,18 @@
 """Copy a stack pack into a product repository (step 6) for the chosen surfaces and tenancy.
 
 Usage: apply_stack.py --target DIR --pack nextjs-fastapi --surfaces api,web,site,mobile
-                      [--tenancy multi|single] [--name SLUG] [--github-repo OWNER/REPO] [--dry-run]
+                      [--tenancy multi|single] [--name SLUG] [--github-repo OWNER/REPO]
+                      [--postgres-major N] [--dry-run]
+
+--postgres-major N writes the PostgreSQL image the pack pins for major N (pack.yaml `postgres:`) into the copied
+infra/k8s/apps/postgres/values.yaml; a major the pack does not pin exits 1 with "postgres major N not pinned in this
+pack" and writes nothing. Without it the pack's default major is used.
 
 Never overwrites: the full file list is computed first; if any pack file already exists in the target, nothing is
 written, each clash is printed as "conflict: <path>", and the exit code is 1. The stack-neutral templates a product
 started with an older Pavedline may lack (infra/, .github/, scripts/, renovate.json, .sanitize-denylist) are copied
-when absent; one that exists and differs is kept ("kept: <path>"), never a conflict. Standard library only.
+when absent; one that exists and differs is kept ("kept: <path>"), never a conflict. An existing .gitignore is kept
+and gains the pack's lines it lacks ("appended: .gitignore"). Standard library only.
 """
 import argparse
 import json
@@ -45,6 +51,15 @@ SLUG_RE = re.compile(r"[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?")
 REPO_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9._-]+")
 BEGIN_RE = re.compile(r"^\s*(?:#|//|<!--)\s*pavedline-begin:\s*(.*?)\s*(?:-->)?\s*$")
 END_RE = re.compile(r"^\s*(?:#|//|<!--)\s*pavedline-end\s*(?:-->)?\s*$")
+
+
+def sub_once(pattern, new, text, dest, keep_prefix=False):
+    """Replace the first match of pattern; a pack file without the line is an error, never a silent no-op."""
+    repl = (lambda m: m.group(1) + new) if keep_prefix else (lambda _m: new)
+    out, n = re.subn(pattern, repl, text, count=1)
+    if n == 0:
+        raise UsageError("%s: no Postgres image line to rewrite" % dest)
+    return out
 
 
 class UsageError(Exception):
@@ -430,7 +445,34 @@ def build_plan(args, pack: dict, pack_dir: pathlib.Path, surfaces: list):
     return entries
 
 
-def transform(entries: dict, args, surfaces: list, known=None):
+def postgres_image(pack: dict, major):
+    """The image the pack pins for a PostgreSQL major (default major when none is asked for); None when unpinned."""
+    pg = pack.get("postgres") or {}
+    majors = {str(k): v for k, v in (pg.get("majors") or {}).items()}
+    wanted = str(major if major is not None else pg.get("default_major", ""))
+    return majors.get(wanted)
+
+
+def postgres_test_image(pack: dict, major):
+    pins = postgres_image(pack, major)
+    return pins.get("test") if isinstance(pins, dict) else None
+
+
+def append_missing_lines(current: str, pack_text: str) -> str:
+    """Lines of the pack's text that the existing text lacks (comments and blanks skipped), appended after a header."""
+    have = {line.strip() for line in current.splitlines()}
+    missing = []
+    for line in pack_text.splitlines():
+        t = line.strip()
+        if t and not t.startswith("#") and t not in have and t not in missing:
+            missing.append(t)
+    if not missing:
+        return current
+    base = current if current.endswith("\n") or not current else current + "\n"
+    return base + "\n# Added by Pavedline (stack pack)\n" + "\n".join(missing) + "\n"
+
+
+def transform(entries: dict, args, surfaces: list, known=None, pack=None):
     chosen = set(surfaces)
     files = set(entries)
     workspace_names = set()
@@ -462,6 +504,11 @@ def transform(entries: dict, args, surfaces: list, known=None):
                 text = filter_package_json(text, workspace_names, files)
             elif dest == "pnpm-lock.yaml":
                 text = filter_lock(text, workspace_dirs)
+            elif dest == "infra/k8s/apps/postgres/values.yaml" and pack is not None:
+                pins = postgres_image(pack, args.postgres_major)
+                image = pins.get("cluster") if isinstance(pins, dict) else None
+                if image:
+                    text = sub_once(r"(?m)^image: .*$", "image: " + image, text, dest)
             elif dest == "infra/local-deploy.json":
                 text = json.dumps(filter_local_deploy(json.loads(text), chosen), indent=2, ensure_ascii=False) + "\n"
             elif dest == ".github/workflows/ci-api.yml" and args.tenancy == "single":
@@ -473,6 +520,10 @@ def transform(entries: dict, args, surfaces: list, known=None):
                     .replace("slug: 'example'", "slug: '" + args.name + "'")
                     .replace("com.example.app", "com." + seg + ".app")
                 )
+            if dest == ".github/workflows/ci-api.yml" and pack is not None:
+                image = postgres_test_image(pack, args.postgres_major)
+                if image:
+                    text = sub_once(r"(?m)^(        image: )postgres:\S+$", image, text, dest, keep_prefix=True)
             if owner and (dest.startswith("infra/") or dest == ".github/CODEOWNERS"):
                 text = text.replace("ghcr.io/OWNER/REPO", "ghcr.io/" + owner.lower() + "/" + repo.lower())
                 if dest == ".github/CODEOWNERS":
@@ -555,6 +606,7 @@ def main(argv=None) -> int:
     ap.add_argument("--tenancy", choices=["multi", "single"], default="multi")
     ap.add_argument("--name", help="product slug (a DNS label); renames the mobile app")
     ap.add_argument("--github-repo", help="OWNER/REPO: fills the image repositories and CODEOWNERS")
+    ap.add_argument("--postgres-major", type=int, help="PostgreSQL major from the product's database decision (the pack pins its own list)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--stacks-dir", help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
@@ -586,10 +638,13 @@ def main(argv=None) -> int:
     if not target.is_dir():
         print("error: target directory does not exist: " + args.target, file=sys.stderr)
         return 1
+    if args.postgres_major is not None and postgres_image(pack, args.postgres_major) is None:
+        print("error: postgres major %d not pinned in this pack" % args.postgres_major, file=sys.stderr)
+        return 1
 
     try:
         entries = build_plan(args, pack, pack_dir, surfaces)
-        transform(entries, args, surfaces, known)
+        transform(entries, args, surfaces, known, pack)
     except (UsageError, ValueError) as exc:
         print("error: " + str(exc), file=sys.stderr)
         return 2
@@ -624,6 +679,13 @@ def main(argv=None) -> int:
                 e.action = "identical"
             elif cur == e.raw:
                 e.action = "updated"
+            elif dest == ".gitignore":
+                merged = append_missing_lines(cur.decode("utf-8", "replace"), e.final.decode("utf-8", "replace"))
+                if merged.encode("utf-8") == cur:
+                    e.action = "identical"
+                else:
+                    e.action = "appended"
+                    e.final = merged.encode("utf-8")
             else:
                 e.action = "kept"
         if e.action == "kept":
@@ -633,7 +695,7 @@ def main(argv=None) -> int:
         if e.action == "identical":
             continue
         copied += 1
-        verb = {"created": "create", "updated": "update"}[e.action]
+        verb = {"created": "create", "updated": "update", "appended": "append"}[e.action]
         if args.dry_run:
             print("would " + verb + ": " + dest)
             continue

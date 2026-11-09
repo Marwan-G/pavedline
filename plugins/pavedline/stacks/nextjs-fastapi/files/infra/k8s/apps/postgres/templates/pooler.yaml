@@ -14,6 +14,12 @@ spec:
     name: {{ .Values.cluster.name }}
   instances: {{ $p.instances }}
   type: rw
+  # The container must be named pgbouncer for the operator to apply this image to the PgBouncer pods.
+  template:
+    spec:
+      containers:
+        - name: pgbouncer
+          image: {{ $p.image }}
   pgbouncer:
     poolMode: transaction
     parameters:

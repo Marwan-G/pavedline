@@ -7,6 +7,13 @@ workloads:
       repository: localhost:5001/api
       tag: "local-0001"
     replicas: 1
+    # api-auth (see values.yaml) plus api-webhooks: only the two webhook signing secrets from .env.local, written by
+    # scripts/local_secrets.sh (empty = no webhook route exists). Optional, so a cluster made before this Secret
+    # existed still starts. Staging and production add theirs from the vault.
+    envFromSecrets:
+      - api-auth
+      - name: api-webhooks
+        optional: true
     env:
       APP_ENV: development
     route:

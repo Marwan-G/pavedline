@@ -47,22 +47,11 @@ Show the lessons as one table (lesson, outcome, where) and ask the founder to ap
 
 Run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/plan_graph.py status`. Edit `STATE.md` (see the `state` skill), time from `date "+%Y-%m-%d %H:%M"`.
 
-If it prints `feature-complete` (every acceptance test maps to a merged slice):
+Read the `integration wave:` line it prints (`not due | due | planned | done`; plan-graph §5b) and set `STATE.md` from it. `LAST` is always `<timestamp> — step 11 done: retro docs/retros/<date>.md (<n> rules, <m> intents, <k> dropped)`.
 
-```
-STEP: 8 — Plan
-LAST: <timestamp> — step 11 done: retro docs/retros/<date>.md (<n> rules, <m> intents, <k> dropped)
-NEXT: the integration wave (ships in a later release)
-```
-
-At this point the contract is complete, so add `--feature-complete` to the `contract_check.py` step in the product's `.github/workflows/ci-api.yml` (and to `RUN.md`'s contract-check line) in this close, or write in `NEXT` that the integration wave does it. Without it CI never fails on a contract route the API still lacks.
-
-Otherwise:
-
-```
-STEP: 8 — Plan
-LAST: <timestamp> — step 11 done: retro docs/retros/<date>.md (<n> rules, <m> intents, <k> dropped)
-NEXT: step 8 — plan wave <n+1>
-```
+- `not due` (feature waves remain): `STEP: 8 — Plan`, `NEXT: step 8 — plan wave <n+1>`.
+- `due` (every acceptance test maps to a merged slice): `STEP: 8 — Plan`, `NEXT: plan the integration wave (plan-graph §5b)`. The contract is complete, so add `--feature-complete` to the `contract_check.py` step in the product's `.github/workflows/ci-api.yml` (and to `RUN.md`'s contract-check line) in this close; without it CI never fails on a contract route the API still lacks.
+- `planned` (the integration plan exists, slices open): `STEP: 9 — Build`, `NEXT: step 9 — build slice int.<n>` (the first open integration slice).
+- `done` (the integration wave is closed): `STEP: 12 — Go to production`, `NEXT: run go-to-production`.
 
 Commit and close as in the shared rules, then ask: **go?** The founder reads the retro; that is the step's gate. Starting the next wave needs the founder's go.

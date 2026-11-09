@@ -1,0 +1,74 @@
+{{- if .Values.enabled }}
+{{- /* Least privilege: read-only verbs on exactly the resources a check reads, in exactly the namespaces it names. */}}
+{{- $need := dict }}
+{{- if .Values.checks.backup.scheduledBackup }}
+{{- $_ := set $need .Values.checks.backup.namespace (dict "backup" true "jobs" false) }}
+{{- end }}
+{{- range .Values.checks.jobs }}
+{{- $cur := get $need .namespace | default (dict "backup" false "jobs" false) }}
+{{- $_ := set $cur "jobs" true }}
+{{- $_ := set $need .namespace $cur }}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alerts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: alerts
+---
+# Only this one ConfigMap, only by name: read it and patch the repeat state.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alerts-state
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [alerts-state]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alerts-state
+  namespace: {{ .Release.Namespace }}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: alerts-state}
+subjects:
+  - {kind: ServiceAccount, name: alerts, namespace: {{ .Release.Namespace }}}
+{{- range $ns, $what := $need }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alerts-read
+  namespace: {{ $ns }}
+rules:
+{{- if $what.backup }}
+  - apiGroups: [postgresql.cnpg.io]
+    resources: [backups]
+    verbs: [list]
+  - apiGroups: [postgresql.cnpg.io]
+    resources: [scheduledbackups]
+    verbs: [get]
+{{- end }}
+{{- if $what.jobs }}
+  - apiGroups: [batch]
+    resources: [cronjobs]
+    verbs: [get]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [list]
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alerts-read
+  namespace: {{ $ns }}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: alerts-read}
+subjects:
+  - {kind: ServiceAccount, name: alerts, namespace: {{ $.Release.Namespace }}}
+{{- end }}
+{{- end }}

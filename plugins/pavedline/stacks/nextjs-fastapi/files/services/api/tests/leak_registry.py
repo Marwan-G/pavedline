@@ -21,7 +21,7 @@ EXEMPT: list[Exempt] = []
 
 
 # Every job type, run as tenant A with tenant B's ids. The platform job types (leak_jobs.py) come first;
-# a scheduled job MUST call purge_expired_idempotency_keys. Add each new job type here.
+# a scheduled job MUST call purge_expired_idempotency_keys and purge_expired_webhook_events. Add each new job type here.
 JOBS: list[JobCase] = [*PLATFORM_JOBS]
 
 

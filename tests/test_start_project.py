@@ -44,6 +44,21 @@ class StartProjectTests(unittest.TestCase):
         self.assertIn("Acme", (self.dir / "CLAUDE.md").read_text())
         self.assertIn("MODE: solo", (self.dir / "STATE.md").read_text())
 
+    def test_ships_a_gitignore_with_worktrees_and_local_env(self):
+        r = self.start()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("created: .gitignore", r.stdout)
+        lines = (self.dir / ".gitignore").read_text().splitlines()
+        self.assertIn(".worktrees/", lines)
+        self.assertIn(".env.local", lines)
+
+    def test_an_existing_gitignore_is_a_conflict_and_stays_untouched(self):
+        (self.dir / ".gitignore").write_text("mine\n")
+        r = self.start()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("conflict: .gitignore", r.stdout)
+        self.assertEqual((self.dir / ".gitignore").read_text(), "mine\n")
+
     def test_refuses_when_claude_md_exists(self):
         (self.dir / "CLAUDE.md").write_text("mine")
         r = self.start()

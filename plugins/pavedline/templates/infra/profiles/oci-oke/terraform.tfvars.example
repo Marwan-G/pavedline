@@ -1,0 +1,34 @@
+# Copy to terraform.tfvars (git-ignored) and replace every <placeholder>. Nothing here is real.
+tenancy_ocid     = "<tenancy-identifier>"
+compartment_ocid = "<compartment-identifier>"
+region           = "<region-identifier>"
+home_region      = "<home-region-identifier>"
+oci_profile      = "<profile-name-used-with-oci-session-authenticate>"
+
+name_prefix        = "example"
+api_allowed_cidrs  = ["<your-public-ip>/32"]
+kubernetes_version = "<oke-kubernetes-version>"
+node_image_id      = "<oke-arm64-node-image-identifier>"
+
+backup_bucket_name      = "example-backups"
+budget_amount           = 100 # monthly, tenancy currency; replace with your own ceiling
+budget_alert_recipients = ["<ops-mailbox>"]
+
+# Phase 2, after the cluster and nodes are Ready:
+# enable_node_taints       = true
+# enable_cluster_resources = true
+# One Secret with the two keys the database chart reads (values pass through the Terraform state: see the README):
+# k8s_secret_bindings = {
+#   "db-backup-s3" = {
+#     namespace = "<database-namespace>"
+#     keys = {
+#       "access-key-id"     = "backup-s3-access-key"
+#       "secret-access-key" = "backup-s3-secret-key"
+#     }
+#   }
+# }
+
+# The data nodes are tainted workload=data:NoSchedule (node_pools in variables.tf). Set the database chart's
+# values-<environment>.yaml to match, or the instances stay Pending:
+#   cluster.nodeSelector: {workload: data}
+#   cluster.tolerations: [{key: workload, operator: Equal, value: data, effect: NoSchedule}]

@@ -13,6 +13,6 @@ LEFT BEHIND: none
 STALE: none
   - outputs made stale by a changed decision, each with the ADR number
 GROW DUE: none
-  - areas whose size or age says they need review
+  - after launch: `<YYYY-MM-DD> — <what>`, the next Grow run (a past date means due); also areas whose size or age says they need review
 OWNER: main session
 MODE: {{MODE}}

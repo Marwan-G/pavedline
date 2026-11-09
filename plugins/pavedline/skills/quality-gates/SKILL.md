@@ -51,8 +51,9 @@ Gates: TDD ✓ · review ✓ (n found, m fixed) · security ✓ · adversarial �
 ```
 
    `✗` is not valid: a slice with a failing gate is not done. When `m < n`, list every unfixed finding as `accepted — <reason>`. Also the `Post-deploy check:` line (one read-only command, used by step 10) and, when a diagram folder changed, the diagram update or `diagram unchanged: <reason>`.
-3. Squash-merge on the remote (`gh pr merge --squash`), subject `Slice <id>: <title>`. Pull the default branch. Clean up the worktree and branch only after the merge succeeded.
-4. Fold `handoff/<branch>.md` into the records (`STATE.md ▶ LEFT BEHIND` for what is open) and delete the file.
+3. **Before every push** (the first push of a branch and each push after), run the pinned secret scanner on an export of what is about to leave: `git archive HEAD | tar -x -C "$EXPORT"` with `EXPORT=$(mktemp -d "$HOME/.gitleaks.XXXXXX")` (under `$HOME`: Colima and Docker Desktop cannot mount `/private/tmp`), then `docker run --rm -v "$EXPORT:/repo:ro" <the gitleaks image> dir /repo --no-banner --redact`. The image is the one `.github/workflows/records.yml` pins by digest (read it there, never type a version); remove the export afterwards. Any finding stops the push: rotate the credential first (a `WAITING.md` item), then remove it from the tree. When docker is absent, say so and leave the check to CI; never skip silently.
+4. Squash-merge on the remote (`gh pr merge --squash`), subject `Slice <id>: <title>`. Pull the default branch. Clean up the worktree and branch only after the merge succeeded.
+5. Fold `handoff/<branch>.md` into the records (`STATE.md ▶ LEFT BEHIND` for what is open) and delete the file.
 
 ## Rules that come from building Pavedline itself
 

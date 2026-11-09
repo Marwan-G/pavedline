@@ -18,6 +18,10 @@ One area at a time, in the order of the skill's areas file (where the skill has 
 
 One decision per answer: record each as a decision (format of `decisions/0000-template.md`, numbered after the highest existing, with a "Stale outputs" section). Within a round the founder may answer `default for the rest of this round`; each area still gets its own decision record. A step's own gate or approval question is never answered by `default for the rest of this round`, which covers only area questions.
 
+## Preferences and rules live in the repository
+
+A preference or rule the founder states (for example "never push without asking") goes into a decision (ADR) or `STATE.md`, never only into the agent's auto-memory: a fresh clone, or another machine, must see it.
+
 ## Ask before adding
 
 A new service or billable resource, even a free one, follows the ask-before-adding rule: say what it is, what it will do, why nothing already in use does it and its verified cost, then wait for the founder to approve. Costs are checked on the web at expected usage (the skill's `references/sources.md`) and never designed to a free tier. Add each approved service to `SERVICES.md`.

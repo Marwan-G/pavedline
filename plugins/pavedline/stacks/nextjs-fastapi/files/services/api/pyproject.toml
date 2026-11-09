@@ -41,7 +41,7 @@ addopts = "-ra"
 line-length = 110
 target-version = "py314"
 # Pavedline's own record checkers and release check live in the same scripts/ folder; they have their own checks.
-extend-exclude = [".venv", "../../scripts/dot_check.py", "../../scripts/dot_drift.py", "../../scripts/pr_checks.py", "../../scripts/sanitize_scan.py", "../../scripts/release_check.py", "../../scripts/post_deploy_check.py"]
+extend-exclude = [".venv", "../../scripts/dot_check.py", "../../scripts/dot_drift.py", "../../scripts/pr_checks.py", "../../scripts/sanitize_scan.py", "../../scripts/release_check.py", "../../scripts/promote.py", "../../scripts/post_deploy_check.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "C4", "SIM", "RUF", "PT", "T20", "ASYNC", "PL"]
@@ -58,7 +58,7 @@ pythonVersion = "3.14"
 venvPath = "."
 venv = ".venv"
 include = ["app", "migrations", "tests", "../../scripts"]
-exclude = ["**/__pycache__", ".venv", "../../scripts/dot_check.py", "../../scripts/dot_drift.py", "../../scripts/pr_checks.py", "../../scripts/sanitize_scan.py", "../../scripts/release_check.py", "../../scripts/post_deploy_check.py"]
+exclude = ["**/__pycache__", ".venv", "../../scripts/dot_check.py", "../../scripts/dot_drift.py", "../../scripts/pr_checks.py", "../../scripts/sanitize_scan.py", "../../scripts/release_check.py", "../../scripts/promote.py", "../../scripts/post_deploy_check.py"]
 
 [tool.importlinter]
 root_package = "app"

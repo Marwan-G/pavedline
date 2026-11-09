@@ -18,7 +18,7 @@ from app.errors import (
     envelope_body,
     install_error_handlers,
 )
-from app.routes import health
+from app.routes import health, webhooks
 from app.routes.v1 import build_router
 from app.settings import Settings
 
@@ -167,6 +167,7 @@ def create_app(
     app.add_middleware(RequestIdMiddleware)  # added last = outermost: the id exists before anything else
     install_error_handlers(app)
     app.include_router(health.router)
+    app.include_router(webhooks.build_router(settings))
     v1_router = build_router()
     for extra in extra_v1_routers:
         v1_router.include_router(extra)

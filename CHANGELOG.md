@@ -7,6 +7,15 @@ All notable changes to Pavedline are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- Step 12, go to production: `go-to-production` refuses until the plan is feature-complete and the integration wave is done, runs the infra intake, writes `INFRA.md`, `NEEDS.md`, `LAUNCH.md` and one decision record per answer, and prints every plan, apply and bootstrap for you to run; staging first, then production by pull request with `promote.py`; `launch_check.py` blocks "go live" until `LAUNCH.md` is satisfied.
+- Two infra profiles: bring your own Kubernetes (`bootstrap.sh`, proven on a second kind cluster in CI) and OCI/OKE (OpenTofu or Terraform files with a plan check that refuses destroys and replacements).
+- Database backups with the Barman Cloud plugin, a local S3 store (SeaweedFS) behind `up.sh --full`, and `restore_drill.sh`, a restore proven before step 12.
+- The three alerts (public endpoints, last backup, late jobs) as an in-cluster checker add-on, with a dead-man's switch pinged to an external monitor you approve.
+- Integration wave: local fakes (Mailpit, an SMS sink) with `up.sh --fakes`, a Cloudflare quick tunnel (`tunnel.sh`, needs your approval row), signed-webhook checks with replay refusal, and simulator builds for mobile; step 12 waits for `integration wave: done`.
+- Grow loop: `seo-foundation`, `content-ops` and the `growth` agent (weekly calendar, monthly review, quarterly refresh); drafts only, and nothing is published without your quoted approval; `GROW DUE` in `STATE.md`; the `marketing` plugin is optional (doctor suggests it; nothing depends on it).
+- `pavedline-cockpit`, an optional second plugin: a status pane that reads `STATE.md` and `WAITING.md`, and `/pavedline-cockpit:status`.
+- Docs pages for step 12, the integration wave and Grow.
+- Claude Code features: hook state kept in `${CLAUDE_PLUGIN_DATA}` (temp directory when unset); `builder` has `maxTurns: 200` and reports a partial result as BLOCKED; a `SubagentStop` hook asks a builder once to finish a report that lacks its status or gates line; plugin eval suites for `start` and `plan-graph` (`plugins/pavedline/evals/`, run locally with `--scaffold`).
 - Records hooks: `PreCompact` keeps the key `STATE.md` lines and open waiting items in the compaction summary; `Stop` reminds Claude to commit uncommitted record files (never blocks).
 - Step skills pre-approve the scripts they run (`apply_stack.py`, `plan_graph.py`, `doctor.py`, `start_project.py`) and nothing else; the `builder` agent preloads `quality-gates`.
 - Starter check: `scripts/starter_check.sh` generates a neutral product from the stack pack and builds, tests, boots and deploys it to kind; CI jobs `starter` (every PR) and `starter-mobile` (Android and iOS native builds, path-filtered and weekly).

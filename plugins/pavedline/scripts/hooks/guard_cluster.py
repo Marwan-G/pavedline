@@ -12,7 +12,7 @@ TOOLS = {"kubectl", "helm", "argocd"}
 
 KUBECTL_MUTATING = set(
     "apply create delete edit patch replace scale rollout label annotate drain cordon uncordon "
-    "taint set run expose autoscale debug exec".split()
+    "taint set run expose autoscale debug exec cp".split()
 )
 HELM_MUTATING = {"install", "upgrade", "uninstall", "delete", "rollback"}
 ARGOCD_GROUPS = {"app", "proj", "repo", "cluster", "appset", "account", "gpg", "cert"}
@@ -110,6 +110,54 @@ def runs_deploy_local(verb, args):
     return False
 
 
+def script_arg(verb, args, name):
+    """If this command is `name` itself or a shell given it as the script, the script's own arguments, else None."""
+    if os.path.basename(verb).lower().endswith(name):
+        return args
+    if verb in SHELLS:
+        for i, a in enumerate(args):
+            if a.startswith("-"):
+                continue
+            return args[i + 1:] if os.path.basename(a).lower().endswith(name) else None
+    return None
+
+
+def bootstrap_block(args):
+    """bootstrap.sh --yes changes a cluster: only a kind-pavedline-* --context may be given."""
+    if "--yes" not in args:
+        return None
+    ctx = None
+    for i, a in enumerate(args):
+        if a == "--context":
+            ctx = args[i + 1] if i + 1 < len(args) else ""
+        elif a.startswith("--context="):
+            ctx = a.split("=", 1)[1]
+    if ctx is not None and ctx.startswith(KIND_PREFIX):
+        return None
+    shown = ctx if ctx else "none given"
+    return (f"Blocked: `bootstrap.sh --yes` would change cluster context {shown}. Agents may only change the "
+            f"disposable local cluster ({KIND_PREFIX}*); run the printing form (no --yes) and give the commands "
+            f"to the founder (step 12).")
+
+
+TOFU_TOOLS = {"tofu", "terraform"}
+TOFU_MUTATING = {"apply", "destroy", "import", "taint", "untaint", "force-unlock"}
+TOFU_STATE_MUTATING = {"mv", "rm", "push", "replace-provider"}
+
+
+def tofu_mutating(args):
+    pos = [a for a in args if not a.startswith("-")]
+    if not pos:
+        return False
+    if pos[0] in TOFU_MUTATING:
+        return True
+    if pos[0] == "state":
+        return len(pos) > 1 and pos[1] in TOFU_STATE_MUTATING
+    if pos[0] == "workspace":
+        return len(pos) > 1 and pos[1] == "delete"
+    return False
+
+
 def kubeconfig_overridden(cmds):
     for cmd in cmds:
         assigns, verb, args = _common.unwrap(cmd)
@@ -138,6 +186,18 @@ def check(command):
                 return (f"Blocked: `deploy_local.sh` would deploy while the kube context is {shown}. Agents may only "
                         f"change the disposable local cluster ({KIND_PREFIX}*). Switch with "
                         f"`kubectl config use-context {KIND_PREFIX}<project>` first.")
+            continue
+        b_args = script_arg(tool, args, "bootstrap.sh")
+        if b_args is not None:
+            reason = bootstrap_block(b_args)
+            if reason:
+                return reason
+            continue
+        if tool in TOFU_TOOLS:
+            if tofu_mutating(args):
+                return (f"Blocked: `{tool} {' '.join(a for a in args if not a.startswith('-'))[:40]}` changes "
+                        f"infrastructure or its state: the founder runs this (step 12). Print the plan and the "
+                        f"command for them instead.")
             continue
         if tool not in TOOLS:
             continue
