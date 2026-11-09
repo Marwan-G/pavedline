@@ -1,0 +1,4 @@
+{
+  "surfaces": ["api", "web", "site", "mobile"],
+  "tenancy": "multi"
+}

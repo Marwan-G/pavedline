@@ -1,0 +1,21 @@
+workloads:
+  api:
+    image:
+      digest: "sha256:ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc0"
+    route:
+      enabled: true
+      hostnames: ["api.example.test"]
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+    pdb:
+      minAvailable: 2
+    resources:
+      requests: {cpu: 250m, memory: 256Mi}
+      limits: {cpu: "1", memory: 512Mi}
+  worker:
+    image:
+      digest: "sha256:ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc1"
+    replicas: 2

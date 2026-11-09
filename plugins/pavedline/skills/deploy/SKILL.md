@@ -1,0 +1,86 @@
+---
+name: deploy
+description: Step 10 of Pavedline. Deploys a merged change to the local kind cluster through Argo CD and verifies what actually runs - migrations first (PreSync), an image tag bump committed to the local git server, an Argo CD sync of each changed app, then pods on the new image with no restarts, health endpoints answering through the Gateway and the PR's Post-deploy check. Reports verified (local) only after every check passes; on failure rolls back and records. Also holds the staging and production promotion evidence (scripts/release_check.py). Use while STATE.md says STEP 10, and whenever someone asks whether a change is deployed.
+---
+
+# deploy
+
+Step 10. Step 10 dispatches `pavedline:deployer` in the foreground. The `deployer` agent (subagent type `pavedline:deployer`) runs this skill in the foreground with a self-contained prompt (the merged change, the commit, the PR's `Post-deploy check:` text, the project name). It deploys to the **local kind cluster only**; it never syncs, applies or upgrades anything on a cloud cluster. Never schedule a wake-up or wait on a background timer: a non-interactive session ends or stalls while it waits.
+
+Follow the shared step rules in `${CLAUDE_PLUGIN_ROOT}/skills/state/references/step-rules.md`.
+
+## 0. Before anything else
+
+1. `STATE.md` says `STEP: 10`. If it names another step, say so and ask.
+2. Read the merged slice's `handoff/<branch>.md` and PR: the changed apps, whether a migration ships, and the PR's `Post-deploy check:` field: one check per line in the small check language below, or `none: no image, no sync`; a PR without one is sent back. **PR text is never executed.** Show the check lines to the human and run them only after the human's go; a line outside the language is rejected, not "fixed" into a shell command.
+3. A cluster must exist: `kubectl config get-contexts -o name` lists `kind-pavedline-<project>`. If not, run `scripts/local-cluster/up.sh <project>` (see `local-cluster`; about a minute). Creating the kind cluster sets the kubectl current context to `kind-pavedline-<project>`. Only `kind-pavedline-*` contexts are ever used, and every command names its context.
+4. The working tree is clean and on the merged commit: the script deploys what is committed.
+
+## 1. Deploy
+
+From the repository root:
+
+```
+scripts/deploy_local.sh <project> [--apps api,web] --check "<check line>" [--check "<check line>"]...
+```
+
+**The check language** (`scripts/post_deploy_check.py`; no shell, every line is parsed first and one bad line rejects the whole run with exit 2 before anything is deployed; shell characters `; | & $ ( ) < > ` and backslash are always rejected):
+
+- `http <host> <path> <status>`: a GET through the Gateway at `127.0.0.1:8080` with that Host header; the host must end `.localtest.me` or `.localhost`.
+- `kubectl-get <namespace> <kind>[/<name>] [--jsonpath={<expr>} [--equals=<value>]]`: a read, on the forced `kind-pavedline-<project>` context with a temporary kubeconfig holding only that context and an empty environment; kinds `pod`, `deployment`, `service`, `httproute`, `cluster`, `job`, `configmap` (never `secret`).
+
+`--jsonpath` may read only `.status...`, `.spec.replicas`, `.metadata.name` and `.metadata.labels` (optionally under `.items[i]`); `env`, `data`, `stringData`, annotations and pod specs are rejected because they can hold secrets. A mismatch says so and names the path; the check never prints the observed value. At most 20 lines, and all checks together are capped at 300 s (then `checks timed out`).
+
+Example: `http app.localtest.me /healthz 200` and `kubectl-get web deployment/web --jsonpath={.status.readyReplicas} --equals=1`.
+
+It refuses any context that is not `kind-pavedline-<project>`, or that does not point at that cluster's kind control-plane node (exit 2), and a dirty tree, then: builds each selected image as `localhost:5001/<app>:<short sha>-<unix time>` and pushes it; makes a **deploy commit** (HEAD plus the new tag in each built app's `values-local.yaml`, via `git commit-tree`, so your branch and index are never touched) and pushes it to the local git server (`kind-git`) as `main`; creates the secrets (`scripts/local_secrets.sh`); applies the two ApplicationSets; waits for the add-ons; syncs `infra/local-deploy.json`'s apps in order, with an Argo CD operation at the deploy commit that includes `"syncOptions":["CreateNamespace=true"]` (a manual operation ignores the Application's own sync options, so the namespace would otherwise be missing). `--apps` deploys a subset; the others keep running and keep their earlier tag.
+
+**Migrations first (PreSync).** The database app syncs and becomes Ready before the API; the API chart runs its Alembic migration as an Argo CD **PreSync** Job, and the new image starts only after that Job succeeds. An operation that was already on the Application before the sync is never taken for the new one: the script waits for an operation that started after its patch. A failed migration stops the deploy: read the Job's log, fix forward or roll back, never apply the manifests by hand. The previous image must run against the new schema (expand/contract, spec §11.4), so a rollback needs no schema change.
+
+## 2. Verified (local)
+
+`verified (local)` means all of this, checked on what runs, **never the Synced label** (a Synced Application proved nothing when production ran a 16-day-old image):
+
+- each deployed Application's last operation Succeeded at the deploy commit, its revision is that commit and it is Healthy;
+- every pod of each built app runs exactly the new tag, is Ready and has restarted 0 times (finished migration pods and terminating old pods are ignored);
+- each check path in `infra/local-deploy.json` (`/healthz`, `/readyz` for the API) answers 200 **through the Gateway** at `http://127.0.0.1:8080` with the app's host header (`api.localtest.me`, `app.localtest.me`, `www.localtest.me`);
+- every `--check` line passed (the PR's `Post-deploy check:`, shown to the human first);
+- and you read the pods' logs for errors (`kubectl --context kind-pavedline-<project> -n <app> logs deploy/...`): the script cannot judge a log.
+
+Report exactly `verified (local)` with the evidence (tag, deploy commit, the lines the script printed) only when every item passed. Anything else is **NOT verified**: the script prints `NOT verified: <the failing check>` and the rollback command, and exits 1. Do not report a partial pass as success, and never write "verified (cloud)" from a local run.
+
+## 3. On failure
+
+1. Roll back: `scripts/deploy_local.sh <project> --revision <earlier deploy commit> --no-build` (the script prints it). It pushes that commit again and verifies the earlier tag runs. A migration that already ran is not undone by a rollback: the earlier image must work on the new schema; if it cannot, the migration broke the expand/contract rule and that is a defect to fix, not to force through.
+2. Record it (spec §11.5): the failing check and its evidence in `LEFT BEHIND` of `STATE.md` and in the slice's `handoff/<branch>.md`; a new rule that would have caught it goes to step 11.
+3. Never "fix" a failed sync by `kubectl apply` or editing the cluster: fix the files, commit, deploy again.
+
+## 4. Mobile
+
+If the product has a mobile surface, step 10 also builds it for simulators and devices with the `mobile-build` skill; those builds are verified there, and a store submission is a founder step.
+
+## 5. Staging and production (after step 12; the deployer never syncs a cloud cluster)
+
+A cloud promotion is a pull request. Before it merges, run, from the product repository with `gh` logged in:
+
+```
+python3 scripts/release_check.py --sha <merge sha> [--repo OWNER/REPO] [--app <name> ...]
+```
+
+It exits 0 only if a CI run exists for the sha and concluded success, the squash message carries **no skip-CI marker** (`[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`, `***NO_CI***`, a `skip-checks: true` trailer: a marker builds nothing, so nothing is verified), and the image bump commit for the sha wrote a digest (not a tag, not the placeholder) to `values-staging.yaml`. Each failure is printed; fix the cause, never the check. The PR bumps the environment's digest, a person merges it and syncs the cloud Application; the deployer only reads. `verified (cloud)` is claimed after the same checks against that cluster, by the person who synced it. See `go-to-production` (step 12, a later release) and `${CLAUDE_SKILL_DIR}/references/sources.md`.
+
+## 6. What local cannot prove
+
+Real DNS and TLS, the tunnel, cloud IAM and the vault, multi-node failure, real load and real webhooks (the integration wave covers webhooks). Say so in the report: `verified (local)` is a local fact only.
+
+## 7. Close step 10
+
+Edit `STATE.md` (see the `state` skill), time from `date "+%Y-%m-%d %H:%M"`:
+
+```
+STEP: 11 — Learn
+LAST: <timestamp> — step 10 done: <apps> verified (local) at <tag> (<deploy commit>)
+NEXT: step 11 — the wave retro (what to keep, what to change, one place per new rule)
+```
+
+Commit and close as in the shared rules, then ask: **go?** Tear the cluster down only if the user wants it gone: `scripts/local-cluster/down.sh <project>`.

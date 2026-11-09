@@ -142,10 +142,11 @@ class LocalClusterStatic(unittest.TestCase):
     def test_kind_config(self):
         text = (LC / "kind-config.yaml.tpl").read_text()
         self.assertIn("apiVersion: kind.x-k8s.io/v1alpha4", text)
-        self.assertRegex(text, r"containerPort: 80\b")
+        # host 8080 reaches the Envoy Gateway data plane through the fixed NodePort 30080; no TLS port until step 12
+        self.assertRegex(text, r"containerPort: 30080\b")
         self.assertRegex(text, r"hostPort: 8080\b")
-        self.assertRegex(text, r"containerPort: 443\b")
-        self.assertRegex(text, r"hostPort: 8443\b")
+        self.assertNotIn("8443", text)
+        self.assertNotIn("30443", text)
         self.assertIn("config_path", text)
 
     def test_smoke_manifest(self):
@@ -170,6 +171,110 @@ class LocalClusterStatic(unittest.TestCase):
             self.assertIn(needle, text, needle)
         self.assertTrue(text.startswith("---\nname: local-cluster\n"))
 
+    def test_gateway_and_git_server_pins(self):
+        v = env_values()
+        text = (LC / "versions.env").read_text()
+        self.assertEqual(v["GATEWAY_API_VERSION"], "v1.6.3")
+        self.assertRegex(v["GATEWAY_API_STANDARD_SHA256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(v["ENVOY_GATEWAY_CHART"], "oci://docker.io/envoyproxy/gateway-helm")
+        self.assertRegex(v["ENVOY_GATEWAY_CHART_VERSION"], r"^v\d+\.\d+\.\d+$")
+        self.assertRegex(v["ENVOY_GATEWAY_CHART_DIGEST"], r"^sha256:[0-9a-f]{64}$")
+        self.assertRegex(v["GIT_SERVER_BASE_IMAGE"], r"^alpine:\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$")
+        self.assertRegex(v["ECHO_IMAGE"], r"^alpine:\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$")
+        self.assertIn("verified 2026-11-09", text)
+        self.assertIn("compatib", text.lower())
+        df = (LC / "git-server/Dockerfile").read_text()
+        self.assertRegex(df, r"(?m)^ARG BASE$")
+        self.assertIn("FROM ${BASE}", df)
+        self.assertIn("git-daemon", df)
+        self.assertIn("--base-path=/srv/git", df)
+        self.assertIn("--export-all", df)
+        self.assertNotIn("latest", df)
+
+    def test_up_installs_gateway_and_git_server(self):
+        text = (LC / "up.sh").read_text()
+        for needle in ["GATEWAY_API_VERSION", "GATEWAY_API_STANDARD_SHA256", "ENVOY_GATEWAY_CHART",
+                       "envoy-gateway-system", "kind-git", "git-server", "docker build", "org.opencontainers.image.base.digest"]:
+            self.assertIn(needle, text, needle)
+
+    def test_git_server_is_read_only_and_not_published(self):
+        for path in (LC / "up.sh", LC / "git-server/Dockerfile", LC / "verify.sh", LC / "push.sh"):
+            self.assertNotIn("receive-pack", path.read_text().replace("git receive-pack", ""), str(path))
+        up = (LC / "up.sh").read_text()
+        for line in up.splitlines():
+            if "docker run" in line and "GIT_NAME" in line:
+                self.assertNotRegex(line, r"\s-p\s|--publish", "kind-git must not publish a host port")
+        self.assertNotIn("GIT_SERVER_PORT", up)
+        self.assertNotIn("GIT_SERVER_PORT", (LC / "versions.env").read_text())
+        for t in ("SKILL.md",):
+            for skill in (SKILL, ROOT / "plugins/pavedline/skills/gitops/SKILL.md"):
+                self.assertNotIn("nothing of value", skill.read_text())
+                self.assertNotIn("git://127.0.0.1", skill.read_text())
+
+    def test_push_helper(self):
+        push = LC / "push.sh"
+        self.assertTrue(push.is_file())
+        text = push.read_text()
+        self.assertIn("protocol.ext.allow=always", text)
+        self.assertIn("ext::docker exec -i kind-git %S /srv/git/", text)
+        self.assertIn("^[a-z0-9]([-a-z0-9]{0,40}[a-z0-9])?$", text)
+        self.assertIn("exit 2", text)
+        self.assertIn("set -euo pipefail", text)
+        r = subprocess.run(["bash", "-n", str(push)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for bad in ("Bad_Name", "a;b", "../x", ""):
+            r = subprocess.run(["bash", str(push), bad], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 2, bad)
+        self.assertIn("push.sh", (LC / "verify.sh").read_text())
+
+    def test_up_rejects_stale_cluster_and_rebuilds_git_image(self):
+        text = (LC / "up.sh").read_text()
+        self.assertIn("this cluster was created by an older Pavedline; run down.sh <project> then up.sh <project>", text)
+        self.assertIn("docker port", text)
+        self.assertIn("30080/tcp", text)
+        self.assertIn("org.opencontainers.image.base.digest", text)
+        df = (LC / "git-server/Dockerfile").read_text()
+        self.assertIn("org.opencontainers.image.base.digest", df)
+
+    def test_every_pin_is_tracked_by_renovate(self):
+        import json
+        conf = json.loads((ROOT / "renovate.json").read_text())
+        matchers = [p for m in conf["customManagers"] for p in m["matchStrings"]]
+        for name in env_values():
+            if name in ("REGISTRY_PORT", "HELM_MIN_VERSION", "GATEWAY_API_STANDARD_SHA256",
+                        "ENVOY_GATEWAY_CHART_DIGEST", "ARGOCD_CHART_DIGEST", "CNPG_CHART_DIGEST"):
+                continue  # not a pin of its own: a port, a floor, a derived tag, or the digest of a pin matched with its version
+            self.assertTrue(any(name in p for p in matchers), f"{name} is not matched by any Renovate customManager")
+        for chart in ("ENVOY_GATEWAY",):
+            self.assertTrue(any(f"{chart}_CHART_DIGEST" in p for p in matchers), chart)
+        self.assertTrue(any("GATEWAY_API_VERSION" in p for m in conf["customManagers"] if m["datasourceTemplate"] == "github-releases" for p in m["matchStrings"]))
+        self.assertIn("a Renovate bump fails up.sh's checksum until GATEWAY_API_STANDARD_SHA256 is updated by hand", (LC / "versions.env").read_text())
+        # the regexes match the real file
+        env_text = (LC / "versions.env").read_text()
+        for m in conf["customManagers"]:
+            for pattern in m["matchStrings"]:
+                self.assertIsNotNone(re.search(re.sub(r"\(\?<(\w+)>", r"(?P<\1>", pattern), env_text), m["description"])
+
+    def test_no_pipe_into_grep_q(self):
+        text = (LC / "down.sh").read_text()
+        self.assertIn("kind-git", text)
+
+    def test_verify_checks_gateway_route_and_argocd_sync(self):
+        text = (LC / "verify.sh").read_text()
+        self.assertIn("Programmed", text)
+        self.assertIn("HTTPRoute", text)
+        self.assertIn("curl", text)
+        self.assertIn("127.0.0.1:8080", text)
+        self.assertIn("git://kind-git:9418", text)
+        self.assertRegex(text, r"Synced")
+        for f in ["manifests/gateway-smoke.yaml", "manifests/argocd-git-smoke.yaml"]:
+            self.assertTrue((LC / f).is_file(), f)
+
+    def test_skill_mentions_new_pieces(self):
+        text = SKILL.read_text()
+        for needle in ["kind-git", "Envoy Gateway", "git://kind-git:9418", "push.sh"]:
+            self.assertIn(needle, text, needle)
+
     def test_no_pipe_into_grep_q(self):
         for path in SCRIPTS:
             for line in command_lines(path):
@@ -178,7 +283,7 @@ class LocalClusterStatic(unittest.TestCase):
     def test_shellcheck_if_available(self):
         import shutil
         if not shutil.which("shellcheck"):
-            self.skipTest("shellcheck not installed")
+            self.skipTest("skipped: shellcheck not on PATH")
         r = subprocess.run(["shellcheck", "-x", *[p.name for p in SCRIPTS]], capture_output=True, text=True, cwd=LC)
         self.assertEqual(r.returncode, 0, r.stdout)
 

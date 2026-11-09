@@ -1,0 +1,32 @@
+name: renovate
+
+# Renovate runs inside this repository's own CI (self-hosted mode, renovatebot/github-action). It needs a token whose
+# pull requests trigger CI, so GITHUB_TOKEN is NOT used: store a fine-grained personal access token (or your own
+# GitHub App's token) as the repository secret RENOVATE_TOKEN. Adding it is an ask-before-adding step listed in
+# SERVICES.md with its rotation procedure; until the secret exists this workflow fails, which is the signal.
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          configurationFile: renovate.json
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: example-app
+description: Test fixture. A tiny application chart built on the Pavedline base chart.
+type: application
+version: 0.1.0
+appVersion: "0.0.0"
+dependencies:
+  - name: base-chart
+    version: 0.1.0
+    repository: file://../../../../plugins/pavedline/templates/infra/helm/base-chart

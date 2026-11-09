@@ -1,0 +1,37 @@
+# Shared by every environment; values-<environment>.yaml overrides it. No credential lives in this chart: the three role
+# passwords are Secrets named below (locally scripts/local_secrets.sh creates them; in the cloud the vault does, PR 3).
+
+# Postgres 16 (the major the service's tests run against). Pinned by tag AND digest (the multi-arch index; linux/arm64
+# and linux/amd64): 16.15 built 2026-10-19. Facts and date: skills/fastapi-service/references/sources.md.
+image: ghcr.io/cloudnative-pg/postgresql:16.15-202610190958-standard-trixie@sha256:f105e137d731f6ac4f69667383f2373345ce8b72dadcc10ab6d385a7a32d6e7f
+
+cluster:
+  name: db                 # services db-rw (direct, for migrations) and db-ro; the pooler is db-pooler-rw
+  database: app            # owned by app_owner
+  instances: 1
+  priorityClassName: app-critical
+  storage:
+    size: 1Gi
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: "1", memory: 512Mi}
+
+# Password Secrets (kubernetes.io/basic-auth, username = the role) in this namespace, one per role.
+secrets:
+  owner: db-owner
+  runtime: db-runtime
+  admin: db-admin
+
+pooler:
+  name: db-pooler-rw
+  instances: 1
+  maxClientConn: "200"
+  defaultPoolSize: "10"
+
+# Who may open connections to the database pods (everything else in the cluster is refused). The namespace's own pods
+# (replication, the pooler) are always allowed.
+networkPolicy:
+  allowFrom:
+    - namespace: api
+      ports: [5432]
+    - namespace: cnpg-system   # the operator reads instance status and drives the instances

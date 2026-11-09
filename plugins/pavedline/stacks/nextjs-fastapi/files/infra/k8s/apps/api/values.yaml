@@ -1,0 +1,109 @@
+# Shared by every environment; values-<environment>.yaml overrides it. Never put an environment's hostname, replicas
+# or image tag here, and never a credential: secrets are referenced by name (see scripts/local_secrets.sh locally).
+priorityClassName: app-default
+
+# The shared Gateway from infra/k8s/addons/gateway. This namespace carries the label gateway-access=shared (the apps
+# ApplicationSet adds it), which is what lets the route attach.
+gateway:
+  name: shared
+  namespace: gateway
+  sectionName: http
+
+workloads:
+  api:
+    image:
+      repository: localhost:5001/api   # overridden per environment
+    port: 8000
+    servicePort: 80
+    replicas: 2
+    env:
+      LOG_LEVEL: info
+    # DATABASE_URL: the RUNTIME role (app_runtime) through the PgBouncer pooler. The app never receives the owner URL.
+    secretEnv:
+      - name: DATABASE_URL
+        secretName: api-db
+        key: DATABASE_URL
+    # AUTH_ISSUER, AUTH_AUDIENCE, AUTH_JWKS_URL, AUTH_TENANT_CLAIM (production refuses to start without the first three).
+    envFromSecrets:
+      - api-auth
+    probes:
+      liveness:
+        path: /healthz
+      readiness:
+        path: /readyz
+    resources:
+      requests: {cpu: 100m, memory: 192Mi}
+      limits: {cpu: 500m, memory: 512Mi}
+    route:
+      enabled: true
+      pathPrefix: /
+    networkPolicy:
+      # In: only the Gateway's data plane. Envoy Gateway runs its proxy pods in the controller's namespace
+      # (envoy-gateway-system), labelled with the Gateway they serve, so that is what is allowed (not namespace gateway).
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: envoy-gateway-system
+              podSelector:
+                matchLabels:
+                  gateway.envoyproxy.io/owning-gateway-name: shared
+                  gateway.envoyproxy.io/owning-gateway-namespace: gateway
+          ports:
+            - port: 8000
+              protocol: TCP
+        # pavedline-begin: web
+        # The web app (namespace web) calls the API from its server, so its pods are let in on the pod port.
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: web
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/name: web
+          ports:
+            - port: 8000
+              protocol: TCP
+        # pavedline-end
+      # Out (DNS is added by the base chart): the database. The app uses the pooler, the PreSync migration Job (it shares
+      # this policy) the direct read-write service. Both live in namespace postgres, port 5432.
+      egress:
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: postgres
+              podSelector:
+                matchLabels:
+                  cnpg.io/poolerName: db-pooler-rw
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: postgres
+              podSelector:
+                matchLabels:
+                  cnpg.io/cluster: db
+                  cnpg.io/instanceRole: primary
+          ports:
+            - port: 5432
+              protocol: TCP
+        # Out to the auth provider's JWKS host (443). A NetworkPolicy cannot name a host, so this allows HTTPS to any
+        # public address and none of the private ranges (so cluster-internal services stay unreachable). To narrow it
+        # to the provider's addresses, replace the ipBlock with their CIDRs, or use a CNI that supports FQDN policies.
+        # Needed whenever the API verifies tokens (always in staging and production; locally only if .env.local sets
+        # the AUTH_* keys), so it is here and not only in the non-local files.
+        - to:
+            - ipBlock:
+                cidr: 0.0.0.0/0
+                except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 100.64.0.0/10]
+          ports:
+            - port: 443
+              protocol: TCP
+    # PreSync Job, same image, owner role (it creates and alters tables; the runtime role cannot).
+    migrations:
+      enabled: true
+      command: ["alembic", "upgrade", "head"]
+      # On a first deploy the Cluster may not be Ready when the Job starts; retries let it catch up.
+      backoffLimit: 6
+      databaseUrlEnv: DATABASE_OWNER_URL
+      databaseUrlSecret:
+        name: api-db
+        key: DATABASE_OWNER_URL

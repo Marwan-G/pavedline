@@ -1,0 +1,72 @@
+{{- $c := .Values.cluster -}}
+# CloudNativePG Cluster. PR 3 / step 12 (production readiness) adds backups (Barman Cloud plugin), the restore drill
+# and load-based sizing; until then this is a working database, not a production-ready one.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $c.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  instances: {{ $c.instances }}
+  imageName: {{ .Values.image }}
+  priorityClassName: {{ $c.priorityClassName }}
+  storage:
+    size: {{ $c.storage.size }}
+  resources:
+    {{- toYaml $c.resources | nindent 4 }}
+  {{- if gt (int $c.instances) 1 }}
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+  postgresql:
+    synchronous:
+      method: any
+      number: 1
+  {{- end }}
+  bootstrap:
+    initdb:
+      database: {{ $c.database }}
+      owner: app_owner
+      secret:
+        name: {{ .Values.secrets.owner }}
+      postInitApplicationSQLRefs:
+        configMapRefs:
+          - name: db-roles-sql
+            key: roles.sql
+  # The three roles of spec 12.3. Attributes mirror services/api/db/roles.sql; passwords come from the Secrets.
+  # Only app_owner may bypass row-level security. app_runtime owns nothing and is not a member of app_owner.
+  managed:
+    roles:
+      - name: app_owner
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        inherit: false
+        bypassrls: true
+        passwordSecret:
+          name: {{ .Values.secrets.owner }}
+      - name: app_runtime
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        inherit: false
+        bypassrls: false
+        passwordSecret:
+          name: {{ .Values.secrets.runtime }}
+      - name: app_admin
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        inherit: false
+        bypassrls: false
+        passwordSecret:
+          name: {{ .Values.secrets.admin }}

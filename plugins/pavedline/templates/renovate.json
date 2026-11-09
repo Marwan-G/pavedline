@@ -1,0 +1,190 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "timezone": "UTC",
+  "dependencyDashboard": true,
+  "labels": [
+    "dependencies"
+  ],
+  "minimumReleaseAge": "14 days",
+  "packageRules": [
+    {
+      "description": "Group minor and patch updates into one weekly PR",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "weekly minor and patch updates"
+    },
+    {
+      "description": "Automerge ONLY patch updates of development tooling, after CI is green: devDependencies and dev dependency groups",
+      "matchDepTypes": [
+        "devDependencies",
+        "dev",
+        "dependency-groups"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "groupName": null,
+      "automerge": true
+    },
+    {
+      "description": "NEVER automerge: Argo CD, CloudNativePG (operator, plugin, postgres images), Envoy Gateway and Gateway API; each opens a PR that must pass the local-cluster test and the five gates",
+      "matchPackageNames": [
+        "/argo-cd/",
+        "/argoproj/",
+        "/cloudnative-pg/",
+        "/envoyproxy/",
+        "/gateway-api/"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "NEVER automerge base images (Dockerfile FROM, compose, Kubernetes manifests)",
+      "matchManagers": [
+        "dockerfile",
+        "docker-compose",
+        "kubernetes"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "NEVER automerge Helm charts and values under infra/",
+      "matchManagers": [
+        "helmv3",
+        "helm-values",
+        "helmfile"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "NEVER automerge Terraform providers, modules and the Terraform version",
+      "matchManagers": [
+        "terraform",
+        "terraform-version",
+        "terragrunt"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "NEVER automerge Terraform providers and modules (by datasource)",
+      "matchDatasources": [
+        "terraform-provider",
+        "terraform-module"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "NEVER automerge the local-cluster pins",
+      "matchFileNames": [
+        "scripts/local-cluster/versions.env",
+        "infra/**"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "NEVER automerge GitHub Actions: they run in jobs that hold write permissions, so a person reviews each update",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "NEVER automerge container images referenced from workflows (services.*.image, docker:// steps): the github-actions manager extracts them with datasource docker",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "automerge": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "argo-cd Helm chart (OCI, version and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "ARGOCD_CHART=oci://(?<depName>\\S+)\\nARGOCD_CHART_VERSION=(?<currentValue>\\S+)\\nARGOCD_CHART_DIGEST=(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "cloudnative-pg Helm chart (OCI, version and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "CNPG_CHART=oci://(?<depName>\\S+)\\nCNPG_CHART_VERSION=(?<currentValue>\\S+)\\nCNPG_CHART_DIGEST=(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "kind node image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "KIND_NODE_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Envoy Gateway Helm chart (OCI, version and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "ENVOY_GATEWAY_CHART=oci://(?<depName>\\S+)\\nENVOY_GATEWAY_CHART_VERSION=(?<currentValue>\\S+)\\nENVOY_GATEWAY_CHART_DIGEST=(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "git server base image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "GIT_SERVER_BASE_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "echo backend image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "ECHO_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Gateway API standard CRDs release in versions.env (the sha256 is updated by hand)",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "GATEWAY_API_VERSION=(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "kubernetes-sigs/gateway-api",
+      "datasourceTemplate": "github-releases"
+    }
+  ]
+}

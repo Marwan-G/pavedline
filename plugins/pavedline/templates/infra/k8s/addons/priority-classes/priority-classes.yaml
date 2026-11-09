@@ -1,0 +1,17 @@
+# The base chart requires priorityClassName on every workload. Never globalDefault: a pod without a class stays at 0,
+# below both of these, so only workloads that name a class are protected.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: app-critical
+value: 100000
+globalDefault: false
+description: "Pods that must stay up under pressure (the API, the web app, the database proxy)."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: app-default
+value: 10000
+globalDefault: false
+description: Ordinary workloads and jobs; evicted before app-critical.

@@ -5,15 +5,15 @@ description: Checks the preferred backend (FastAPI) against the spec with source
 
 # backend-evaluate
 
-Part of step 4. Output: a short report `docs/architecture/BACKEND-EVALUATION.md` (create `docs/architecture/` when missing; a v0.1 project lacks it) and a decision. The `researcher` agent (subagent type `pavedline:researcher`) gathers the evidence; every claim has a URL and a date, marked definite, inferred or unknown. Versions and support status come from the web now (`${CLAUDE_SKILL_DIR}/references/sources.md`), never from memory. Run agents in the foreground and never wait on a background task or timer: a non-interactive session stalls or ends while it waits.
+Part of step 4. Output: a short report `docs/architecture/BACKEND-EVALUATION.md` (create `docs/architecture/` when missing; a v0.1 project lacks it) and a decision. The `researcher` agent (subagent type `pavedline:researcher`) gathers the evidence; every claim has a URL and a date, marked definite, inferred or unknown. Versions and support status come from the web now (`${CLAUDE_SKILL_DIR}/references/sources.md`), never from memory.
 
 **FastAPI is the preferred default.** It stays the answer unless the evaluation finds a blocker.
+
+Follow the shared step rules in `${CLAUDE_PLUGIN_ROOT}/skills/state/references/step-rules.md`.
 
 ## 1. Read
 
 `docs/spec/SPEC.md` (must-have features, non-functional needs), decisions 0002, 0003 and 0005, `PRODUCT.md`.
-
-An area already answered by a decision is shown as `decided in NNNN` and not re-asked; only its undecided detail is asked.
 
 ## 2. Pass criteria
 
@@ -31,4 +31,4 @@ Name exactly what FastAPI would struggle with. Only then compare alternatives, w
 
 ## 4. Recommend, then ask
 
-State the recommendation and what it changes. **The founder decides.** Record the answer as a decision (format of `decisions/0000-template.md`, number after the highest existing). A new service or paid tool that the choice would add follows the ask-before-adding rule (what it is, what it will do, why nothing in use does it, verified cost), never designed to a free tier.
+State the recommendation and what it changes. **The founder decides.** Record the answer as a decision (format of `decisions/0000-template.md`, number after the highest existing). A new service or paid tool that the choice would add follows ask-before-adding.

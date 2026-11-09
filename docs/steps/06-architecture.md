@@ -12,11 +12,11 @@ Only what is still undecided, one area at a time with options and a recommended 
 
 ## Output files
 
-`docs/architecture/ARCHITECTURE.dot` (+ `ARCHITECTURE.svg`), `docs/architecture/DEPLOYMENT.md`, `docs/architecture/THREATS.md`, one decision per answer, and the gate's verdict in `docs/reviews/06-architecture-review.md`.
+`docs/architecture/ARCHITECTURE.dot` (+ `ARCHITECTURE.svg`), `docs/architecture/DEPLOYMENT.md`, `docs/architecture/THREATS.md`, the copied stack pack (`services/`, `apps/`, `packages/`, `infra/`, `.github/workflows/`, `scripts/`, `docs/architecture/STACK-SOURCES.md`, a `## Stack` section in `RUN.md`), one decision per answer, and the gate's verdict in `docs/reviews/06-architecture-review.md`.
 
 ## What this step does not do
 
-It copies no stack templates. It records the chosen pack (`nextjs-fastapi`) and writes the Helm and environment layout (local, staging, production, each with its values file) as a document. The pack's templates are copied in a later release.
+Nothing is copied until the documents are done. Then `apply_stack.py` copies the chosen pack (`nextjs-fastapi`) into your repository: only the apps, Helm charts, CI jobs and Argo CD apps for the surfaces you decided in step 4, and for a single-tenant product no tenant-isolation checks. It never overwrites a file you already have; it lists each clash and stops. It prints every value you still have to fill in (domain, GitHub owner, mobile identifiers), and those go into `WAITING.md` with two settings only you can change: the GitHub Actions bypass on `main` and the Renovate token.
 
 ## Checks and gate
 

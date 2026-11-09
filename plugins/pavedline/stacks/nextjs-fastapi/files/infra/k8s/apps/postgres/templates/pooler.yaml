@@ -1,0 +1,21 @@
+# PgBouncer in TRANSACTION mode for the runtime URL (the service sets the tenant with SET LOCAL only and uses no
+# session state or session advisory locks, so it is safe). Migrations use the direct read-write service db-rw.
+{{- $p := .Values.pooler }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: {{ $p.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  cluster:
+    name: {{ .Values.cluster.name }}
+  instances: {{ $p.instances }}
+  type: rw
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      max_client_conn: {{ $p.maxClientConn | quote }}
+      default_pool_size: {{ $p.defaultPoolSize | quote }}

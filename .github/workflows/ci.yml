@@ -15,11 +15,13 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.12"
+  # Release-host downloads (e.g. the Gateway API CRDs from GitHub) return 504 for minutes at a time: retry longer in CI.
+  PAVEDLINE_RETRY_ATTEMPTS: "7"
 
 jobs:
   unit:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,6 +44,17 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: python3 scripts/lint_skills.py plugins/pavedline/skills
       - run: python3 scripts/gen_agent_models.py --check
+      - name: Install actionlint v1.7.12 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/rhysd/actionlint/releases/download/v1.7.12
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O "$base/actionlint_1.7.12_linux_amd64.tar.gz"
+          # Expected sha256 from $base/actionlint_1.7.12_checksums.txt
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint_1.7.12_linux_amd64.tar.gz" | sha256sum --check --strict
+          tar -xzf actionlint_1.7.12_linux_amd64.tar.gz actionlint
+          sudo install -m 0755 actionlint /usr/local/bin/actionlint
+      - name: actionlint on both CI template trees
+        run: bash scripts/actionlint_templates.sh
       - name: STATE.md template is at most 60 lines (design 9.3 backstop)
         run: |
           lines=$(wc -l < plugins/pavedline/templates/STATE.md)
@@ -137,6 +150,56 @@ jobs:
       - name: Tear down
         if: always()
         run: plugins/pavedline/scripts/local-cluster/down.sh ci --all
+
+  # The stack pack on a generated neutral product: render, build, test, boot, deploy to kind through Argo CD
+  # (scripts/starter_check.sh). Native mobile builds are in starter-mobile.yml.
+  starter:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    env:
+      STARTER_PLAYWRIGHT_DEPS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26.12.1"
+      - run: npm install -g pnpm@11.28.8
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.13.5"
+          enable-cache: false
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
+      - name: Install kind v0.33.0 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O "$base/kind-linux-arm64"
+          # Expected sha256 from $base/kind-linux-arm64.sha256sum
+          echo "20022bee6cfcd5086cb7234d218e3454e6090022f2a8f55d1fa7fcf42c3867a2  kind-linux-arm64" | sha256sum --check --strict
+          sudo install -m 0755 kind-linux-arm64 /usr/local/bin/kind
+      - name: Install helm v4.3.1 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz
+          # Expected sha256 from https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz.sha256sum
+          echo "8cf8f66ecbc252ac8f7f06cca68aba88508ddfde3a6a34feb1678ad1694b4f88  helm-v4.3.1-linux-arm64.tar.gz" | sha256sum --check --strict
+          tar -xzf helm-v4.3.1-linux-arm64.tar.gz linux-arm64/helm
+          sudo install -m 0755 linux-arm64/helm /usr/local/bin/helm
+      - name: Install actionlint v1.7.12 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/rhysd/actionlint/releases/download/v1.7.12
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O "$base/actionlint_1.7.12_linux_arm64.tar.gz"
+          # Expected sha256 from $base/actionlint_1.7.12_checksums.txt
+          echo "325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6  actionlint_1.7.12_linux_arm64.tar.gz" | sha256sum --check --strict
+          tar -xzf actionlint_1.7.12_linux_arm64.tar.gz actionlint
+          sudo install -m 0755 actionlint /usr/local/bin/actionlint
+      - run: scripts/starter_check.sh --stage all
 
   pr-body:
     if: github.event_name == 'pull_request'

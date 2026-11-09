@@ -1,0 +1,10 @@
+apiVersion: v2
+name: web
+description: The web app (apps/web) on the Pavedline base chart. Values only; the rules live in the base chart.
+type: application
+version: 0.1.0
+appVersion: "0.0.0"
+dependencies:
+  - name: base-chart
+    version: 0.1.0
+    repository: file://../../../helm/base-chart

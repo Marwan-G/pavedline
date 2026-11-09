@@ -1,0 +1,169 @@
+openapi: 3.1.0
+info:
+  title: Example API
+  version: 1.0.0
+  license: {name: MIT, identifier: MIT}
+  description: >
+    A neutral example contract for the starter check. A product replaces it with the contract written
+    at step 5. The tenant comes from the verified token, never from a request field.
+servers:
+  - url: https://api.example.test
+tags:
+  - name: items
+    description: Items of the calling tenant.
+security:
+  - bearerAuth: []
+paths:
+  /v1/items:
+    get:
+      operationId: listItems
+      tags: [items]
+      summary: List items
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: cursor
+          in: query
+          schema: {type: string}
+      responses:
+        '200':
+          description: A page of items, ordered by id.
+          headers:
+            X-Min-App-Version: {$ref: '#/components/headers/MinAppVersion'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ItemList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/Invalid'}
+    post:
+      operationId: createItem
+      tags: [items]
+      summary: Create an item
+      description: Idempotent per (tenant, principal, Idempotency-Key) for 24 hours.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ItemCreate'}
+      responses:
+        '201':
+          description: The created item (or the stored result of an earlier request with the same key).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ItemEnvelope'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/Invalid'}
+  /v1/items/{item_id}:
+    get:
+      operationId: getItem
+      tags: [items]
+      summary: Get an item
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The item.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ItemEnvelope'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/Invalid'}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  headers:
+    MinAppVersion:
+      description: >
+        The oldest mobile app version this API still serves (plain MAJOR.MINOR.PATCH). Sent on EVERY response,
+        errors included. An app below it shows a blocking "please update" screen.
+      schema: {type: string, pattern: '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$', example: 1.4.0}
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: A unique key per logical request; at most 255 printable characters.
+      schema: {type: string, maxLength: 255}
+  schemas:
+    Item:
+      type: object
+      required: [id, name, price_minor, currency, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        price_minor: {type: integer, description: Integer minor units of the currency.}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        created_at: {type: string, format: date-time}
+    ItemEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/Item'}
+    ItemList:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Item'}
+        next_cursor:
+          type: [string, 'null']
+    ItemCreate:
+      type: object
+      required: [name, price_minor, currency]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        price_minor: {type: integer, minimum: 0}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            request_id: {type: string}
+            details: {}
+  responses:
+    BadRequest:
+      description: The request is malformed (for example a missing Idempotency-Key).
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unauthorized:
+      description: Missing or invalid credentials.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Forbidden:
+      description: The token does not belong to a known tenant.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    NotFound:
+      description: Not found (also for another tenant's id).
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Invalid:
+      description: Validation failed, or the Idempotency-Key was reused with a different request.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}

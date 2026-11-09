@@ -1,0 +1,25 @@
+# Data-plane settings for the shared Gateway. The proxy Service is a NodePort with a fixed port so the local kind
+# cluster (host 8080 -> 30080) and a tunnel in the cloud both reach it with no load balancer.
+# Edit here for an environment that needs a LoadBalancer.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: shared
+  annotations:
+    # Created before the GatewayClass that references it (parametersRef): when the class is applied first, Envoy
+    # Gateway marks it Accepted=False "EnvoyProxy not found" and the add-on stays Degraded in Argo CD.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              ports:
+                - name: http-80
+                  port: 80
+                  nodePort: 30080

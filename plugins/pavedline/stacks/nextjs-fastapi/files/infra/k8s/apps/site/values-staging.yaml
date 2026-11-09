@@ -1,0 +1,13 @@
+# Staging: not indexed (SITE_INDEXABLE false), so a preview can never compete with production in search results.
+# CI writes the image digest in the tag-bump commit; step 6 replaces OWNER/REPO and the hostname.
+workloads:
+  site:
+    image:
+      repository: ghcr.io/OWNER/REPO/site
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    replicas: 2
+    env:
+      SITE_INDEXABLE: "false"
+      SITE_ORIGIN: https://www.staging.example.com
+    route:
+      hostnames: ["www.staging.example.com"]

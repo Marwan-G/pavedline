@@ -50,9 +50,9 @@ def scan(paths, patterns) -> List[Finding]:
 def main() -> int:
     root = pathlib.Path(__file__).resolve().parent.parent
     out = subprocess.run(
-        ["git", "ls-files", "-z"], cwd=root, capture_output=True, check=True
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=root, capture_output=True, check=True
     ).stdout.decode("utf-8")
-    names = [n for n in out.split("\0") if n and n not in DENYLISTS]
+    names = sorted({n for n in out.split("\0") if n and n not in DENYLISTS and (root / n).is_file()})
     findings = scan([root / n for n in names], load_patterns(root))
     for f in findings:
         print(f"{pathlib.Path(f.path).relative_to(root)}:{f.line}: {f.pattern}")

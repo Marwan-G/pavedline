@@ -34,4 +34,4 @@ A changed answer is a new decision that supersedes the old one and lists the out
 
 `STATE.md` is set to `STEP: 8 — Plan`.
 
-Next: step 8 ships in a later release.
+Next: step 8 plans the first wave (`plan-graph`; see [08-plan.md](08-plan.md)).

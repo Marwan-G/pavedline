@@ -1,0 +1,48 @@
+# Shared by every environment; values-<environment>.yaml overrides it. No credential here: the website holds none.
+priorityClassName: app-default
+
+gateway:
+  name: shared
+  namespace: gateway
+  sectionName: http
+
+workloads:
+  site:
+    image:
+      repository: localhost:5001/site # overridden per environment
+    port: 3000
+    servicePort: 80
+    replicas: 2
+    env:
+      # Only the production origin is indexed: robots.txt, the sitemap and X-Robots-Tag follow SITE_INDEXABLE at runtime.
+      SITE_INDEXABLE: "false"
+      SITE_ORIGIN: http://www.localtest.me:8080
+    probes:
+      liveness:
+        path: /healthz
+      readiness:
+        path: /healthz
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+    extraEmptyDirs:
+      - name: next-cache
+        mountPath: /app/apps/site/.next/cache
+        sizeLimit: 256Mi
+    route:
+      enabled: true
+      pathPrefix: /
+    networkPolicy:
+      # In: only the Gateway's data plane. Out: DNS only (added by the base chart); the website calls nothing.
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: envoy-gateway-system
+              podSelector:
+                matchLabels:
+                  gateway.envoyproxy.io/owning-gateway-name: shared
+                  gateway.envoyproxy.io/owning-gateway-namespace: gateway
+          ports:
+            - port: 3000
+              protocol: TCP

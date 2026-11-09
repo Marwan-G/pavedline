@@ -16,6 +16,15 @@ SECRET_PATTERNS = [
     r"\bAKIA[0-9A-Z]{16}\b",
 ]
 
+# The gates line a pull request body must carry (design section 9.1). Own copy of
+# scripts/pr_checks.py GATES (that file is not installed with the plugin);
+# tests/hooks/test_warn_hooks.py checks that both stay equal.
+GATES_LINE = re.compile(
+    r"^Gates: TDD ✓ · review ✓ \(\d+ found, \d+ fixed\) · security ✓ · "
+    r"adversarial (✓|n/a) · verification ✓$",
+    re.MULTILINE,
+)
+
 ENV_ALLOWED_SUFFIXES = (".example", ".sample", ".template")
 
 
@@ -197,11 +206,11 @@ def resolve_path(event, path) -> str:
     return p if os.path.isabs(p) else os.path.join(event_cwd(event), p)
 
 
-def read_text(path) -> str:
-    """File contents, or '' when missing or unreadable."""
+def read_text(path, limit=None) -> str:
+    """File contents, or '' when missing or unreadable. `limit` caps the characters read (a hook must stay fast)."""
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
-            return fh.read()
+            return fh.read() if limit is None else fh.read(limit)
     except OSError:
         return ""
 
@@ -211,3 +220,42 @@ def count_lines(text: str) -> int:
     if not text:
         return 0
     return len(text.split("\n")) - (1 if text.endswith("\n") else 0)
+
+
+def warn(event_name: str, message: str) -> NoReturn:
+    """Tell the user (stderr) and Claude (additionalContext), then exit 0: a warning never blocks."""
+    sys.stderr.write(message.rstrip() + "\n")
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": event_name, "additionalContext": message}}))
+    sys.exit(0)
+
+
+# ---------------------------------------------------------------------------
+# Record files (PreCompact and Stop hooks)
+# ---------------------------------------------------------------------------
+
+RECORD_PATHS = ("STATE.md", "WAITING.md", "decisions/", "handoff/", "docs/intent/", "docs/plans/",
+                "docs/retros/", "docs/reviews/")
+
+
+def project_dir(event) -> str:
+    """The product directory: CLAUDE_PROJECT_DIR when set, else the event's cwd."""
+    env = os.environ.get("CLAUDE_PROJECT_DIR")
+    return env if env else event_cwd(event)
+
+
+def uncommitted_records(base) -> list:
+    """Record files with uncommitted changes (git status --porcelain, limited to RECORD_PATHS); [] on any error."""
+    import subprocess
+    try:
+        r = subprocess.run(["git", "-C", base, "status", "--porcelain", "-uall", "--", *RECORD_PATHS],
+                           capture_output=True, text=True, timeout=5)
+    except Exception:
+        return []
+    if r.returncode != 0:
+        return []
+    files = []
+    for line in r.stdout.splitlines():
+        name = line[3:].split(" -> ")[-1].strip().strip('"')
+        if name and name not in files:
+            files.append(name)
+    return files

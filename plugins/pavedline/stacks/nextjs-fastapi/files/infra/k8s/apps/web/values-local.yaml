@@ -1,0 +1,9 @@
+# Local (kind): the image comes from the local registry; the deploy script sets a unique tag every deploy.
+workloads:
+  web:
+    image:
+      repository: localhost:5001/web
+      tag: "local-0001"
+    replicas: 1
+    route:
+      hostnames: ["app.localtest.me"] # *.localtest.me resolves to 127.0.0.1; host port 8080 is the Gateway

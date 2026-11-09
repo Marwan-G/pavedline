@@ -2,7 +2,7 @@
 name: start
 description: Starts a new Pavedline product (step 0). Checks the machine, asks the platform questions one at a time, copies the project templates and records each answer as a decision. Run it once, in the repository of the new product, by typing /pavedline:start.
 disable-model-invocation: true
-allowed-tools: Bash(python3 *) Bash(date *) Bash(git rev-parse *) Bash(git init*) Bash(git add *) Bash(git commit *)
+allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/start_project.py) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/start_project.py *) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py *) Bash(date *) Bash(git rev-parse *) Bash(git init*) Bash(git add *) Bash(git commit *)
 ---
 
 # start
@@ -14,7 +14,7 @@ Step 0 of Pavedline. You run it in the repository of the new product. Follow the
 Run:
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py"
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py
 ```
 
 If the last line says a required check failed, follow the `doctor` skill's install rule: tell the user what it will install, why (which Pavedline step needs it) and the exact command, then run it; Claude Code's permission prompt is the user's approval point. Never use `sudo`. Re-run the checker afterwards. Stop here only if the user refuses an install (add it to `WAITING.md`) or a command fails; then tell the user to fix it and run `/pavedline:start` again.
@@ -54,7 +54,7 @@ If it is not, ask the user before running `git init`. Never initialise silently.
 Propose the project name: a short kebab-case slug (letters, digits, hyphens) made from answer 1. Show it and let the user confirm or change it. It also names the local cluster `pavedline-<project>`. Take the mode from answer 4 (`solo` or `team`). Then run, from the repository root:
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/start_project.py" --target . --name <name> --mode <solo|team>
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/start_project.py --target . --name <name> --mode <solo|team>
 ```
 
 The script never overwrites. If it exits 1 and lists `conflict:` lines, write nothing yourself. Show the conflicts and ask the user whether to move those files aside or to start elsewhere, then stop.

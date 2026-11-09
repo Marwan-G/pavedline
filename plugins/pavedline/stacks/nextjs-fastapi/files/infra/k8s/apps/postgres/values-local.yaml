@@ -1,0 +1,3 @@
+# Local (kind): one instance, small disk.
+cluster:
+  instances: 1

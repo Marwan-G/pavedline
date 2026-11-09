@@ -1,0 +1,24 @@
+{
+  "name": "@app/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "check": "node scripts/check.mjs",
+    "lint": "biome ci .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "openapi-typescript": "7.13.0",
+    "vitest": "5.0.5"
+  }
+}

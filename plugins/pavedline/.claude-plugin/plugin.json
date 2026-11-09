@@ -15,7 +15,6 @@
     "superpowers@claude-plugins-official",
     "mattpocock-skills@claude-plugins-official",
     "product-management@knowledge-work-plugins",
-    "figma@claude-plugins-official",
-    "ui-ux-pro-max@ui-ux-pro-max-skill"
+    "figma@claude-plugins-official"
   ]
 }

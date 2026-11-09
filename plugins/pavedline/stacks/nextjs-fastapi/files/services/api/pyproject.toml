@@ -1,0 +1,83 @@
+[project]
+name = "api"
+version = "0.0.0"
+description = "FastAPI service"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+  "fastapi==0.162.0",
+  "uvicorn==0.54.0",
+  "pydantic==2.14.1",
+  "pydantic-settings==2.16.1",
+  "sqlalchemy[asyncio]==2.1.6",
+  "alembic==1.20.1",
+  "psycopg[binary]==3.3.6",
+  "pyjwt[crypto]==2.15.1",
+]
+
+[dependency-groups]
+dev = [
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.1",
+  "httpx==0.28.1",
+  "ruff==0.17.2",
+  "pyright==1.1.414",
+  "import-linter==2.15",
+  "pyyaml==6.0.3",
+]
+
+[tool.uv]
+package = false
+# Nothing published after this instant is resolved: every locked version is at least two weeks old.
+exclude-newer = "2026-10-26T00:00:00Z"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 110
+target-version = "py314"
+# Pavedline's own record checkers and release check live in the same scripts/ folder; they have their own checks.
+extend-exclude = [".venv", "../../scripts/dot_check.py", "../../scripts/dot_drift.py", "../../scripts/pr_checks.py", "../../scripts/sanitize_scan.py", "../../scripts/release_check.py", "../../scripts/post_deploy_check.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "C4", "SIM", "RUF", "PT", "T20", "ASYNC", "PL"]
+ignore = ["PLR0913", "PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S608", "PLR0915", "PT018", "PLC0415"]
+"migrations/**" = ["S608"]
+"../../scripts/**" = ["T20", "S608", "PLR0912"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.14"
+venvPath = "."
+venv = ".venv"
+include = ["app", "migrations", "tests", "../../scripts"]
+exclude = ["**/__pycache__", ".venv", "../../scripts/dot_check.py", "../../scripts/dot_drift.py", "../../scripts/pr_checks.py", "../../scripts/sanitize_scan.py", "../../scripts/release_check.py", "../../scripts/post_deploy_check.py"]
+
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers: main > routes > services > db"
+type = "layers"
+layers = ["app.main", "app.routes", "app.services", "app.db"]
+
+[[tool.importlinter.contracts]]
+name = "HTTP stays in routes: services and db do not import fastapi directly"
+type = "forbidden"
+source_modules = ["app.services", "app.db"]
+forbidden_modules = ["fastapi", "starlette"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The token verifier knows nothing of routes, services or the database"
+type = "forbidden"
+source_modules = ["app.auth"]
+forbidden_modules = ["app.routes", "app.services", "app.db", "app.main"]

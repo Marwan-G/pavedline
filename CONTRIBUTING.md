@@ -13,12 +13,33 @@ Thanks for your interest. Pavedline is a Claude Code plugin marketplace; contrib
 
 ## Trying a change locally
 
-- Install the dependency plugins first (`superpowers`, `mattpocock-skills`, `product-management`, `figma`,
-  `ui-ux-pro-max`; `/pavedline:doctor` lists them). With a dependency missing, `claude --plugin-dir plugins/pavedline`
+- Install the dependency plugins first (`superpowers`, `mattpocock-skills`, `product-management`, `figma`;
+  `/pavedline:doctor` lists them, with `ui-ux-pro-max` and `impeccable` as optional). With a dependency missing, `claude --plugin-dir plugins/pavedline`
   silently loads nothing.
 - Headless runs (`claude -p`): add `--add-dir <plugin dir>` so skills can read their own `references/` files
   ([permissions](https://code.claude.com/docs/en/permissions.md), checked 2026-11-08), and use
   `--output-format stream-json --verbose` so the session id appears first. macOS has no `timeout` command; do not rely on it.
+
+## Running the starter check
+
+Any change under `plugins/pavedline/stacks/` or `plugins/pavedline/templates/` must pass the starter check, which
+generates a neutral product (`example`, all four surfaces, multi-tenant; answers in `tests/fixtures/starter-answers.json`)
+and proves it builds, tests, boots and deploys:
+
+```bash
+scripts/starter_check.sh                 # all stages
+scripts/starter_check.sh --stage static  # helm + Checkov, actionlint, records scripts (seconds)
+scripts/starter_check.sh --stage unit    # pnpm and uv checks, both builds, Playwright + axe, API tests on a throwaway Postgres
+scripts/starter_check.sh --stage cluster # kind + Argo CD deploy, must print `verified (local)`, then every hostname answers
+scripts/starter_check.sh --keep          # keep the generated tree (its path is printed)
+```
+
+It needs Docker (Colima is fine), Node, `uv`, `kind`, `kubectl`, `helm`, `actionlint` and Graphviz (`dot`); nothing
+else is installed for you and it never runs `sudo`. It prints one PASS or FAIL line per step with its time, cleans up
+its Postgres container, kind cluster and temp directory on exit, and refuses any Kubernetes context that is not a
+`kind-pavedline-*` one. It creates the cluster `pavedline-ci`, so it stops if one already exists. Expect about
+five minutes with warm caches (the first run pulls images and packages: allow fifteen). The native mobile builds (Gradle for Android, Xcode for an unsigned iOS simulator build) run only in
+CI, in `.github/workflows/starter-mobile.yml` (on changes to the stack pack and weekly; never a required check).
 
 ## Found a problem? Open an issue
 

@@ -1,0 +1,137 @@
+name: e2e-local
+
+# The end-to-end job: the product's own scripts create a kind cluster (scripts/local-cluster/, copied at step 6),
+# deploy every app through Argo CD from the in-cluster git server (scripts/deploy_local.sh), then scan what is
+# actually running: OWASP ZAP baseline against every hostname an HTTPRoute exposes, axe (WCAG 2.2 AA) against the web
+# app, Lighthouse against the site. Surface-agnostic: each check runs only if its app exists. The cluster is torn
+# down in an always() step. Native arm64 runner, like the production nodes (free for public repositories; billed on
+# private ones, see docs/architecture/STACK-SOURCES.md).
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "services/**"
+      - "infra/**"
+      - "scripts/deploy_local.sh"
+      - "scripts/local-cluster/**"
+      - ".github/workflows/e2e-local.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "services/**"
+      - "infra/**"
+      - "scripts/deploy_local.sh"
+      - "scripts/local-cluster/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-local-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PROJECT: ci
+  CTX: kind-pavedline-ci
+  # Host port of the cluster's Gateway (scripts/local-cluster/kind-config.yaml.tpl).
+  GATEWAY_PORT: "8080"
+  # Official image (zaproxy.org/docs/docker), release 2.16.1, built 2025-12-12, multi-arch, by digest (2.17.0's image was
+  # rebuilt on 2026-11-03, under 14 days old; see docs/architecture/STACK-SOURCES.md).
+  ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:2.16.1@sha256:7840969c7c9fead565bf9734b12f49f6886db90b1d35b1f74d79710bbd081dab
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install kind v0.33.0 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O "$base/kind-linux-arm64"
+          # Expected sha256 from $base/kind-linux-arm64.sha256sum
+          echo "20022bee6cfcd5086cb7234d218e3454e6090022f2a8f55d1fa7fcf42c3867a2  kind-linux-arm64" | sha256sum --check --strict
+          sudo install -m 0755 kind-linux-arm64 /usr/local/bin/kind
+      - name: Install helm v4.3.1 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz
+          # Expected sha256 from https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz.sha256sum
+          echo "8cf8f66ecbc252ac8f7f06cca68aba88508ddfde3a6a34feb1678ad1694b4f88  helm-v4.3.1-linux-arm64.tar.gz" | sha256sum --check --strict
+          tar -xzf helm-v4.3.1-linux-arm64.tar.gz linux-arm64/helm
+          sudo install -m 0755 linux-arm64/helm /usr/local/bin/helm
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: hashFiles('.node-version') != ''
+        with:
+          node-version-file: .node-version
+      - name: Create the cluster
+        env:
+          PAVEDLINE_RETRY_ATTEMPTS: "7"  # release hosts return 504 for minutes at a time
+        run: scripts/local-cluster/up.sh ci
+      - name: Build, push and deploy every app (Argo CD syncs from the in-cluster git server)
+        env:
+          GIT_AUTHOR_NAME: ci
+          GIT_AUTHOR_EMAIL: ci@example.invalid
+          GIT_COMMITTER_NAME: ci
+          GIT_COMMITTER_EMAIL: ci@example.invalid
+        run: scripts/deploy_local.sh ci
+      - name: Routed hostnames
+        run: |
+          kubectl --context "$CTX" get httproute -A -o jsonpath='{range .items[*]}{range .spec.hostnames[*]}{@}{"\n"}{end}{end}' | sort -u > "$RUNNER_TEMP/hosts.txt"
+          cat "$RUNNER_TEMP/hosts.txt"
+          test -s "$RUNNER_TEMP/hosts.txt" || { echo "no HTTPRoute hostnames: nothing was deployed" >&2; exit 1; }
+          # The routes come from the pull request's own charts: scan only local names, never an arbitrary host.
+          if grep -Ev '^[a-z0-9-]+(\.[a-z0-9-]+)*\.(localtest\.me|localhost)$' "$RUNNER_TEMP/hosts.txt"; then
+            echo "not a local hostname (only *.localtest.me and *.localhost are scanned); refusing" >&2
+            exit 1
+          fi
+      - name: OWASP ZAP baseline against every routed hostname
+        run: |
+          out="$RUNNER_TEMP/zap"
+          mkdir -p "$out"
+          chmod 777 "$out"
+          while read -r host; do
+            echo "== ZAP baseline: $host"
+            # -I: warnings do not fail the run (starter policy; a FAIL-level alert does). Tighten with -c <rules file>.
+            docker run --rm --network host --user root -v "$out:/zap/wrk:rw" "$ZAP_IMAGE" \
+              zap-baseline.py -t "http://${host}:${GATEWAY_PORT}/" -r "${host}.html" -I
+          done < "$RUNNER_TEMP/hosts.txt"
+      # pavedline-begin: web,site
+      - name: Chromium (the Playwright build shared by the browser checks and Lighthouse)
+        if: hashFiles('apps/*/package.json') != ''
+        run: npx --yes playwright@1.64.1 install --with-deps chromium
+      # pavedline-end
+      # pavedline-begin: web
+      - name: axe (WCAG 2.2 AA) against the deployed web app
+        if: hashFiles('apps/web/playwright.cluster.config.ts') != ''
+        run: |
+          npm install -g pnpm@11.28.8
+          pnpm install --frozen-lockfile
+          host=$(grep -E '^app\.' "$RUNNER_TEMP/hosts.txt" | head -n 1)
+          E2E_BASE_URL="http://${host}:${GATEWAY_PORT}" pnpm --filter @app/web exec playwright test -c playwright.cluster.config.ts
+      # pavedline-end
+      # pavedline-begin: site
+      - name: Lighthouse against the deployed site
+        if: hashFiles('apps/site/lighthouserc.json') != ''
+        run: |
+          host=$(grep -E '^www\.' "$RUNNER_TEMP/hosts.txt" | head -n 1)
+          # Same budgets as ci-site, minus SEO: the local site is noindex on purpose, which Lighthouse scores as not crawlable.
+          jq --arg url "http://${host}:${GATEWAY_PORT}/" \
+            'del(.ci.collect.startServerCommand, .ci.collect.startServerReadyPattern, .ci.collect.startServerReadyTimeout, .ci.assert.assertions["categories:seo"]) | .ci.collect.url = [$url]' \
+            apps/site/lighthouserc.json > "$RUNNER_TEMP/lighthouserc.cluster.json"
+          CHROME_PATH=$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*chromium-*' | head -n 1) \
+            npx --yes @lhci/cli@0.15.1 autorun --config="$RUNNER_TEMP/lighthouserc.cluster.json"
+      # pavedline-end
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: zap-reports
+          path: ${{ runner.temp }}/zap
+          if-no-files-found: ignore
+      - name: Tear down
+        if: always()
+        run: scripts/local-cluster/down.sh ci --all

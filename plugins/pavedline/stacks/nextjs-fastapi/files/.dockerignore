@@ -1,0 +1,14 @@
+# The context of the web and site images is the repository root; send only what they build from.
+**/node_modules
+**/.next
+**/playwright-report
+**/test-results
+**/.env
+**/.env.*
+.git
+services
+infra
+docs
+# pavedline-begin: mobile
+apps/mobile
+# pavedline-end

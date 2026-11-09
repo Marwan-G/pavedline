@@ -1,0 +1,18 @@
+{
+  "name": "product",
+  "private": true,
+  "packageManager": "pnpm@11.28.8",
+  "scripts": {
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "e2e": "pnpm --filter @app/web e2e",
+    "check:generated": "pnpm --filter @app/api-client check && pnpm --filter @app/tokens check",
+    "check:boundary": "python3 scripts/web_boundary_check.py"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "typescript": "5.9.3"
+  }
+}

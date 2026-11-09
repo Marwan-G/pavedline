@@ -7,11 +7,27 @@ All notable changes to Pavedline are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- Records hooks: `PreCompact` keeps the key `STATE.md` lines and open waiting items in the compaction summary; `Stop` reminds Claude to commit uncommitted record files (never blocks).
+- Step skills pre-approve the scripts they run (`apply_stack.py`, `plan_graph.py`, `doctor.py`, `start_project.py`) and nothing else; the `builder` agent preloads `quality-gates`.
+- Starter check: `scripts/starter_check.sh` generates a neutral product from the stack pack and builds, tests, boots and deploys it to kind; CI jobs `starter` (every PR) and `starter-mobile` (Android and iOS native builds, path-filtered and weekly).
 - Steps 4-7: system design (with backend evaluation), data and API (domain model, schema, multi-tenancy, OpenAPI
   contract), architecture (system architecture, threat model) and design (Figma, design-system contract); four new
   agents (`architect`, `reviewer`, `designer`, `design-verifier`) and optional doctor checks for Redocly and impeccable.
 - Reviewers approve only when every required check ran; otherwise `REJECT — incomplete`.
 - `/pavedline:doctor` no longer reports Pavedline missing when it is loaded with `--plugin-dir`.
+- CI templates: stack-neutral records and Renovate workflows, the scanner scripts and deny-list copied at step 0; per-surface CI, security, end-to-end (kind, ZAP, axe, Lighthouse), OpenAPI breaking-change and image-build workflows in the `nextjs-fastapi` pack. Every action by SHA, every image by digest; actionlint runs over both trees in Pavedline's CI.
+- Step 6 copies the stack pack: `apply_stack.py` copies the `nextjs-fastapi` pack for the chosen surfaces only (apps, Helm charts, CI jobs, Argo CD apps), drops the tenant-isolation checks for a single-tenant product, never overwrites, and prints what is left to fill in. Step 7 now continues to step 8.
+- Step 8, plan: `plan-graph` turns the spec's acceptance tests into a wave of slices, checks the mapping with `plan_graph.py`, and asks for approval as its own question.
+- Step 9, build: `quality-gates` runs each slice through five gates in its own worktree, with an adversarial review on risky slices.
+- Step 10, deploy to local: `deploy` and `deploy_local.sh` sync through Argo CD and report `verified (local)` only after the running pods and the pull request's post-deploy checks pass.
+- Step 11, learn: `lessons` turns a wave's retro into one rule, one intent or a dropped note per lesson.
+- Stack pack `nextjs-fastapi`: API, web, website, mobile, shared charts and the database chart, with the `fastapi-service`, `mobile-build`, `helm-base-chart` and `gitops` skills.
+- GitOps templates (Helm library chart, Argo CD ApplicationSets) and local cluster additions: a Gateway API controller and a local git server (`kind-git`) that Argo CD syncs from.
+- Intent capture: `docs/intent/` holds proposed changes, and accepted ones are specced before they are planned.
+- Agents `builder`, `adversary` (read-only) and `deployer`; warn hooks for a pull request body without the gates line and for code changed without its `ARCHITECTURE.dot`.
+
+### Changed
+- `ui-ux-pro-max` is now optional: removed from the plugin dependencies, and `doctor` lists it as optional.
 
 ### Fixed
 - The local cluster needs helm 4.2.2 or newer. helm 4.2.1 waits the full timeout on every hook deletion

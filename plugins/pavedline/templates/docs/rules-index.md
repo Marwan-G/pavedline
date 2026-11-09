@@ -18,3 +18,7 @@ nothing else.
 | The API contract | `docs/api/` |
 | Design system and tokens | `docs/design/` |
 | Things with a long wait, started early | `docs/production/LEAD-TIME.md` |
+| Proposed changes, before they are specced | `docs/intent/` |
+| Waves, slices and which acceptance tests each proves | `docs/plans/` |
+| What went well and badly, per wave | `docs/retros/` |
+| Gate reviews and verdicts | `docs/reviews/` |

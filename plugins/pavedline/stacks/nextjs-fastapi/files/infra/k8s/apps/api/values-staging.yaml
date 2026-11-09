@@ -1,0 +1,13 @@
+# Staging: production settings at a smaller size. CI writes the image digest in the tag-bump commit; step 6 replaces
+# OWNER/REPO and the hostname with the product's. staging runs APP_ENV=production on purpose: it must fail the way
+# production fails (no AUTH_* keys, no start).
+workloads:
+  api:
+    image:
+      repository: ghcr.io/OWNER/REPO/api
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    replicas: 2
+    env:
+      APP_ENV: production
+    route:
+      hostnames: ["api.staging.example.com"]

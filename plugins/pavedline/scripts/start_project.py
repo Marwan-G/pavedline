@@ -45,6 +45,9 @@ def is_conflict(target: pathlib.Path, rel: pathlib.Path) -> bool:
     dest = target / rel
     if dest.exists() or dest.is_symlink():
         return True
+    # a symlinked folder between the target and the file would carry the write out of the target
+    if any((target / a).is_symlink() for a in rel.parents if a != pathlib.Path(".")):
+        return True
     return any((target / a).exists() and not (target / a).is_dir() for a in rel.parents if a != pathlib.Path("."))
 
 

@@ -1,0 +1,8 @@
+# Replace OWNER with your GitHub user (or @ORG/team) at step 6. Until then GitHub assigns no code owner for these lines
+# (an unknown owner is skipped; it fails nothing: docs.github.com about-code-owners, checked 2026-11-09).
+# The checkers, the deny-list and the workflows are protected paths: a change needs the owner's review (turn on
+# "Require review from Code Owners" in the branch ruleset once OWNER is real).
+* @OWNER
+/scripts/ @OWNER
+/.github/ @OWNER
+/.sanitize-denylist @OWNER

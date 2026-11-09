@@ -7,6 +7,8 @@ description: Step 7 of Pavedline. Builds the design system and every screen in F
 
 Step 7. The designer builds in Figma; this skill is the contract between Figma and code. Outputs: `docs/design/DESIGN.md`, `docs/design/tokens.json`, the Figma file (private), the gate verdict in `docs/reviews/07-figma-review.md`, and one decision per answered question. Create `docs/design/` and `docs/reviews/` when missing. All Figma writing goes to the plugin's `designer` agent (subagent type `pavedline:designer`, never a general-purpose agent) with a self-contained prompt (files to read, the Figma file, what to build, report format); the `designer` is the only agent that writes to Figma. Run it in the foreground and never schedule a wake-up or wait on a background timer: a non-interactive session ends or stalls while it waits. Vendor and version facts go to the `researcher` agent (subagent type `pavedline:researcher`).
 
+Follow the shared step rules in `${CLAUDE_PLUGIN_ROOT}/skills/state/references/step-rules.md`.
+
 ## 0. Before anything else
 
 - If the Figma login is missing, stop and add it to `WAITING.md` (what: connect the Figma plugin and log in; where: `/mcp`, then the Figma sign-in; unblocks: step 7). Do not design offline.
@@ -15,13 +17,11 @@ Step 7. The designer builds in Figma; this skill is the contract between Figma a
 
 ## 1. Read first, in order
 
-`CLAUDE.md`, `PRODUCT.md`, `STATE.md`, `WAITING.md`, every file in `decisions/`, `GLOSSARY.md`, `docs/spec/SPEC.md`, `docs/architecture/SYSTEM-DESIGN.md`, `TENANCY-LIFECYCLE.md`, `DEPLOYMENT.md`, `docs/data/DOMAIN.md` and `SCHEMA.md`, `docs/api/openapi.yaml`, and any existing `docs/design/`. If `STATE.md` says `STEP: 7 — Figma`, continue; if it says an earlier step, say so and ask. Surfaces come from decision 0005 (a dropped surface gets no frames). Ask only what is undecided.
-
-An area already answered by a decision is shown as `decided in NNNN` and not re-asked; only its undecided detail is asked.
+After the records of the shared rules: `docs/spec/SPEC.md`, `docs/architecture/SYSTEM-DESIGN.md`, `TENANCY-LIFECYCLE.md`, `DEPLOYMENT.md`, `docs/data/DOMAIN.md` and `SCHEMA.md`, `docs/api/openapi.yaml`, and any existing `docs/design/`. Surfaces come from decision 0005 (a dropped surface gets no frames). Continue when `STATE.md` says `STEP: 7 — Figma`.
 
 ## 2. Questions (one area at a time; options, recommended default, what it changes; wait)
 
-"Default" is valid; "not needed" only with a recorded reason. None is skipped or merged; before closing compare the areas with the decisions written. Areas, in order, details in `${CLAUDE_SKILL_DIR}/references/areas.md`: Figma account and file · brand and style direction (`ui-ux-pro-max` is a reference for this, never copied; `impeccable` is optional critique, use it only if installed) · tokens and themes · type and spacing · component set · surfaces and navigation · FigJam flows · accessibility targets · the code naming rule. Record each answer as a decision (`decisions/0000-template.md`, numbered after the highest existing, with a "Stale outputs" section). Within a round the founder may answer `default for the rest of this round`; each area still gets its own decision record. A new service or plugin: ask-before-adding.
+Areas, in order, details in `${CLAUDE_SKILL_DIR}/references/areas.md`: Figma account and file · brand and style direction (`ui-ux-pro-max` is an optional style reference: use `ui-ux-pro-max` only if installed, never copied; `impeccable` is optional critique, use it only if installed) · tokens and themes · type and spacing · component set · surfaces and navigation · FigJam flows · accessibility targets · the code naming rule. A new service or plugin: ask-before-adding.
 
 **One fill-in turn.** Before building, compare the decisions for gaps and contradictions; the `designer` resolves each gap with the recommended default and lists it. Show all fill-ins as ONE numbered list for one approval turn ("default" approves all); a fill-in that changes an existing decision is asked on its own.
 
@@ -47,18 +47,14 @@ Use the Figma plugin's skills, loading each before its tool: `figma-use` (before
 3. It ends `DESIGN VERDICT: APPROVE` or `DESIGN VERDICT: REJECT — <reason>`. Write the verdict and every finding to `docs/reviews/07-figma-review.md` (a finding may cite node ids; that file is the only other place they may appear); on REJECT the file lists the findings, so a fresh session resumes from it. A `REJECT` means rework and a narrow re-check, never arguing past it. Record each finding as fixed or accepted with a reason.
 4. Only after `DESIGN VERDICT: APPROVE`, show the founder the screens and ask for approval: then the founder approves the visual. The design-verifier never approves a visual (taste, layout and brand feel are the founder's call), and the founder's approval never replaces the verdict.
 
-## 6. Re-entry
-
-Any step can be reopened. A changed answer is a new decision superseding the old (`supersedes NNNN`); stale outputs go to `STATE.md ▶ STALE` with the number.
-
-## 7. Close step 7
+## 6. Close step 7
 
 After `DESIGN VERDICT: APPROVE` and the founder's approval, edit `STATE.md` (see the `state` skill), time from `date "+%Y-%m-%d %H:%M"`:
 
 ```
 STEP: 8 — Plan
 LAST: <timestamp> — step 7 done: DESIGN.md, tokens.json, Figma file; design-verifier APPROVE, see docs/reviews/07-figma-review.md
-NEXT: step 8 — plan the first wave (ships in a later release)
+NEXT: step 8 — plan the first wave (plan-graph)
 ```
 
-Commit. Print the closing block (done, changed, next, waiting on you, clear-safe). Say plainly that step 8 ships in a later release, so Pavedline stops here for now. Ask: **go?**
+Commit and close as in the shared rules, then ask "go?" to start step 8: the `plan-graph` skill plans the first wave from these records.

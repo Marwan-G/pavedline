@@ -95,6 +95,21 @@ def mutating(tool, pos):
     return False
 
 
+SHELLS = {"bash", "sh", "zsh", "dash"}
+
+
+def runs_deploy_local(verb, args):
+    """Is this `deploy_local.sh` itself or a shell given it as the script?"""
+    if verb == "deploy_local.sh":
+        return True
+    if verb in SHELLS:
+        for a in args:
+            if a.startswith("-"):
+                continue
+            return os.path.basename(a).lower() == "deploy_local.sh"
+    return False
+
+
 def kubeconfig_overridden(cmds):
     for cmd in cmds:
         assigns, verb, args = _common.unwrap(cmd)
@@ -113,6 +128,17 @@ def check(command):
     kc_env = kubeconfig_overridden(cmds)
     for cmd in cmds:
         _, tool, args = _common.unwrap(cmd)
+        if runs_deploy_local(tool, args):
+            if kc_env:
+                return ("Blocked: `deploy_local.sh` runs with a custom kubeconfig, so the target context is unknown. "
+                        "Drop the kubeconfig override.")
+            ctx = current_context()
+            if not ctx.startswith(KIND_PREFIX):
+                shown = ctx or "unknown (kubectl could not report it)"
+                return (f"Blocked: `deploy_local.sh` would deploy while the kube context is {shown}. Agents may only "
+                        f"change the disposable local cluster ({KIND_PREFIX}*). Switch with "
+                        f"`kubectl config use-context {KIND_PREFIX}<project>` first.")
+            continue
         if tool not in TOOLS:
             continue
         pos, ctx, kc_flag, srv = parse(tool, args)
