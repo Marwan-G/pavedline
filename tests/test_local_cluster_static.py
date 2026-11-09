@@ -175,7 +175,7 @@ class LocalClusterStatic(unittest.TestCase):
         v = env_values()
         text = (LC / "versions.env").read_text()
         self.assertEqual(v["GATEWAY_API_VERSION"], "v1.6.3")
-        self.assertRegex(v["GATEWAY_API_STANDARD_SHA256"], r"^[0-9a-f]{64}$")
+        self.assertRegex(v["GATEWAY_CRDS_SHA256"], r"^[0-9a-f]{64}$")
         self.assertEqual(v["ENVOY_GATEWAY_CHART"], "oci://docker.io/envoyproxy/gateway-helm")
         self.assertRegex(v["ENVOY_GATEWAY_CHART_VERSION"], r"^v\d+\.\d+\.\d+$")
         self.assertRegex(v["ENVOY_GATEWAY_CHART_DIGEST"], r"^sha256:[0-9a-f]{64}$")
@@ -193,7 +193,7 @@ class LocalClusterStatic(unittest.TestCase):
 
     def test_up_installs_gateway_and_git_server(self):
         text = (LC / "up.sh").read_text()
-        for needle in ["GATEWAY_API_VERSION", "GATEWAY_API_STANDARD_SHA256", "ENVOY_GATEWAY_CHART",
+        for needle in ["GATEWAY_API_VERSION", "GATEWAY_CRDS_SHA256", "ENVOY_GATEWAY_CHART",
                        "envoy-gateway-system", "kind-git", "git-server", "docker build", "org.opencontainers.image.base.digest"]:
             self.assertIn(needle, text, needle)
 
@@ -241,14 +241,14 @@ class LocalClusterStatic(unittest.TestCase):
         conf = json.loads((ROOT / "renovate.json").read_text())
         matchers = [p for m in conf["customManagers"] for p in m["matchStrings"]]
         for name in env_values():
-            if name in ("REGISTRY_PORT", "HELM_MIN_VERSION", "GATEWAY_API_STANDARD_SHA256",
+            if name in ("REGISTRY_PORT", "HELM_MIN_VERSION", "GATEWAY_CRDS_SHA256",
                         "ENVOY_GATEWAY_CHART_DIGEST", "ARGOCD_CHART_DIGEST", "CNPG_CHART_DIGEST"):
                 continue  # not a pin of its own: a port, a floor, a derived tag, or the digest of a pin matched with its version
             self.assertTrue(any(name in p for p in matchers), f"{name} is not matched by any Renovate customManager")
         for chart in ("ENVOY_GATEWAY",):
             self.assertTrue(any(f"{chart}_CHART_DIGEST" in p for p in matchers), chart)
         self.assertTrue(any("GATEWAY_API_VERSION" in p for m in conf["customManagers"] if m["datasourceTemplate"] == "github-releases" for p in m["matchStrings"]))
-        self.assertIn("a Renovate bump fails up.sh's checksum until GATEWAY_API_STANDARD_SHA256 is updated by hand", (LC / "versions.env").read_text())
+        self.assertIn("a Renovate bump fails up.sh's checksum until GATEWAY_CRDS_SHA256 is updated by hand", (LC / "versions.env").read_text())
         # the regexes match the real file
         env_text = (LC / "versions.env").read_text()
         for m in conf["customManagers"]:

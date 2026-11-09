@@ -118,7 +118,7 @@ if command -v sha256sum >/dev/null 2>&1; then
 else
   got="$(shasum -a 256 "$CRD_FILE" | cut -d' ' -f1)"
 fi
-[ "$got" = "$GATEWAY_API_STANDARD_SHA256" ] || { echo "error: Gateway API ${GATEWAY_API_VERSION} CRDs have sha256 $got, expected $GATEWAY_API_STANDARD_SHA256" >&2; exit 1; }
+[ "$got" = "$GATEWAY_CRDS_SHA256" ] || { echo "error: Gateway API ${GATEWAY_API_VERSION} CRDs have sha256 $got, expected $GATEWAY_CRDS_SHA256" >&2; exit 1; }
 retry kubectl --context "$CTX" apply --server-side -f "$CRD_FILE"
 kubectl --context "$CTX" wait --for=condition=Established crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io --timeout=60s
 
