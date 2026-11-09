@@ -546,7 +546,7 @@ YAML
   deploy_checks "checks: {endpoints: [{name: down, url: \"$down\"}], backupMaxAge: 36h}"
   n0="$(count 'REQ POST /notify')"; h0="$(count 'REQ GET /heartbeat')"
   run_checker; run_checker
-  expect endpoint-notify "notify messages for endpoint-down" 1 $(( $(count 'REQ POST /notify .*endpoint-down') ))
+  expect endpoint-notify "notify messages for endpoint-0-down" 1 $(( $(count 'REQ POST /notify .*endpoint-[0-9][0-9]*-down') ))
   expect endpoint-total "notify messages" 1 $(( $(count 'REQ POST /notify') - n0 ))
   expect endpoint-heartbeat "heartbeat pings" 0 $(( $(count 'REQ GET /heartbeat') - h0 ))
 
