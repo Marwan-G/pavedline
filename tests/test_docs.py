@@ -67,9 +67,13 @@ class Docs(unittest.TestCase):
         self.assertIn("Pavedline collects nothing. Every answer stays in your own repository.", t)
         self.assertIn("/plugin marketplace add Marwan-G/pavedline", t)
         install = t.split("## Why Pavedline exists")[0].split("## Install")[1]
-        for s in ("/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill",
-                  "`figma`, `ui-ux-pro-max`"):
-            self.assertIn(s, install, s)
+        self.assertIn("/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill", install)
+        self.assertIn("marketplace line is optional", install)
+        self.assertNotIn("`figma`, `ui-ux-pro-max`", install)
+        self.assertIn("ui-ux-pro-max", t.split("## Install")[1])
+        arch = (ROOT / "docs/architecture.md").read_text()
+        self.assertIn("`ui-ux-pro-max` (optional)", arch)
+        self.assertNotIn("five dependencies", arch)
         self.assertIn("CREDITS.md", t)
 
     def test_third_party_notice(self):

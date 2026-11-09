@@ -1,0 +1,52 @@
+name: openapi-diff
+
+# Breaking-change check of docs/api/openapi.yaml against the pull request's base branch (oasdiff, pinned release
+# binary, checksum verified). A breaking change at error level fails the build. A breaking change is allowed only as
+# a NEW version: add the changed operations under a new /v2 prefix and keep /v1 as it was (oasdiff then sees only an
+# addition). Skips cleanly while the contract does not exist on the base or on the head (the contract is written at
+# step 5; before its first merge there is nothing to compare).
+on:
+  pull_request:
+    paths:
+      - "docs/api/openapi.yaml"
+      - ".github/workflows/openapi-diff.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openapi-diff-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  breaking:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install oasdiff v1.34.1 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/oasdiff/oasdiff/releases/download/v1.34.1
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O "$base/oasdiff_1.34.1_linux_amd64.tar.gz"
+          # Expected sha256 from $base/checksums.txt
+          echo "75775f65b0adebd26a8e013af51a799342dfdc6262d89efa9e3b7bdf89657d90  oasdiff_1.34.1_linux_amd64.tar.gz" | sha256sum --check --strict
+          tar -xzf oasdiff_1.34.1_linux_amd64.tar.gz oasdiff
+          sudo install -m 0755 oasdiff /usr/local/bin/oasdiff
+      - name: Compare with the base branch
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ ! -f docs/api/openapi.yaml ]; then
+            echo "docs/api/openapi.yaml is absent on this branch; skipping"
+            exit 0
+          fi
+          if ! git cat-file -e "$BASE_SHA:docs/api/openapi.yaml" 2>/dev/null; then
+            echo "the base branch has no docs/api/openapi.yaml yet; skipping (nothing to compare)"
+            exit 0
+          fi
+          git show "$BASE_SHA:docs/api/openapi.yaml" > "$RUNNER_TEMP/base-openapi.yaml"
+          oasdiff breaking "$RUNNER_TEMP/base-openapi.yaml" docs/api/openapi.yaml --fail-on ERR

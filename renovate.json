@@ -41,6 +41,16 @@
         "plugins/pavedline/scripts/local-cluster/versions.env"
       ],
       "automerge": false
+    },
+    {
+      "description": "NEVER automerge container images referenced from workflows (services.*.image, docker:// steps): the github-actions manager extracts them with datasource docker",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "automerge": false
     }
   ],
   "customManagers": [
@@ -76,6 +86,51 @@
         "KIND_NODE_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
       ],
       "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Envoy Gateway Helm chart (OCI, version and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "ENVOY_GATEWAY_CHART=oci://(?<depName>\\S+)\\nENVOY_GATEWAY_CHART_VERSION=(?<currentValue>\\S+)\\nENVOY_GATEWAY_CHART_DIGEST=(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "git server base image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "GIT_SERVER_BASE_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "echo backend image (tag and digest) in versions.env",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "ECHO_IMAGE=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Gateway API standard CRDs release in versions.env (the sha256 is updated by hand)",
+      "managerFilePatterns": [
+        "/(^|/)versions\\.env$/"
+      ],
+      "matchStrings": [
+        "GATEWAY_API_VERSION=(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "kubernetes-sigs/gateway-api",
+      "datasourceTemplate": "github-releases"
     }
   ]
 }

@@ -1,0 +1,11 @@
+# Production: three instances, anti-affinity and quorum synchronous replication. NOT production-ready until PR 3 /
+# step 12 adds backups (Barman Cloud to S3-compatible storage), the restore drill and the sizing from real load.
+cluster:
+  instances: 3
+  storage:
+    size: 20Gi
+  resources:
+    requests: {cpu: 500m, memory: 1Gi}
+    limits: {cpu: "2", memory: 2Gi}
+pooler:
+  instances: 2

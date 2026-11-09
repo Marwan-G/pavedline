@@ -1,0 +1,15 @@
+# Production. CI writes the image digest in the tag-bump commit; step 6 replaces OWNER/REPO and the hostname.
+# The all-zero digest is a placeholder that cannot be pulled, so nothing runs until CI has built an image.
+workloads:
+  api:
+    image:
+      repository: ghcr.io/OWNER/REPO/api
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    replicas: 3
+    env:
+      APP_ENV: production
+    route:
+      hostnames: ["api.example.com"]
+    resources:
+      requests: {cpu: 250m, memory: 256Mi}
+      limits: {cpu: "1", memory: 512Mi}

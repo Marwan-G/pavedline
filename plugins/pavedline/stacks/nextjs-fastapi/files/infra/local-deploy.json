@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "apps": [
+    {
+      "name": "postgres",
+      "surface": "api",
+      "image": null,
+      "wait": "cnpg-cluster:postgres/db",
+      "host": null,
+      "checks": []
+    },
+    {
+      "name": "api",
+      "surface": "api",
+      "image": {"context": "services/api", "dockerfile": "services/api/Dockerfile"},
+      "wait": "rollout",
+      "host": "api.localtest.me",
+      "checks": ["/healthz", "/readyz"]
+    },
+    {
+      "name": "web",
+      "surface": "web",
+      "image": {"context": ".", "dockerfile": "apps/web/Dockerfile"},
+      "wait": "rollout",
+      "host": "app.localtest.me",
+      "checks": ["/healthz", "/"]
+    },
+    {
+      "name": "site",
+      "surface": "site",
+      "image": {"context": ".", "dockerfile": "apps/site/Dockerfile"},
+      "wait": "rollout",
+      "host": "www.localtest.me",
+      "checks": ["/healthz", "/robots.txt"]
+    }
+  ]
+}

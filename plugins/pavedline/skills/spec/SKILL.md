@@ -53,3 +53,14 @@ NEXT: step 4 — ask the system-design questions
 ```
 
 Commit. Step 4 is the `system-design` skill: the next session runs it (or say "continue: step 4"). Ask: **go?** The founder approves the spec first; do not move on without that.
+
+## Change mode
+
+When the founder accepts an intent (`docs/intent/<file>` says `Status: accepted`), do not redo steps 1 to 3. Read the intent, then:
+
+1. Update only the affected sections of `docs/spec/SPEC.md`.
+2. Write a decision (next number, with `supersedes NNNN` where it changes an earlier one; the outputs it makes stale go to its "Stale outputs" section and to `STATE.md ▶ STALE`). It records `Intent: docs/intent/<file>`.
+3. Add new `AT-NNN` acceptance tests numbered after the highest existing one; it never renumbers an existing test.
+4. Set the intent's line to `Status: accepted → specced in decision NNNN`.
+
+Then the `plan-graph` skill picks the new tests up: they stay unmapped until a slice proves them.

@@ -28,7 +28,7 @@ Default: **solo**. One main session writes the records; approvals happen in the 
 
 ## Question 5: surfaces
 
-Default: **all four**: web app, marketing website with blog, mobile app, API. The user may drop any. Each surface gets its own features in the spec and its own Figma frames.
+Default: **all four**: web app, marketing website with blog, mobile app, API. The user may drop any. Each surface gets its own features in the spec and its own Figma frames. The decision record carries one structured line, `Surfaces: web, api, site, mobile` (the subset kept; `site` is the website with its blog), which later steps read.
 
 ## Question 6: database
 

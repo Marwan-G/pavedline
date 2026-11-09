@@ -29,7 +29,8 @@ class StepZeroContracts(unittest.TestCase):
     def test_start_frontmatter(self):
         t = read("start")
         self.assertIn("disable-model-invocation: true", t)
-        self.assertIn("Bash(python3 *)", t)
+        self.assertIn("Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/start_project.py *)", t)
+        self.assertNotIn("Bash(python3 *)", t)
 
     def test_compliance_exact_wording(self):
         self.assertIn(COMPLIANCE, read("compliance"))

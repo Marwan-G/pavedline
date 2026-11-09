@@ -1,0 +1,132 @@
+name: records
+
+# Checks every product repository gets at step 0, whatever the stack: the gates line, the deny-list scan, diagrams,
+# secrets, and the STATE.md size cap. Nothing here reads a secret or runs a cluster.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: records-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  gates-line:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      # The checker is the BASE branch's copy: a pull request cannot weaken the check it is judged by.
+      - name: Use the base branch's copy of the checker
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "$BASE_SHA:scripts/pr_checks.py" > "scripts/pr_checks.py"
+          git show "$BASE_SHA:scripts/dot_drift.py" > "scripts/dot_drift.py"
+          git show "$BASE_SHA:scripts/dependency-files.txt" > "scripts/dependency-files.txt"
+      - name: Gates line present
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/body.txt"
+          git diff --name-only "$BASE_SHA...HEAD" > "$RUNNER_TEMP/changed.txt"
+          python3 scripts/pr_checks.py --body-file "$RUNNER_TEMP/body.txt" \
+            --head-ref "$HEAD_REF" --changed-files-file "$RUNNER_TEMP/changed.txt" \
+            --head-repo "$HEAD_REPO" --base-repo "$BASE_REPO"
+
+  denylist:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Use the base branch's copy of the scanner and the list
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "$BASE_SHA:scripts/sanitize_scan.py" > "scripts/sanitize_scan.py"
+          git show "$BASE_SHA:.sanitize-denylist" > ".sanitize-denylist"
+      # .sanitize-denylist is committed (generic patterns). Private identifiers go in .sanitize-denylist.local,
+      # which is git-ignored: CI runs only the committed list, your machine (and the plugin's hooks) run both.
+      - run: python3 scripts/sanitize_scan.py
+
+  diagrams:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
+      - name: Use the base branch's copy of the diagram checkers
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "$BASE_SHA:scripts/dot_check.py" > "scripts/dot_check.py"
+          git show "$BASE_SHA:scripts/dot_drift.py" > "scripts/dot_drift.py"
+      - name: Validate every .dot and check the committed .svg is current
+        run: python3 scripts/dot_check.py --check
+      - name: Diagram drift (pull requests only)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/body.txt"
+          python3 scripts/dot_drift.py --base "$BASE_SHA" --pr-body-file "$RUNNER_TEMP/body.txt"
+
+  gitleaks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Official image (github.com/gitleaks/gitleaks README), pinned by digest: ghcr.io, not GitHub release downloads.
+      - name: Scan for secrets (gitleaks v8.30.1)
+        uses: docker://ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+        with:
+          args: dir /github/workspace --no-banner --redact
+
+  state-size:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: STATE.md is at most 60 lines
+        run: |
+          lines=$(wc -l < STATE.md)
+          echo "STATE.md: ${lines} lines"
+          test "$lines" -le 60

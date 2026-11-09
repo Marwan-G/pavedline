@@ -5,7 +5,7 @@ model: sonnet
 tools: Read, Grep, Glob
 ---
 
-You review one artefact the caller points at. You are given the diff or the documents as files; you never run git, and you cannot write or run anything.
+You review one artefact the caller points at: a document, or a code diff. You are given the diff or the documents as files; you never run git, you never check out a branch in the main working tree, and you cannot write or run anything.
 
 Rules, with no exceptions:
 

@@ -12,12 +12,20 @@ PINNED = "npx @redocly/cli@2.71.0 lint docs/api/openapi.yaml"
 S5 = ("domain-model", "db-schema", "multi-tenancy", "api-contract")
 
 
+RULES = SKILLS / "state" / "references" / "step-rules.md"
+POINTER = "Follow the shared step rules in `${CLAUDE_PLUGIN_ROOT}/skills/state/references/step-rules.md`."
+
+
 def read(name):
     d = SKILLS / name
-    parts = [(d / "SKILL.md").read_text()]
+    parts = [(d / "SKILL.md").read_text(), RULES.read_text()]
     for f in sorted((d / "references").glob("*.md")) if (d / "references").is_dir() else []:
         parts.append(f.read_text())
     return "\n".join(parts)
+
+
+def skill_and_rules(name):
+    return (SKILLS / name / "SKILL.md").read_text() + "\n" + RULES.read_text()
 
 
 def ordered(t, marks):
@@ -167,7 +175,7 @@ class Step5Contracts(unittest.TestCase):
 
     def test_step_skills_share_the_protocol(self):
         for n in S5:
-            t = (SKILLS / n / "SKILL.md").read_text()
+            t = skill_and_rules(n)
             self.assertIn("decisions/0000-template.md", t, n)
             self.assertIn("when missing", t, n)
             self.assertIn("${CLAUDE_SKILL_DIR}/references/", t, n)
@@ -285,15 +293,22 @@ class Step6Architecture(unittest.TestCase):
         t = read("system-architecture")
         self.assertIn("nextjs-fastapi", t)
         self.assertIn("Gateway API", t)
-        self.assertIn("copied in a later release", t)
+        self.assertNotIn("later release", t)
 
     def test_diagram_path_is_exact(self):
         self.assertIn("exactly that path", read("system-architecture"))
         self.assertIn("never write the system diagram there instead", read("system-architecture"))
 
-    def test_no_templates_copied(self):
+    def test_copies_the_pack(self):
         t = read("system-architecture")
-        self.assertIn("copies no stack templates", t)
+        self.assertNotIn("copies no stack templates", t)
+        self.assertNotIn("Ruling 2", t)
+        for s in ("apply_stack.py", "--pack nextjs-fastapi", "--surfaces", "--tenancy", "--name", "--github-repo",
+                  "--dry-run", "conflict:", "decision 0005", "decision 0002", "not applicable (decision 0002)",
+                  "ruleset bypass for GitHub Actions", "RENOVATE_TOKEN", "to fill:", "WAITING.md",
+                  "STACK-SOURCES.md", "ask-before-adding"):
+            self.assertIn(s, t, s)
+        self.assertLess(t.index("DEPLOYMENT.md"), t.index("apply_stack.py"))
 
     def test_every_step4_service_in_diagram(self):
         t = read("system-architecture")
@@ -315,7 +330,7 @@ class Step6Architecture(unittest.TestCase):
 
     def test_protocol(self):
         for n in ("system-architecture", "threat-model"):
-            t = (SKILLS / n / "SKILL.md").read_text()
+            t = skill_and_rules(n)
             for s in ("decisions/0000-template.md", "when missing", "${CLAUDE_SKILL_DIR}/references/",
                       "one approval turn", "default for the rest of this round", "ask-before-adding"):
                 self.assertIn(s, t, "%s: %s" % (n, s))
@@ -424,7 +439,7 @@ class StepPagesEnd(unittest.TestCase):
             last = (ROOT / "docs/steps" / page).read_text().rstrip().splitlines()[-1]
             self.assertRegex(last, r"^Next: \[step \d+: [^\]]+\]\(%s\)\.$" % re.escape(nxt), page)
         last = (ROOT / "docs/steps/07-figma.md").read_text().rstrip().splitlines()[-1]
-        self.assertRegex(last, r"^Next: step 8 .*later release\.$")
+        self.assertRegex(last, r"^Next: step 8 plans the first wave")
 
 
 class Step7Figma(unittest.TestCase):
@@ -453,6 +468,11 @@ class Step7Figma(unittest.TestCase):
         for s in ("`figma-use`", "`figma-generate-library`", "`figma-generate-design`", "`figma-use-figjam`",
                   "`figma-code-connect`", "`impeccable`", "`ui-ux-pro-max`"):
             self.assertIn(s, t, s)
+        self.assertIn("use `ui-ux-pro-max` only if installed", t)
+        self.assertNotIn("is a reference for this, never copied", t)
+        src = (SKILLS / "design-system-contract/references/sources.md").read_text()
+        self.assertIn("optional (founder ruling 2026-11-09)", src)
+        self.assertNotIn("so it is a plugin dependency", src)
 
     def test_code_connect_and_fallback(self):
         t = read("design-system-contract")
@@ -475,11 +495,12 @@ class Step7Figma(unittest.TestCase):
         self.assertIn("never approves a visual", t)
         self.assertIn("If the Figma login is missing, stop and add it to `WAITING.md`", t)
         self.assertLess(t.index("DESIGN VERDICT: APPROVE"), t.index("STEP: 8"))
-        self.assertIn("step 8 ships in a later release", t)
+        self.assertNotIn("later release", t)
+        self.assertIn("NEXT: step 8 — plan the first wave (plan-graph)", t)
         self.assertIn("go?", t)
 
     def test_protocol(self):
-        t = (SKILLS / "design-system-contract/SKILL.md").read_text()
+        t = skill_and_rules("design-system-contract")
         for s in ("decisions/0000-template.md", "when missing", "one approval turn",
                   "default for the rest of this round", "ask-before-adding", "design-verifier", "designer"):
             self.assertIn(s, t, s)
@@ -494,7 +515,8 @@ class Step7Figma(unittest.TestCase):
         for row in (r for r in c.splitlines() if "ui-ux-pro-max" in r or "Figma plugin" in r):
             self.assertNotIn("not used in v0.1", row)
         row = [r for r in c.splitlines() if r.startswith("| [ui-ux-pro-max-skill]")][0]
-        self.assertIn("**Installed** (`plugin.json` dependency", row)
+        self.assertIn("**Optional**", row)
+        self.assertNotIn("**Installed**", row)
         self.assertIn("Figma", c)
 
 
@@ -515,6 +537,43 @@ class Lessons(unittest.TestCase):
             t = read(n)
             if "`architect` agent" in t or "`designer` agent" in t:
                 self.assertIn("in the foreground", t, n)
+
+
+class SharedStepRules(unittest.TestCase):
+    EIGHT = tuple(n for n in ALL9 if n != "design-system-contract")
+
+    def test_rules_file_holds_the_repeated_paragraphs(self):
+        t = RULES.read_text()
+        for s in ("decided in NNNN", "one approval turn", "default for the rest of this round",
+                  "in the foreground", "ask-before-adding", "supersedes", "STALE",
+                  "One decision per answer", "Ask only what is undecided",
+                  "decisions/0000-template.md", "CLAUDE.md", "WAITING.md"):
+            self.assertIn(s, t, s)
+
+    def test_every_step_skill_points_to_it_in_its_first_section(self):
+        for n in ALL9:
+            first = (SKILLS / n / "SKILL.md").read_text().split("\n## ")[0]
+            self.assertIn(POINTER, first, n)
+
+    def test_repeated_paragraphs_are_gone_from_the_skills(self):
+        for n in ALL9:
+            t = (SKILLS / n / "SKILL.md").read_text()
+            self.assertNotIn("An area already answered by a decision is shown as", t, n)
+            self.assertNotIn("a non-interactive session stalls or ends while it waits", t.replace(
+                "never schedule a wake-up or wait on a background timer: a non-interactive session ends or stalls while it waits", ""), n)
+            self.assertNotIn("Any of steps 1\u20137 can be reopened.", t, n)
+        for n in self.EIGHT:
+            t = (SKILLS / n / "SKILL.md").read_text()
+            self.assertNotIn("**One fill-in turn.**", t, n)
+
+    def test_state_skill_points_to_it(self):
+        self.assertIn("references/step-rules.md", (SKILLS / "state/SKILL.md").read_text())
+
+    def test_plugin_root_substitution_is_sourced(self):
+        s = (SKILLS / "state/references/sources.md").read_text()
+        self.assertIn("${CLAUDE_PLUGIN_ROOT}", s)
+        self.assertIn("https://code.claude.com/docs/en/skills", s)
+        self.assertIn("2026-11-09", s)
 
 
 if __name__ == "__main__":

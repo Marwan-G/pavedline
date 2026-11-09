@@ -1,0 +1,13 @@
+workloads:
+  api:
+    image:
+      repository: localhost:5001/example-api
+      tag: "local-0001"
+    replicas: 1
+    route:
+      enabled: true
+      hostnames: ["api.local.example.test"]
+  worker:
+    image:
+      repository: localhost:5001/example-worker
+      tag: "local-0001"

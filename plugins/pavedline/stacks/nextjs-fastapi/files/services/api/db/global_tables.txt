@@ -1,0 +1,4 @@
+# Tables that have no tenant. One per line: `table  # reason`. The reason is required.
+# rls_check.py fails on any table that is neither tenant-safe nor listed here.
+tenants  # the tenant directory itself: maps the identity provider's organisation id to our tenant id
+alembic_version  # migration bookkeeping, owned by the owner role

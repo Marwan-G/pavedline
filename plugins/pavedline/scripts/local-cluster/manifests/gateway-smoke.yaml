@@ -1,0 +1,57 @@
+# verify.sh: an echo backend and an HTTPRoute on the shared Gateway (namespace gateway), reached from the host at
+# http://127.0.0.1:8080/. The namespace carries the label the Gateway's allowedRoutes requires.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-smoke
+  labels:
+    gateway-access: shared
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: gateway-smoke
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: echo}
+  template:
+    metadata:
+      labels: {app: echo}
+    spec:
+      containers:
+        - name: echo
+          image: "@ECHO_IMAGE@"
+          # alpine's busybox has no httpd: answer each connection with a fixed HTTP response through nc.
+          command: ["/bin/sh", "-c", "while true; do printf 'HTTP/1.1 200 OK\\r\\nContent-Length: 17\\r\\nConnection: close\\r\\n\\r\\npavedline-echo-ok' | nc -l -p 8080 >/dev/null; done"]
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /, port: 8080}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  namespace: gateway-smoke
+spec:
+  selector: {app: echo}
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: echo
+  namespace: gateway-smoke
+spec:
+  parentRefs:
+    - name: shared
+      namespace: gateway
+      sectionName: http
+  rules:
+    - backendRefs:
+        - name: echo
+          port: 80

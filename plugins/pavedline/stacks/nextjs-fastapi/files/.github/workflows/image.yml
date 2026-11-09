@@ -1,0 +1,148 @@
+name: image
+
+# Reusable workflow (called by the ci-<surface> workflows on a push to main; never on a pull request). It builds one
+# image on a native arm64 runner (the production nodes are arm64), scans it, pushes it to GHCR and commits the new
+# image DIGEST to infra/k8s/apps/<app>/values-staging.yaml. It never deploys: a person (or the deploy skill) rolls
+# the change out after the merge. The bump is pushed with GITHUB_TOKEN, which triggers no workflow, so the bump
+# commit has no CI run of its own (the digest it records was built and scanned by the run that made it). Pushing to
+# a protected main needs a ruleset bypass for GitHub Actions (a founder step, see the gitops skill).
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: App folder name under infra/k8s/apps (also the image name)
+        required: true
+        type: string
+      dockerfile:
+        description: Dockerfile path from the repository root
+        required: true
+        type: string
+      context:
+        description: Docker build context from the repository root
+        required: true
+        type: string
+      workload:
+        description: Key under workloads in the values file (defaults to the app name)
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ inputs.app }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    env:
+      APP: ${{ inputs.app }}
+      DOCKERFILE: ${{ inputs.dockerfile }}
+      CONTEXT: ${{ inputs.context }}
+      # Official image (aquasecurity/trivy README), by digest. Trivy's GitHub Action wrappers are not used, see docs/architecture/STACK-SOURCES.md.
+      TRIVY_IMAGE: ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the inputs
+        run: |
+          [[ "$APP" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "bad app name: $APP" >&2; exit 1; }
+          for p in "$DOCKERFILE" "$CONTEXT"; do
+            case "$p" in /*|*..*) echo "bad path: $p" >&2; exit 1;; esac
+          done
+          test -f "$DOCKERFILE"
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}/${APP}" >> "$GITHUB_ENV"
+      - name: Build (the boot check runs inside the build)
+        run: docker build -f "$DOCKERFILE" -t "$IMAGE:$GITHUB_SHA" "$CONTEXT"
+      - name: Scan the image with Trivy (fail on HIGH or CRITICAL that have a fix)
+        run: |
+          mkdir -p "$RUNNER_TEMP/trivy-cache"
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$RUNNER_TEMP/trivy-cache:/root/.cache/trivy" \
+            "$TRIVY_IMAGE" image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --no-progress \
+            "$IMAGE:$GITHUB_SHA"
+      - name: Push to GHCR and read the digest
+        id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:$GITHUB_SHA"
+          ref=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$GITHUB_SHA")
+          digest="${ref#*@}"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "no digest in: $ref" >&2; exit 1; }
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+  # Commits the new digest to main. With a protected main this job needs the ruleset bypass for GitHub Actions
+  # named above; without it the push is refused and the job fails.
+  tag-bump:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      APP: ${{ inputs.app }}
+      WORKLOAD: ${{ inputs.workload != '' && inputs.workload || inputs.app }}
+      DIGEST: ${{ needs.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Write image.digest into values-staging.yaml and push (retry on a push race)
+        run: |
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "bad digest" >&2; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5 6; do
+            git fetch --quiet origin main
+            git reset --quiet --hard origin/main
+            python3 -I - <<'PY'
+          import os
+          import pathlib
+          import sys
+
+          app, workload, digest = os.environ["APP"], os.environ["WORKLOAD"], os.environ["DIGEST"]
+          path = pathlib.Path("infra/k8s/apps") / app / "values-staging.yaml"
+          lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+          start = next((i for i, ln in enumerate(lines) if ln.rstrip() == "  %s:" % workload), None)
+          if start is None:
+              sys.exit("%s: no workloads.%s block" % (path, workload))
+          in_image = False
+          for i in range(start + 1, len(lines)):
+              ln = lines[i]
+              if ln.strip() and len(ln) - len(ln.lstrip()) <= 2:
+                  break
+              if ln.rstrip() == "    image:":
+                  in_image = True
+              elif in_image and ln.startswith("      digest:"):
+                  lines[i] = '      digest: "%s"\n' % digest
+                  path.write_text("".join(lines), encoding="utf-8")
+                  sys.exit(0)
+          sys.exit("%s: no image.digest under workloads.%s" % (path, workload))
+          PY
+            git add "infra/k8s/apps/${APP}/values-staging.yaml"
+            if git diff --cached --quiet; then
+              echo "digest already current"
+              exit 0
+            fi
+            git commit --quiet -m "chore: ${APP} image digest for ${GITHUB_SHA::7}"
+            if git push --quiet origin HEAD:main; then
+              exit 0
+            fi
+            echo "push lost a race (attempt ${attempt}); retrying"
+            sleep $((attempt * 5))
+          done
+          echo "could not push the digest bump" >&2
+          exit 1

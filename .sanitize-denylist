@@ -1,9 +1,12 @@
 # Generic deny-list. One regex per line; '#' starts a comment.
 # Private identifiers go in .sanitize-denylist.local (git-ignored).
 ocid1\.
-\b10\.\d+\.\d+\.\d+\b
-\b192\.168\.\d+\.\d+\b
-\b172\.(1[6-9]|2\d|3[01])\.\d+\.\d+\b
+\b10\.\d+\.\d+\.\d+\b(?!/\d)
+\b192\.168\.\d+\.\d+\b(?!/\d)
+\b172\.(1[6-9]|2\d|3[01])\.\d+\.\d+\b(?!/\d)
+\b10\.\d+\.\d+\.(?:[1-9]\d{0,2})/\d+\b
+\b192\.168\.\d+\.(?:[1-9]\d{0,2})/\d+\b
+\b172\.(1[6-9]|2\d|3[01])\.\d+\.(?:[1-9]\d{0,2})/\d+\b
 -----BEGIN [A-Z ]*PRIVATE KEY-----
 \bghp_[A-Za-z0-9]{36}\b
 \bsk-ant-[A-Za-z0-9_-]{20,}

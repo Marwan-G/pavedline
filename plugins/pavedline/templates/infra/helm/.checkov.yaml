@@ -1,0 +1,8 @@
+# Checkov config for the rendered Helm output. Every skip carries a reason and is shown to the reviewer.
+framework:
+  - kubernetes
+skip-check:
+  # Images are pinned by digest in staging and production, so IfNotPresent is safe and avoids needless pulls.
+  - CKV_K8S_15
+  # DATABASE_URL comes from a secretKeyRef (the 12-factor norm); it is never logged and never in a values file.
+  - CKV_K8S_35

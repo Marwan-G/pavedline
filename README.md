@@ -31,8 +31,10 @@ When your project reaches the local cluster, Pavedline creates:
 | **A Kubernetes cluster** | [kind](https://kind.sigs.k8s.io/) v0.33.0, Kubernetes v1.37.0 (node image pinned by digest). Cluster `pavedline-<project>`, kube context `kind-pavedline-<project>` |
 | **Argo CD** | Helm chart 10.15.0 in namespace `argocd`. Every deploy goes through Git, as in production |
 | **CloudNativePG** | Helm chart 0.29.1 in namespace `cnpg-system`. `verify.sh` brings up a one-instance Postgres to prove it works, then deletes it |
+| **Gateway API and Envoy Gateway** | The Gateway API standard CRDs and the Envoy Gateway controller; the shared Gateway answers HTTP on host port 8080 |
 | **A local image registry** | Container `kind-registry` on `localhost:5001` |
-| **Ports** | `127.0.0.1:8080` → 80 and `127.0.0.1:8443` → 443. Everything binds to loopback only; nothing is exposed to your network |
+| **A local git server** | Container `kind-git` (read-only `git daemon`, no host port); Argo CD syncs the apps from it |
+| **Ports** | `127.0.0.1:8080` → the shared Gateway (HTTP). Everything binds to loopback only; nothing is exposed to your network |
 
 **What to expect:**
 - **It downloads.** The first run pulls a few GB of container images (the Kubernetes node, Argo CD, CloudNativePG,
@@ -91,8 +93,8 @@ your-product/
 ```
 
 Add the dependency marketplaces first: Pavedline's dependencies (`superpowers`, `mattpocock-skills`,
-`product-management`, `figma`, `ui-ux-pro-max`) install automatically only from marketplaces you have already added. Without them the install
-warns that Pavedline will not load. (Verified on a clean profile with `scripts/install_test.sh`.)
+`product-management`, `figma`) install automatically only from marketplaces you have already added. Without them the install
+warns that Pavedline will not load. The `ui-ux-pro-max-skill` marketplace line is optional: `ui-ux-pro-max` is a step-7 style reference, used only if installed. (Verified on a clean profile with `scripts/install_test.sh`.)
 
 **If `/pavedline:start` is not found:** a missing dependency stops Pavedline from loading at all. Run
 `claude plugin list`, which shows the dependency warning, then add the missing marketplace or plugin with the commands
@@ -109,9 +111,10 @@ new paid service or account still needs your go first.
   ships in v0.2.
 - **Memory in your repository:** `PRODUCT.md`, `STATE.md`, `WAITING.md`, `GLOSSARY.md` and numbered decision records,
   so a fresh session resumes from files.
-- **Six hooks:** block `.env` reads and secrets written into files; block cluster commands outside the local
+- **Ten hooks:** block `.env` reads and secrets written into files; block cluster commands outside the local
   `kind-pavedline-*` cluster; block `--no-verify` and force-pushes to the main branch; block a `STATE.md` over 60
-  lines; warn when `CLAUDE.md` passes 150 lines; print the project state when a session starts.
+  lines; warn when `CLAUDE.md` passes 150 lines; warn when a pull request body lacks the gates line; warn when code
+  changes under a folder whose `ARCHITECTURE.dot` did not; print the project state when a session starts; keep the key `STATE.md` lines through compaction; remind Claude to commit uncommitted records when a turn ends.
 - **`/pavedline:doctor`:** checks the machine and plugins; for anything missing it tells you what it will install and why, then installs it.
 - **Local cluster scripts:** a kind cluster with Argo CD, CloudNativePG and a local image registry, with `up`,
   `verify` and `down` scripts. See [environments](docs/environments.md).

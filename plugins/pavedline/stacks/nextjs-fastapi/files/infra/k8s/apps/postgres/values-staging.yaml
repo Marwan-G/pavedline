@@ -1,0 +1,11 @@
+# Staging: three instances, anti-affinity and quorum synchronous replication. Backups (Barman Cloud to S3-compatible
+# storage), the restore drill and the managed-database alternative are production readiness: PR 3 / step 12, not here.
+cluster:
+  instances: 3
+  storage:
+    size: 10Gi
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+pooler:
+  instances: 2

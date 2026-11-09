@@ -1,0 +1,43 @@
+# Applications: one Argo CD Application per folder under infra/k8s/apps/. NO automatic sync: a person (or the deployer,
+# after the pull request merged) syncs each app. preserveResourcesOnDeletion keeps the workloads and the database when
+# a folder is renamed or removed, so a rename can never delete data. {{REPO_URL}}, {{REVISION}} and {{ENVIRONMENT}}
+# (local, staging or production) are placeholders that stay in Git: deploy_local.sh renders them for the local cluster,
+# the cloud bootstrap renders them later; never commit filled values. Every folder is a Helm chart: it reads its own
+# values.yaml plus values-<environment>.yaml; a chart without that file for the environment just uses values.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  goTemplate: false
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  generators:
+    - git:
+        repoURL: '{{REPO_URL}}'
+        revision: '{{REVISION}}'
+        directories:
+          - path: infra/k8s/apps/*
+  template:
+    metadata:
+      name: 'app-{{path.basename}}'
+    spec:
+      project: default
+      source:
+        repoURL: '{{REPO_URL}}'
+        targetRevision: '{{REVISION}}'
+        path: '{{path}}'
+        helm:
+          ignoreMissingValueFiles: true
+          valueFiles:
+            - 'values-{{ENVIRONMENT}}.yaml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        managedNamespaceMetadata:
+          labels:
+            gateway-access: shared

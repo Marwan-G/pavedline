@@ -1,0 +1,62 @@
+# Shared by every environment; values-<environment>.yaml overrides it. No credential here: the web app holds none.
+priorityClassName: app-default
+
+gateway:
+  name: shared
+  namespace: gateway
+  sectionName: http
+
+workloads:
+  web:
+    image:
+      repository: localhost:5001/web # overridden per environment
+    port: 3000
+    servicePort: 80
+    replicas: 2
+    env:
+      # The API's Service inside the cluster (Argo CD names the release app-api, the workload api, in namespace api).
+      # Fetched on the server, so the browser never calls the API and no CORS is needed.
+      API_INTERNAL_URL: http://app-api-api.api.svc.cluster.local
+    probes:
+      liveness:
+        path: /healthz
+      readiness:
+        path: /healthz
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+    # Next.js writes its cache under .next/cache; the root filesystem is read-only.
+    extraEmptyDirs:
+      - name: next-cache
+        mountPath: /app/apps/web/.next/cache
+        sizeLimit: 256Mi
+    route:
+      enabled: true
+      pathPrefix: /
+    networkPolicy:
+      # In: only the Gateway's data plane (Envoy Gateway runs its proxy pods in envoy-gateway-system).
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: envoy-gateway-system
+              podSelector:
+                matchLabels:
+                  gateway.envoyproxy.io/owning-gateway-name: shared
+                  gateway.envoyproxy.io/owning-gateway-namespace: gateway
+          ports:
+            - port: 3000
+              protocol: TCP
+      # Out (DNS is added by the base chart): the API pods, port 8000 (the pod port; a policy is evaluated after the
+      # Service's port 80 is translated). Nothing else: the web app has no database and no other backend.
+      egress:
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: api
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/name: api
+          ports:
+            - port: 8000
+              protocol: TCP

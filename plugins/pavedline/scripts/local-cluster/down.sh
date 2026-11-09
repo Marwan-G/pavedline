@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Delete the kind cluster pavedline-<project> only. With --all, also remove the shared kind-registry container.
+# Delete the kind cluster pavedline-<project> only. With --all, also remove the shared kind-registry and kind-git containers.
 set -euo pipefail
 
 usage() { echo "usage: down.sh <project> [--all]" >&2; exit 2; }
@@ -20,6 +20,7 @@ kind delete cluster --name "$CLUSTER"
 
 if [ "$ALL" -eq 1 ]; then
   docker rm -f kind-registry >/dev/null 2>&1 || true
-  echo "removed the kind-registry container"
+  docker rm -f kind-git >/dev/null 2>&1 || true
+  echo "removed the kind-registry and kind-git containers"
 fi
 echo "removed cluster $CLUSTER (context kind-pavedline-${PROJECT})"

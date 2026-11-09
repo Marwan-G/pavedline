@@ -13,7 +13,7 @@ AGENTS = ROOT / "plugins" / "pavedline" / "agents"
 MODELS = ROOT / "plugins" / "pavedline" / "config" / "models.yaml"
 FIGMA = "mcp__plugin_figma_figma__"
 EDIT_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
-NEW = ["architect", "designer", "design-verifier", "reviewer"]
+NEW = ["architect", "designer", "design-verifier", "reviewer", "builder", "adversary", "deployer"]
 
 
 def load(stem):
@@ -45,7 +45,7 @@ class AgentTests(unittest.TestCase):
 
     def test_read_only_agents_use_allowlist(self):
         banned = EDIT_TOOLS | {"Bash"}
-        for n in ("design-verifier", "reviewer"):
+        for n in ("design-verifier", "reviewer", "adversary"):
             self.assertFalse(banned & allowed(n), n)
             self.assertNotIn("disallowedTools", load(n)[0], n)
 
@@ -98,6 +98,26 @@ class AgentTests(unittest.TestCase):
         for n in NEW:
             self.assertRegex(load(n)[1].lower(), r"first line.*model that ran")
 
+    def test_code_agents(self):
+        self.assertEqual(allowed("adversary"), {"Read", "Grep", "Glob"})
+        self.assertEqual(allowed("builder"), {"Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebFetch", "WebSearch"})
+        self.assertEqual(allowed("deployer"), {"Read", "Write", "Edit", "Bash", "Grep", "Glob"})
+        needles = {
+            "builder": ["own worktree", "Red first.", "approval quoted in the prompt", "handoff/<branch>.md",
+                        "never dispatch reviewers and never merge"],
+            "adversary": ["ADVERSARIAL: APPROVE", "ADVERSARIAL: REJECT", "concrete input", "stop rule",
+                          "ADVERSARIAL: REJECT — incomplete:"],
+            "deployer": ["kind-pavedline-", "never the Synced label",
+                         "never runs kubectl apply or helm upgrade against a cloud cluster",
+                         "never reads cloud credentials", "git commit-tree"],
+            "reviewer": ["scanner output", "code diff", "never check out"],
+        }
+        for n, ss in needles.items():
+            body = load(n)[1]
+            for s in ss:
+                self.assertIn(s, body, f"{n}: {s}")
+        for n in ("builder", "adversary", "deployer"):
+            self.assertLessEqual(len(load(n)[1].splitlines()), 40, n)
 
     def test_incomplete_check_is_a_reject(self):
         for n in ("reviewer", "design-verifier"):

@@ -1,0 +1,14 @@
+# The per-database hardening and the three roles: ONE source of truth, services/api/db/roles.sql. files/roles.sql is an
+# identical copy (a chart can only read its own files; tests/test_stack_api_chart.py fails if they differ). CNPG runs it
+# once, as a superuser, in the application database, right after initdb (bootstrap.initdb.postInitApplicationSQLRefs).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-roles-sql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  roles.sql: |
+    {{- .Files.Get "files/roles.sql" | nindent 4 }}

@@ -1,0 +1,10 @@
+workloads:
+  api:
+    image:
+      digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0"
+    route:
+      enabled: true
+      hostnames: ["api.staging.example.test"]
+  worker:
+    image:
+      digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1"

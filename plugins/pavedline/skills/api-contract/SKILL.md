@@ -7,19 +7,17 @@ description: Step 5 of Pavedline, part 4 and the step's gate. Writes the OpenAPI
 
 Fourth and last skill of step 5 (`domain-model` → `db-schema` → `multi-tenancy` → `api-contract`). Output: `docs/api/openapi.yaml` and one decision per answered question; it then runs the step's gate. Create `docs/api/` and `docs/data/` when missing (a project started with v0.1 has neither). The contract is the source of truth: code and SDKs follow it; a later change to it goes to `decisions/` first.
 
-Design work goes to the `architect` agent (subagent type `pavedline:architect`) with a self-contained prompt (files to read, document to write, report format); facts to the `researcher` agent (subagent type `pavedline:researcher`). Run agents in the foreground and never wait on a background task or timer: a non-interactive session stalls or ends while it waits.
+Follow the shared step rules in `${CLAUDE_PLUGIN_ROOT}/skills/state/references/step-rules.md`.
 
 ## 1. Read first, in order
 
-`CLAUDE.md`, `PRODUCT.md`, `STATE.md`, `WAITING.md`, every file in `decisions/`, `GLOSSARY.md`, `docs/spec/SPEC.md` (features and acceptance tests per surface), `docs/architecture/SYSTEM-DESIGN.md`, `AUTH.md`, then `docs/data/DOMAIN.md` and `SCHEMA.md`. Ask only what is undecided. If a decision already says the API is internal only, the contract is still written (the web app and mobile app are clients of it), and the decision's limits (no public docs, no SDK) are noted in the file's `info.description`. Resource and field names are `GLOSSARY.md` terms, identical to the schema.
-
-An area already answered by a decision is shown as `decided in NNNN` and not re-asked; only its undecided detail is asked.
+After the records of the shared rules: `docs/spec/SPEC.md` (features and acceptance tests per surface), `docs/architecture/SYSTEM-DESIGN.md`, `AUTH.md`, then `docs/data/DOMAIN.md` and `SCHEMA.md`. If a decision already says the API is internal only, the contract is still written (the web app and mobile app are clients of it), and the decision's limits (no public docs, no SDK) are noted in the file's `info.description`. Resource and field names are `GLOSSARY.md` terms, identical to the schema.
 
 ## 2. Questions (one area at a time; options, recommended default, what it changes; wait)
 
-"Default" is valid; "not needed" only with a recorded reason. None is skipped or merged; before closing compare the areas with the decisions written. Areas, in order, details in `${CLAUDE_SKILL_DIR}/references/questions.md`: versioning and paths · resources and operations per surface · authentication on the API (from `AUTH.md`) and the scopes · errors · pagination and filtering · idempotency · rate limits and quotas · webhooks (incoming and outgoing) · files and uploads · real-time or polling endpoints (from the real-time decision). Record each answer as a decision (`decisions/0000-template.md`, numbered after the highest existing, with a "Stale outputs" section). Within a round the founder may answer `default for the rest of this round`; each area still gets its own decision record. A new service (an API gateway, a docs host, a mock server): what it is, what it will do, why nothing already in use does it, its verified cost; wait for the founder.
+Areas, in order, details in `${CLAUDE_SKILL_DIR}/references/questions.md`: versioning and paths · resources and operations per surface · authentication on the API (from `AUTH.md`) and the scopes · errors · pagination and filtering · idempotency · rate limits and quotas · webhooks (incoming and outgoing) · files and uploads · real-time or polling endpoints (from the real-time decision). A new service (an API gateway, a docs host, a mock server) follows ask-before-adding.
 
-**One fill-in turn.** Before writing outputs, compare the decisions for gaps and contradictions; the `architect` resolves each gap with the recommended default and lists it. Show all fill-ins as ONE numbered list for one approval turn ("default" approves all); a fill-in that changes an existing decision is asked on its own.
+Before writing outputs, do the one fill-in turn of the shared rules.
 
 ## 3. Rules the contract must follow
 
@@ -29,7 +27,7 @@ An area already answered by a decision is shown as `decided in NNNN` and not re-
 - Every operation that creates or changes state accepts an `Idempotency-Key` header; keys are stored under `(tenant_id, principal, key)` with a request fingerprint (method, path, body hash); a retry with the same key and fingerprint returns the original result; the same key with a different fingerprint returns a 422 error, never the cached body; the key's lifetime is stated; the table is a tenant table under FORCE RLS and in the leak-test registry. Ask only the detail beyond the Concurrency decision of step 4. Reads are safe by definition.
 - Collections paginate (cursor by default) with a documented maximum page size and a stable sort.
 - Security schemes are declared once and applied per operation; public operations say `security: []` on purpose.
-- When mobile is a surface (decision 0005), the contract exposes the minimum supported app version (an endpoint or a response header) and the blocking error the app shows when it is older.
+- When mobile is a surface (decision 0005), the contract exposes the minimum supported app version (an endpoint or a response header) and the blocking error the app shows when it is older. The stack's API sends the response header `X-Min-App-Version` (plain `MAJOR.MINOR.PATCH`, setting `MIN_APP_VERSION`) on every response; declare it once as a `components.headers` entry and reference it from the responses the app reads.
 - Money, time and ids use the types decided in `domain-model` (integer minor units plus currency; RFC 3339 UTC instants; string ids).
 - Webhooks are described with `webhooks` or callbacks: signed, retried, idempotent by event id. Provider webhook event names are checked on the web (URL and date) or written as a `WAITING.md` item.
 - Every acceptance test of the spec that crosses the API maps to at least one operation; list the mapping in the file's `info.description` or an `x-acceptance` field.
@@ -51,11 +49,7 @@ The version is pinned (newest release at least 14 days old when written; see `${
 3. The reviewer ends `VERDICT: APPROVE` or `VERDICT: REJECT — <reason>`. Write the verdict and every finding to `docs/reviews/05-data-and-api-review.md` (create `docs/reviews/` when missing); on REJECT the file lists the findings to rework, so a fresh session resumes from it. A `REJECT` means rework and a narrow re-review, never arguing past it. Record each finding as fixed or accepted with a reason. After the rework re-run the checks of step 1.
 4. Only after `VERDICT: APPROVE`, show the founder the outputs, the decisions and the verdict, and ask for the go. The `APPROVE` comes before the founder's go; the founder's go never replaces it.
 
-## 6. Re-entry
-
-Any of steps 1–7 can be reopened. A changed answer is a new decision superseding the old (`supersedes NNNN`); stale outputs go to `STATE.md ▶ STALE` with the number.
-
-## 7. Close step 5
+## 6. Close step 5
 
 After `VERDICT: APPROVE` and the founder's go, edit `STATE.md` (see the `state` skill), time from `date "+%Y-%m-%d %H:%M"`:
 
@@ -65,4 +59,4 @@ LAST: <timestamp> — step 5 done: DOMAIN.md, erd.dot, SCHEMA.md, MIGRATIONS.md,
 NEXT: step 6 — architecture diagram, threat model, Helm and environment layout
 ```
 
-Commit. Print the closing block (done, changed, next, waiting on you, clear-safe). Ask: **go?**
+Commit and close as in the shared rules.

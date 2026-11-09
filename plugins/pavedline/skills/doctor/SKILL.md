@@ -1,7 +1,7 @@
 ---
 name: doctor
 description: Checks that every tool and plugin Pavedline needs is installed and, for anything missing, tells the user what it will install and why, then installs it. Use at the start of step 0 (before /pavedline:start does anything else), and whenever a command is not found or a dependency seems missing.
-allowed-tools: Bash(python3 *)
+allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py *)
 ---
 
 # doctor
@@ -9,7 +9,7 @@ allowed-tools: Bash(python3 *)
 Run the checker:
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py"
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py
 ```
 
 It prints a table (name, ok or missing, required or optional, fix) and a last line

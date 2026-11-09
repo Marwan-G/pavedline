@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+# Two-week rule (Pavedline): a package version younger than 14 days (20160 minutes) is not installed, so the
+# transitive packages in pnpm-lock.yaml obey the same cutoff as the exact pins in each package.json.
+minimumReleaseAge: 20160
+# pavedline-begin: mobile
+# Install scripts do not run (supply-chain rule). Both packages below are pulled in by the mobile tooling and ship
+# prebuilt binaries as optional dependencies, so nothing is lost; add a package here only after reading its script.
+allowBuilds:
+  "@parcel/watcher": false
+  unrs-resolver: false
+# pavedline-end

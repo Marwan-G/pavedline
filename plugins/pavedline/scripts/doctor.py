@@ -61,21 +61,21 @@ PLUGINS = [
     ),
     ("figma@claude-plugins-official", "/plugin install figma@claude-plugins-official"),
     (
-        "ui-ux-pro-max@ui-ux-pro-max-skill",
-        "/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill then "
-        "/plugin install ui-ux-pro-max@ui-ux-pro-max-skill",
-    ),
-    (
         PAVEDLINE_ID,
         "/plugin marketplace add Marwan-G/pavedline then /plugin install pavedline@pavedline",
     ),
 ]
 
-# optional plugins (design critique in step 7); never fail the doctor
+# optional plugins (design critique and style reference in step 7); never fail the doctor
 OPTIONAL_PLUGINS = [
     (
         "impeccable@impeccable",
         "/plugin marketplace add pbakaus/impeccable then /plugin install impeccable@impeccable",
+    ),
+    (
+        "ui-ux-pro-max@ui-ux-pro-max-skill",
+        "/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill then "
+        "/plugin install ui-ux-pro-max@ui-ux-pro-max-skill",
     ),
 ]
 

@@ -15,7 +15,7 @@ only** (read for inspiration, no code or text used) · **used by templates or CI
 | [product-management](https://github.com/anthropics/knowledge-work-plugins) (from knowledge-work-plugins) | Anthropic | Apache-2.0 | **Installed** (`plugin.json` dependency): competitive brief, research synthesis |
 | [@playwright/mcp](https://github.com/microsoft/playwright-mcp) | Microsoft | Apache-2.0 | **Shipped** in the plugin's `.mcp.json`, pinned: competitor research in a browser |
 | [crawl4ai](https://github.com/unclecode/crawl4ai) | unclecode | Apache-2.0 (attribution required) | **Optional**: bulk crawling, only if you have it installed |
-| [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | nextlevelbuilder | MIT | **Installed** (`plugin.json` dependency, from v0.2): step 7 style reference, never copied |
+| [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | nextlevelbuilder | MIT | **Optional**: step 7 style reference, used only if installed, never copied; `doctor` lists it as optional |
 | [impeccable](https://github.com/pbakaus/impeccable) | Paul Bakaus | Apache-2.0 | **Optional**, from v0.2: design critique in step 7; `doctor` lists it as optional |
 | [Figma plugin and MCP](https://www.figma.com/) | Figma | Figma terms (a Full seat writes to the canvas) | **Installed** (`plugin.json` dependency, from v0.2): step 7, the only agent that writes to the canvas is the `designer` |
 | Clerk skills | Clerk | no licence file detected | **Later** (stack pack, v0.3): authentication; `doctor` will print the install command |

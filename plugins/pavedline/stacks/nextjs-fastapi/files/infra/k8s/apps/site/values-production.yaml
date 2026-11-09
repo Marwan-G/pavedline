@@ -1,0 +1,13 @@
+# Production: the only indexed origin. CI writes the image digest in the tag-bump commit; step 6 replaces
+# OWNER/REPO and the hostname. The all-zero digest cannot be pulled, so nothing runs until CI has built an image.
+workloads:
+  site:
+    image:
+      repository: ghcr.io/OWNER/REPO/site
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    replicas: 3
+    env:
+      SITE_INDEXABLE: "true"
+      SITE_ORIGIN: https://www.example.com
+    route:
+      hostnames: ["www.example.com"]

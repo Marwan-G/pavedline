@@ -12,9 +12,9 @@ ALL_IDS = [
     "mattpocock-skills@claude-plugins-official",
     "product-management@knowledge-work-plugins",
     "figma@claude-plugins-official",
-    "ui-ux-pro-max@ui-ux-pro-max-skill",
     "pavedline@pavedline",
 ]
+UIUX = "ui-ux-pro-max@ui-ux-pro-max-skill"
 
 
 def listing(ids, enabled=True):
@@ -65,7 +65,7 @@ class DoctorTests(unittest.TestCase):
 
     def test_plugins_detected(self):
         checks = doctor.check_plugins(listing(ALL_IDS))
-        self.assertEqual(len(checks), 6)
+        self.assertEqual(len(checks), 5)
         self.assertTrue(all(c.ok for c in checks))
 
     def test_disabled_plugin_not_present(self):
@@ -80,19 +80,16 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("/plugin marketplace add anthropics/knowledge-work-plugins", c.fix)
 
     def test_step_7_plugins_have_install_fixes(self):
-        checks = by_name(doctor.check_plugins(listing(ALL_IDS[:3] + ALL_IDS[5:])))
+        checks = by_name(doctor.check_plugins(listing(ALL_IDS[:3] + ALL_IDS[4:])))
         f = checks["figma@claude-plugins-official"]
         self.assertFalse(f.ok)
         self.assertTrue(f.required)
         self.assertIn("/plugin install figma@claude-plugins-official", f.fix)
-        u = checks["ui-ux-pro-max@ui-ux-pro-max-skill"]
-        self.assertFalse(u.ok)
-        self.assertIn("/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill", u.fix)
-        self.assertIn("/plugin install ui-ux-pro-max@ui-ux-pro-max-skill", u.fix)
+        self.assertNotIn(UIUX, checks)
 
     def test_impeccable_is_optional_and_listed(self):
         names = [n for n, _ in doctor.OPTIONAL_PLUGINS]
-        self.assertEqual(names, ["impeccable@impeccable"])
+        self.assertEqual(names, ["impeccable@impeccable", UIUX])
         c = doctor.check_optional_plugins(listing(ALL_IDS))[0]
         self.assertFalse(c.ok)
         self.assertFalse(c.required)
@@ -101,14 +98,23 @@ class DoctorTests(unittest.TestCase):
         c = doctor.check_optional_plugins(listing(ALL_IDS + ["impeccable@impeccable"]))[0]
         self.assertTrue(c.ok)
 
+    def test_ui_ux_pro_max_is_optional(self):
+        c = doctor.check_optional_plugins(listing(ALL_IDS))[1]
+        self.assertEqual(c.name, UIUX)
+        self.assertFalse(c.ok)
+        self.assertFalse(c.required)
+        self.assertIn("/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill", c.fix)
+        self.assertIn("/plugin install ui-ux-pro-max@ui-ux-pro-max-skill", c.fix)
+        self.assertTrue(doctor.check_optional_plugins(listing(ALL_IDS + [UIUX]))[1].ok)
+
     def test_inline_pavedline_enabled_is_ok(self):
-        ids = ALL_IDS[:5] + ["pavedline@inline"]
+        ids = ALL_IDS[:4] + ["pavedline@inline"]
         c = by_name(doctor.check_plugins(listing(ids)))["pavedline@pavedline"]
         self.assertTrue(c.ok)
         self.assertEqual(c.status, "ok")
 
     def test_inline_pavedline_disabled_is_not_ok(self):
-        data = json.loads(listing(ALL_IDS[:5]))
+        data = json.loads(listing(ALL_IDS[:4]))
         data.append({"id": "pavedline@inline", "enabled": False})
         c = by_name(doctor.check_plugins(json.dumps(data)))["pavedline@pavedline"]
         self.assertFalse(c.ok)
@@ -186,10 +192,10 @@ class DoctorTests(unittest.TestCase):
         home = pathlib.Path("/home/u")
         self.assertTrue(doctor.loaded_from_plugin_dir(pathlib.Path("/work/pavedline/plugins/pavedline/scripts/doctor.py"), home))
         self.assertFalse(doctor.loaded_from_plugin_dir(home / ".claude/plugins/cache/pavedline/pavedline/0.1.0/scripts/doctor.py", home))
-        c = by_name(doctor.check_plugins(listing(ALL_IDS[:5]), plugin_dir_load=True))["pavedline@pavedline"]
+        c = by_name(doctor.check_plugins(listing(ALL_IDS[:4]), plugin_dir_load=True))["pavedline@pavedline"]
         self.assertTrue(c.ok)
         self.assertIn("--plugin-dir", c.status)
-        c = by_name(doctor.check_plugins(listing(ALL_IDS[:5]), plugin_dir_load=False))["pavedline@pavedline"]
+        c = by_name(doctor.check_plugins(listing(ALL_IDS[:4]), plugin_dir_load=False))["pavedline@pavedline"]
         self.assertFalse(c.ok)
         self.assertEqual(c.status, "missing")
 

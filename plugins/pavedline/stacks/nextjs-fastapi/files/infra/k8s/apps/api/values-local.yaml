@@ -1,0 +1,16 @@
+# Local (kind): the image comes from the local registry; step 10 / the deploy script sets a unique tag every deploy.
+# APP_ENV=development, so the API starts without the AUTH_* keys (every /v1 route then answers 401); put them in the
+# gitignored .env.local and re-run scripts/local_secrets.sh to test tokens.
+workloads:
+  api:
+    image:
+      repository: localhost:5001/api
+      tag: "local-0001"
+    replicas: 1
+    env:
+      APP_ENV: development
+    route:
+      hostnames: ["api.localtest.me"]   # *.localtest.me resolves to 127.0.0.1 (checked 2026-11-09); host port 8080 is the Gateway
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 512Mi}

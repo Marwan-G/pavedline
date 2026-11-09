@@ -1,0 +1,90 @@
+name: starter-mobile
+
+# The native mobile builds of the generated neutral starter (scripts/starter_check.sh --stage generate builds the
+# tree). Android on Linux, an unsigned iOS simulator build on macOS (macos-26 is the arm64 label, free for public
+# repositories: docs.github.com/actions/reference/runners/github-hosted-runners and the 2026-02-26 changelog, checked
+# 2026-11-09). A workflow-level path filter cannot sit inside ci.yml, so these jobs live here. Never mark them as
+# required checks: a pull request that touches no stack file would wait for them forever.
+on:
+  pull_request:
+    paths:
+      - "plugins/pavedline/stacks/**"
+      - "scripts/starter_check.sh"
+      - ".github/workflows/starter-mobile.yml"
+  push:
+    branches: [main, next]
+    paths:
+      - "plugins/pavedline/stacks/**"
+      - "scripts/starter_check.sh"
+      - ".github/workflows/starter-mobile.yml"
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: starter-mobile-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  starter-mobile-android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26.12.1"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm install -g pnpm@11.28.8
+      - name: Generate the starter tree
+        run: echo "STARTER_TREE=$(scripts/starter_check.sh --stage generate | tail -n 1)" >> "$GITHUB_ENV"
+      - run: pnpm install --frozen-lockfile
+        working-directory: ${{ env.STARTER_TREE }}
+      - name: Generate the native project (never committed)
+        working-directory: ${{ env.STARTER_TREE }}
+        run: pnpm --filter @app/mobile exec expo prebuild --no-install --platform android
+      - name: Debug build (the Android SDK is on the runner image)
+        working-directory: ${{ env.STARTER_TREE }}/apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+  starter-mobile-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26.12.1"
+      - run: npm install -g pnpm@11.28.8
+      - name: Generate the starter tree
+        run: echo "STARTER_TREE=$(scripts/starter_check.sh --stage generate | tail -n 1)" >> "$GITHUB_ENV"
+      - run: pnpm install --frozen-lockfile
+        working-directory: ${{ env.STARTER_TREE }}
+      - name: Generate the native project (runs pod install; never committed)
+        working-directory: ${{ env.STARTER_TREE }}/apps/mobile
+        run: npx expo prebuild --platform ios
+      - name: Unsigned simulator build
+        working-directory: ${{ env.STARTER_TREE }}/apps/mobile
+        run: |
+          workspace=$(printf '%s\n' ios/*.xcworkspace | head -n 1)
+          scheme=$(basename "$workspace" .xcworkspace)
+          xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

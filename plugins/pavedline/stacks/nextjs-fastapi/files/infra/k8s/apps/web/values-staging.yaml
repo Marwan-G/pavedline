@@ -1,0 +1,10 @@
+# Staging: the production settings at a smaller size. CI writes the image digest in the tag-bump commit; step 6
+# replaces OWNER/REPO and the hostname with the product's.
+workloads:
+  web:
+    image:
+      repository: ghcr.io/OWNER/REPO/web
+      digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    replicas: 2
+    route:
+      hostnames: ["app.staging.example.com"]

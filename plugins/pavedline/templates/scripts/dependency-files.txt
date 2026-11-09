@@ -1,0 +1,11 @@
+# Files a Renovate dependency PR may touch without a gates line (globs; ** spans directories).
+renovate.json
+.github/workflows/*.yml
+scripts/local-cluster/versions.env
+**/package-lock.json
+**/pnpm-lock.yaml
+**/yarn.lock
+**/uv.lock
+**/poetry.lock
+**/Cargo.lock
+**/go.sum

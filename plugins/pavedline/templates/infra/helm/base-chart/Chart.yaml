@@ -1,0 +1,5 @@
+apiVersion: v2
+name: base-chart
+description: Pavedline library chart. Renders hardened workloads (Deployment, Service, ServiceAccount, PodDisruptionBudget, NetworkPolicy, HTTPRoute, optional HPA, PreSync migration Job) from values.
+type: library
+version: 0.1.0

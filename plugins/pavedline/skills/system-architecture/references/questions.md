@@ -3,7 +3,7 @@
 None may be skipped. "Not needed" is valid only with a recorded reason. Per area: question, options, recommended default, what the answer changes. Each answer feeds a decision, `ARCHITECTURE.dot` and `DEPLOYMENT.md`. A new service: ask before adding, never designed to a free tier.
 
 ## Stack pack
-Default `nextjs-fastapi` (monorepo: web app, optional website and blog app, mobile app, FastAPI service, shared packages). Surfaces dropped in decision 0005 drop their app. Changes: which apps exist and what step 9 builds. The pack's templates are copied in a later release.
+Default `nextjs-fastapi` (monorepo: web app, optional website and blog app, mobile app, FastAPI service, shared packages). Surfaces dropped in decision 0005 drop their app. Changes: which apps exist and what step 9 builds. The pack is copied into the repository at the end of the step, for the surfaces kept.
 
 ## Apps and services
 Which apps and services run as separate deployments (default: web app, API, background worker, website separately so it caches and releases on its own) and which share one. Changes: nodes in the diagram, replicas, release independence.

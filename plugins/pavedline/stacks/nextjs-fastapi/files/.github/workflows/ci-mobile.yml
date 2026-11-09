@@ -1,0 +1,102 @@
+# pavedline-surface: mobile
+name: ci-mobile
+
+# The Expo app (apps/mobile). Lint (with the accessibility rule set), types and jest run on every pull request that
+# touches the app or the shared workspace files. The two native debug builds (Android on Linux, an unsigned iOS
+# simulator build on macOS) run on the same path filter plus a weekly schedule, not on every pull request elsewhere
+# (ruling 8): macOS minutes are free only in PUBLIC repositories. On a PRIVATE repository they are billed (checked on
+# github.com docs 2026-11-09, see docs/architecture/STACK-SOURCES.md): delete the ios-build job, or keep it knowing the cost, before adding
+# any other paid service. This workflow is path-filtered, so never mark ci-mobile as a required check (a pull request
+# that touches no mobile file would wait for it forever). Nothing here signs or ships a build: store submission is a founder step.
+on:
+  pull_request:
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "biome.json"
+      - "tsconfig.base.json"
+      - ".node-version"
+      - ".github/workflows/ci-mobile.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/ci-mobile.yml"
+  schedule:
+    - cron: "43 3 * * 3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-mobile-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - run: npm install -g pnpm@11.28.8
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @app/mobile lint
+      - run: pnpm --filter @app/mobile typecheck
+      - run: pnpm --filter @app/mobile test
+
+  android-build:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm install -g pnpm@11.28.8
+      - run: pnpm install --frozen-lockfile
+      - name: Generate the native project (never committed)
+        run: pnpm --filter @app/mobile exec expo prebuild --no-install --platform android
+      - name: Debug build (Gradle wrapper; the Android SDK is on the runner image)
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+  ios-build:
+    needs: checks
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - run: npm install -g pnpm@11.28.8
+      - run: pnpm install --frozen-lockfile
+      - name: Generate the native project (runs pod install; never committed)
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios
+      - name: Unsigned simulator build
+        working-directory: apps/mobile
+        run: |
+          workspace=$(printf '%s\n' ios/*.xcworkspace | head -n 1)
+          scheme=$(basename "$workspace" .xcworkspace)
+          xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

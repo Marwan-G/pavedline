@@ -24,8 +24,6 @@ echo "== add claude-plugins-official marketplace"
 claude plugin marketplace add anthropics/claude-plugins-official
 echo "== add knowledge-work-plugins marketplace"
 claude plugin marketplace add anthropics/knowledge-work-plugins
-echo "== add ui-ux-pro-max-skill marketplace"
-claude plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill
 echo "== marketplaces known"
 claude plugin marketplace list || true
 echo "== install pavedline"
@@ -49,7 +47,6 @@ print("OK: pavedline@pavedline installed and enabled")
 for dep in ("superpowers@claude-plugins-official",
             "mattpocock-skills@claude-plugins-official",
             "product-management@knowledge-work-plugins",
-            "figma@claude-plugins-official",
-            "ui-ux-pro-max@ui-ux-pro-max-skill"):
+            "figma@claude-plugins-official"):
     print(("auto-installed: " if dep in found else "NOT installed:   ") + dep)
 PY

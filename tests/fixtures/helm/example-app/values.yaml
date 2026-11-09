@@ -1,0 +1,71 @@
+# Defaults shared by every environment. Per-environment files override them.
+priorityClassName: app-standard
+gateway:
+  name: example-gateway
+  namespace: gateway-system
+  sectionName: https
+
+workloads:
+  api:
+    image:
+      repository: registry.example.test/example/api
+      # local sets a tag; staging and production set a digest (CI writes it in the tag-bump commit)
+    port: 8000
+    replicas: 2
+    env:
+      LOG_LEVEL: info
+    envFromSecrets:
+      - example-api-runtime
+    extraEmptyDirs:
+      - name: cache
+        mountPath: /app/.cache
+    probes:
+      liveness:
+        path: /healthz
+      readiness:
+        path: /readyz
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 256Mi}
+    networkPolicy:
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: gateway-system
+          ports:
+            - port: 8000
+              protocol: TCP
+      egress:
+        - to:
+            - podSelector:
+                matchLabels:
+                  app: db
+          ports:
+            - port: 5432
+              protocol: TCP
+    route:
+      enabled: false
+    autoscaling:
+      enabled: false
+    migrations:
+      enabled: true
+      command: ["alembic"]
+      args: ["upgrade", "head"]
+      databaseUrlSecret:
+        name: example-db-owner
+        key: url
+  worker:
+    image:
+      repository: registry.example.test/example/worker
+    port: 8001
+    replicas: 1
+    command: ["python", "-m", "worker"]
+    probes:
+      liveness:
+        path: /healthz
+      readiness:
+        path: /readyz
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {cpu: 250m, memory: 256Mi}

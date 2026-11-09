@@ -1,0 +1,70 @@
+# pavedline-surface: web
+name: ci-web
+
+# The Next.js web app (apps/web). Lint, types, unit tests, generated-code and boundary checks, the production build and
+# Playwright + axe (WCAG 2.2 AA) on the standalone build on every pull request. The image is built, scanned, pushed and
+# its digest committed on a push to main only.
+# Runs on every pull request (no path filter), so it can be a required check.
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/image.yml"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "biome.json"
+      - "tsconfig.base.json"
+      - ".node-version"
+      - "scripts/web_boundary_check.py"
+      - "docs/api/openapi.yaml"
+      - "docs/design/tokens.json"
+      - ".github/workflows/ci-web.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-web-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      # Node 25 and later ship without corepack, so pnpm is installed from npm at the exact version of package.json.
+      - run: npm install -g pnpm@11.28.8
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r lint
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+      - name: The API client and the tokens are current
+        run: pnpm run check:generated
+      - run: python3 scripts/web_boundary_check.py
+      - run: pnpm --filter @app/web build
+      - name: Playwright + axe on the standalone build
+        run: |
+          pnpm --filter @app/web exec playwright install --with-deps chromium
+          pnpm --filter @app/web e2e
+
+  image:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/image.yml
+    with:
+      app: web
+      dockerfile: apps/web/Dockerfile
+      context: .

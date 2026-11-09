@@ -1,0 +1,6 @@
+apiVersion: v2
+name: postgres
+description: The product's PostgreSQL (CloudNativePG Cluster, PgBouncer Pooler, role hardening). Needs the CloudNativePG operator.
+type: application
+version: 0.1.0
+appVersion: "16"

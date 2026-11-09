@@ -1,0 +1,34 @@
+# Cluster add-ons: one Argo CD Application per folder under infra/k8s/addons/. Add-ons sync automatically and heal
+# drift. {{REPO_URL}} and {{REVISION}} are placeholders that stay in Git: deploy_local.sh renders them for the local
+# cluster, the cloud bootstrap renders them later; never commit filled values. The {{path}} forms are Argo CD's own.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: addons
+  namespace: argocd
+spec:
+  goTemplate: false
+  generators:
+    - git:
+        repoURL: '{{REPO_URL}}'
+        revision: '{{REVISION}}'
+        directories:
+          - path: infra/k8s/addons/*
+  template:
+    metadata:
+      name: 'addon-{{path.basename}}'
+    spec:
+      project: default
+      source:
+        repoURL: '{{REPO_URL}}'
+        targetRevision: '{{REVISION}}'
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

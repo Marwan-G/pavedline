@@ -1,0 +1,156 @@
+# pavedline-surface: api
+name: ci-api
+
+# The FastAPI service (services/api). Lint, format, types and import boundaries on every pull request; the DB tests
+# (pytest on a throwaway Postgres, then the RLS check and the contract check on the migrated database) at the MERGE
+# GATE: they run when a maintainer adds the label `ci:db` to a pull request (after review approves) and on every
+# push to main. The image is built, scanned, pushed and its digest committed on a push to main only.
+# Runs on every pull request (no path filter), so it can be a required check.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: [main]
+    paths:
+      - "services/api/**"
+      - "scripts/rls_check.py"
+      - "scripts/contract_check.py"
+      - "docs/api/openapi.yaml"
+      - ".github/workflows/ci-api.yml"
+      - ".github/workflows/image.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-api-${{ github.ref }}-${{ github.event.action == 'labeled' && 'db' || 'checks' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  UV_VERSION: "0.13.5"
+  # multi: row-level-security tenancy (default). single: a single-tenant product (decision 0002); step 6 sets this
+  # and the two steps named "RLS check" and "Leak fixture" then print "not applicable" instead of running.
+  PAVEDLINE_TENANCY: multi
+
+jobs:
+  checks:
+    if: github.event.action != 'labeled'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - run: uv sync --frozen
+      - run: uv run ruff check . ../../scripts
+      - run: uv run ruff format --check . ../../scripts
+      - run: uv run pyright
+      - run: uv run lint-imports
+
+  db-tests:
+    if: >-
+      github.event_name == 'push'
+      || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci:db'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        # Same major as the CloudNativePG image of infra/k8s/apps/postgres (16.x), by digest; built 2026-08-05 (at least 14 days old).
+        image: postgres:16.14@sha256:95206741a5b214807675e14165369d05b93a9cf692223b616d07cca227e74b0b
+        env:
+          POSTGRES_PASSWORD: throwaway
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      # An administrator URL of this THROWAWAY server: the tests create their own databases and roles on it.
+      DATABASE_URL: postgresql://postgres:throwaway@127.0.0.1:5432/postgres
+      DATABASE_OWNER_URL: postgresql://app_owner:owner-pw@127.0.0.1:5432/checks
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # On a pull request the schema checks and the tenancy setting are the BASE branch's: a pull request cannot
+      # disable or weaken the check it is judged by. On a push to main the checked-out copies are the base.
+      - name: Use the base branch's schema checks and tenancy setting
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          for f in scripts/rls_check.py services/api/db/global_tables.txt; do
+            if git cat-file -e "$BASE_SHA:$f" 2>/dev/null; then
+              git show "$BASE_SHA:$f" > "$f"
+            fi
+          done
+          tenancy="$(git show "$BASE_SHA:.github/workflows/ci-api.yml" | sed -n 's/^  PAVEDLINE_TENANCY: *\(multi\|single\) *$/\1/p' | head -n 1)"
+          [ -n "$tenancy" ] || { echo "no PAVEDLINE_TENANCY in the base branch's ci-api.yml" >&2; exit 1; }
+          echo "PAVEDLINE_TENANCY=$tenancy" >> "$GITHUB_ENV"
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - run: uv sync --frozen
+        working-directory: services/api
+      # The cross-tenant leak fixture runs in its own step below, so a single-tenant product can skip it by name.
+      - name: Tests (pytest)
+        working-directory: services/api
+        run: uv run pytest -q --ignore=tests/test_tenant_leak.py
+      - name: Migrate a database for the schema checks
+        working-directory: services/api
+        run: |
+          uv run python - <<'PY'
+          import os
+          import pathlib
+
+          import psycopg
+          from psycopg import sql
+
+          roles = pathlib.Path("db/roles.sql").read_text()
+          admin = os.environ["DATABASE_URL"]
+          with psycopg.connect(admin, autocommit=True) as conn:
+              conn.execute(roles)
+              conn.execute(sql.SQL("ALTER ROLE app_owner PASSWORD 'owner-pw'"))
+              conn.execute(sql.SQL("CREATE DATABASE checks OWNER app_owner"))
+          with psycopg.connect(admin.rsplit("/", 1)[0] + "/checks", autocommit=True) as conn:
+              conn.execute(roles)
+          PY
+          uv run alembic upgrade head
+      - name: RLS check
+        run: |
+          if [ "$PAVEDLINE_TENANCY" = "single" ]; then
+            echo "RLS check: not applicable (decision 0002)"
+          else
+            uv run --project services/api python scripts/rls_check.py --database-url "$DATABASE_OWNER_URL" \
+              --global-tables services/api/db/global_tables.txt
+          fi
+      - name: Leak fixture
+        working-directory: services/api
+        run: |
+          if [ "$PAVEDLINE_TENANCY" = "single" ]; then
+            echo "Leak fixture: not applicable (decision 0002)"
+          else
+            uv run pytest -q tests/test_tenant_leak.py
+          fi
+      - name: Contract check
+        run: uv run --project services/api python scripts/contract_check.py --app app.main:app --contract docs/api/openapi.yaml
+
+  image:
+    needs: [checks, db-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/image.yml
+    with:
+      app: api
+      dockerfile: services/api/Dockerfile
+      context: services/api
