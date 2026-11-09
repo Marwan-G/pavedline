@@ -58,6 +58,32 @@ class LocalClusterStatic(unittest.TestCase):
         for path in SCRIPTS + [LC / "versions.env", LC / "kind-config.yaml.tpl", LC / "manifests/cnpg-smoke-cluster.yaml"]:
             self.assertNotRegex(path.read_text(), r"(?i)[:=@]latest\b", str(path))
 
+    def test_backup_pins_are_exact_and_by_digest(self):
+        v = env_values()
+        self.assertEqual(v["CERT_MANAGER_CHART"], "oci://quay.io/jetstack/charts/cert-manager")
+        self.assertRegex(v["CERT_MANAGER_CHART_VERSION"], r"^v\d+\.\d+\.\d+$")
+        self.assertRegex(v["CERT_MANAGER_CHART_DIGEST"], r"^sha256:[0-9a-f]{64}$")
+        self.assertRegex(v["BARMAN_PLUGIN_VERSION"], r"^v\d+\.\d+\.\d+$")
+        self.assertRegex(v["BARMAN_PLUGIN_SHA256"], r"^[0-9a-f]{64}$")
+        for key, repo in (("BARMAN_PLUGIN_IMAGE", "ghcr.io/cloudnative-pg/plugin-barman-cloud"),
+                          ("BARMAN_SIDECAR_IMAGE", "ghcr.io/cloudnative-pg/plugin-barman-cloud-sidecar"),
+                          ("SEAWEEDFS_IMAGE", "chrislusf/seaweedfs")):
+            self.assertRegex(v[key], r"^" + re.escape(repo) + r":[0-9v][^@\s]*@sha256:[0-9a-f]{64}$", key)
+        self.assertTrue(v["BARMAN_PLUGIN_IMAGE"].split(":")[1].startswith(v["BARMAN_PLUGIN_VERSION"]))
+        self.assertTrue(v["BARMAN_SIDECAR_IMAGE"].split(":")[1].startswith(v["BARMAN_PLUGIN_VERSION"]))
+
+    def test_full_flag_installs_the_backup_stack_from_the_pins(self):
+        up = (LC / "up.sh").read_text()
+        for needle in ("--full", "FULL=1", '"${CERT_MANAGER_CHART}:${CERT_MANAGER_CHART_VERSION}@${CERT_MANAGER_CHART_DIGEST}"',
+                       "crds.enabled=true", "BARMAN_PLUGIN_SHA256", "SIDECAR_IMAGE", "${BARMAN_PLUGIN_IMAGE}", "${SEAWEEDFS_IMAGE}",
+                       "seaweedfs-s3"):
+            self.assertIn(needle, up, needle)
+        self.assertNotIn("openssl rand", up.split("if [ \"$FULL\" = 1 ]", 1)[0])
+        self.assertIn("--full", (LC / "verify.sh").read_text())
+        sw = (LC / "manifests/seaweedfs.yaml").read_text()
+        self.assertIn("@SEAWEEDFS_IMAGE@", sw)
+        self.assertNotRegex(sw, r"(?i)accessKey|secretKey")  # the key is generated into a Secret, never written here
+
     def test_strict_mode(self):
         for p in SCRIPTS:
             lines = [l for l in p.read_text().splitlines()]
@@ -126,6 +152,8 @@ class LocalClusterStatic(unittest.TestCase):
         conf = json.loads((ROOT / "renovate.json").read_text())
         found = {}
         for m in conf["customManagers"]:
+            if "versions" not in " ".join(m["managerFilePatterns"]):
+                continue  # another env file (scripts/gitleaks.env) has its own test in test_ci_templates
             for pattern in m["matchStrings"]:
                 py = re.sub(r"\(\?<(\w+)>", r"(?P<\1>", pattern)  # JS named groups -> Python
                 hit = re.search(py, env_text)
@@ -242,7 +270,8 @@ class LocalClusterStatic(unittest.TestCase):
         matchers = [p for m in conf["customManagers"] for p in m["matchStrings"]]
         for name in env_values():
             if name in ("REGISTRY_PORT", "HELM_MIN_VERSION", "GATEWAY_CRDS_SHA256",
-                        "ENVOY_GATEWAY_CHART_DIGEST", "ARGOCD_CHART_DIGEST", "CNPG_CHART_DIGEST"):
+                        "ENVOY_GATEWAY_CHART_DIGEST", "ARGOCD_CHART_DIGEST", "CNPG_CHART_DIGEST",
+                        "CERT_MANAGER_CHART_DIGEST", "BARMAN_PLUGIN_SHA256"):
                 continue  # not a pin of its own: a port, a floor, a derived tag, or the digest of a pin matched with its version
             self.assertTrue(any(name in p for p in matchers), f"{name} is not matched by any Renovate customManager")
         for chart in ("ENVOY_GATEWAY",):
@@ -252,6 +281,8 @@ class LocalClusterStatic(unittest.TestCase):
         # the regexes match the real file
         env_text = (LC / "versions.env").read_text()
         for m in conf["customManagers"]:
+            if "versions" not in " ".join(m["managerFilePatterns"]):
+                continue
             for pattern in m["matchStrings"]:
                 self.assertIsNotNone(re.search(re.sub(r"\(\?<(\w+)>", r"(?P<\1>", pattern), env_text), m["description"])
 

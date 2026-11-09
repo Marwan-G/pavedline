@@ -2,3 +2,4 @@
 # rls_check.py fails on any table that is neither tenant-safe nor listed here.
 tenants  # the tenant directory itself: maps the identity provider's organisation id to our tenant id
 alembic_version  # migration bookkeeping, owned by the owner role
+webhook_events  # replay protection for signed webhooks: provider + event id only, claimed before any tenant is known

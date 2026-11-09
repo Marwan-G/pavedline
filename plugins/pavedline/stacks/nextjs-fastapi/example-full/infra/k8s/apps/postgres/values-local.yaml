@@ -1,0 +1,11 @@
+# Used only by scripts/starter_check.sh --stage full (a product never receives it): the production shape of the
+# database on the local cluster. Three instances (a one-node kind cluster cannot honour required anti-affinity, so it is
+# preferred here; staging and production keep required) and backups to the local S3 store that `up.sh --full` installs.
+cluster:
+  instances: 3
+  antiAffinity: preferred
+backup:
+  enabled: true
+  objectStore:
+    destinationPath: s3://pavedline-backups/db
+    endpointURL: http://seaweedfs-s3.seaweedfs.svc.cluster.local:8333

@@ -119,6 +119,16 @@ class AgentTests(unittest.TestCase):
         for n in ("builder", "adversary", "deployer"):
             self.assertLessEqual(len(load(n)[1].splitlines()), 40, n)
 
+    def test_growth_agent(self):
+        self.assertEqual(allowed("growth"), {"Read", "Write", "Edit", "Grep", "Glob", "WebFetch", "WebSearch", "Skill"})
+        body = load("growth")[1]
+        for s in ("never pushes", "never merges", "never deploys", "founder's approval quoted",
+                  "never creates an account", "GROW DUE", "Search Console"):
+            self.assertIn(s, body)
+        self.assertRegex(body.lower(), r"first line.*model that ran")
+        self.assertNotIn("haiku", load("growth")[0]["model"])
+        self.assertLessEqual(len(body.splitlines()), 40)
+
     def test_incomplete_check_is_a_reject(self):
         for n in ("reviewer", "design-verifier"):
             body = load(n)[1]

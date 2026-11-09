@@ -153,6 +153,47 @@ class ClusterGuardTests(unittest.TestCase):
     def test_unbalanced_quotes_still_blocks(self):
         self.blocked("kubectl delete ns 'x")
 
+    def test_bootstrap_with_yes_needs_a_kind_context(self):
+        for c in ["bash bootstrap.sh --context prod --repo-url u --yes",
+                  "sh infra/profiles/byo-kubernetes/bootstrap.sh --context prod --repo-url u --yes",
+                  "FOO=1 bash ./bootstrap.sh --repo-url u --yes",
+                  "bootstrap.sh --context kind-other --repo-url u --yes",
+                  "bootstrap.sh --context=prod --repo-url u --yes"]:
+            with self.subTest(c=c):
+                self.blocked(c, "kind-pavedline-demo")
+        self.allowed("bash bootstrap.sh --context kind-pavedline-byo --repo-url u --yes")
+        self.allowed("bash bootstrap.sh --context prod --repo-url u")
+        self.allowed("bash bootstrap.sh --context prod --repo-url u --print")
+
+    def test_mutating_tofu_and_terraform_blocked(self):
+        for c in ["tofu apply", "terraform apply -auto-approve", "terraform state rm x.y",
+                  "tofu destroy", "terraform import a.b id", "tofu taint a.b", "tofu untaint a.b",
+                  "terraform state mv a b", "terraform state push f", "tofu state replace-provider a b",
+                  "terraform force-unlock id", "tofu workspace delete x",
+                  "cd infra && terraform -chdir=x apply", "env X=1 tofu apply"]:
+            with self.subTest(c=c):
+                self.blocked(c, "kind-pavedline-demo")
+                self.assertIn("the founder runs this (step 12)", run(c, "kind-pavedline-demo").stderr)
+
+    def test_read_only_tofu_allowed(self):
+        for c in ["tofu init", "tofu validate", "tofu fmt -check", "tofu plan -out p", "terraform show p",
+                  "tofu providers", "tofu version", "terraform output", "tofu graph",
+                  "terraform state list", "tofu workspace list"]:
+            with self.subTest(c=c):
+                self.allowed(c)
+
+    def test_more_writing_kubectl_verbs_blocked(self):
+        for c in ["kubectl --context prod cp a b", "kubectl cp a pod:/b", "kubectl replace -f x",
+                  "kubectl rollout restart deploy/x", "kubectl set image d/x c=i", "kubectl debug pod/x",
+                  "kubectl taint node n k=v:NoSchedule", "kubectl drain n", "kubectl cordon n",
+                  "kubectl uncordon n", "kubectl label ns x a=b", "kubectl annotate ns x a=b",
+                  "kubectl edit cm x", "kubectl apply -k ."]:
+            with self.subTest(c=c):
+                self.blocked(c)
+
+    def test_restore_drill_printing_form_allowed(self):
+        self.allowed("scripts/restore_drill.sh --cloud-context prod --yes-i-am-the-founder")
+
 
 if __name__ == "__main__":
     unittest.main()

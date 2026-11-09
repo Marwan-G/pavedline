@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
 # Create the local kind cluster pavedline-<project>, a local registry, a local git server, Argo CD, the CloudNativePG
-# operator, the Gateway API CRDs and Envoy Gateway.
+# operator, the Gateway API CRDs and Envoy Gateway. With --full also what database backups need: cert-manager, the
+# Barman Cloud plugin and a local S3 store (SeaweedFS, namespace seaweedfs). With --fakes also the local email and SMS
+# fakes (Mailpit and an SMS sink, namespace fakes), for the integration wave.
 set -euo pipefail
 
-usage() { echo "usage: up.sh <project>" >&2; exit 2; }
-[ "$#" -eq 1 ] || usage
-PROJECT="$1"
+usage() { echo "usage: up.sh <project> [--full] [--fakes]" >&2; exit 2; }
+FULL=0
+FAKES=0
+PROJECT=""
+for arg in "$@"; do
+  case "$arg" in
+    --full) FULL=1 ;;
+    --fakes) FAKES=1 ;;
+    -*) usage ;;
+    *) [ -z "$PROJECT" ] || usage; PROJECT="$arg" ;;
+  esac
+done
+[ -n "$PROJECT" ] || usage
 if ! [[ "$PROJECT" =~ ^[a-z0-9]([-a-z0-9]{0,40}[a-z0-9])?$ ]]; then
   echo "error: project must be a lowercase DNS label (a-z, 0-9, -), got: $PROJECT" >&2
   exit 2
@@ -132,6 +144,65 @@ retry kubectl --context "$CTX" apply --server-side -f "$CHART_DIR/gateway-helm/c
 retry helm upgrade --install eg "${ENVOY_GATEWAY_CHART}:${ENVOY_GATEWAY_CHART_VERSION}@${ENVOY_GATEWAY_CHART_DIGEST}" \
   --kube-context "$CTX" --namespace envoy-gateway-system --create-namespace --set crds.enabled=false --wait --timeout 10m
 
+# 7b. --full: what backups need. cert-manager (the plugin's certificates), the Barman Cloud plugin in cnpg-system, and
+# the local S3 store. Every pin is in versions.env; the plugin manifest is checked against its sha256 and both of its
+# images are then moved to their digests.
+if [ "$FULL" = 1 ]; then
+  retry helm upgrade --install cert-manager "${CERT_MANAGER_CHART}:${CERT_MANAGER_CHART_VERSION}@${CERT_MANAGER_CHART_DIGEST}" \
+    --kube-context "$CTX" --namespace cert-manager --create-namespace --set crds.enabled=true --wait --timeout 10m
+
+  PLUGIN_FILE="$(mktemp)"
+  trap 'rm -rf "${CONFIG:-}" "${CRD_FILE:-}" "${CHART_DIR:-}" "$PLUGIN_FILE"' EXIT
+  retry curl --fail --silent --show-error --location -o "$PLUGIN_FILE" \
+    "https://github.com/cloudnative-pg/plugin-barman-cloud/releases/download/${BARMAN_PLUGIN_VERSION}/manifest.yaml"
+  if command -v sha256sum >/dev/null 2>&1; then
+    got="$(sha256sum "$PLUGIN_FILE" | cut -d' ' -f1)"
+  else
+    got="$(shasum -a 256 "$PLUGIN_FILE" | cut -d' ' -f1)"
+  fi
+  [ "$got" = "$BARMAN_PLUGIN_SHA256" ] || { echo "error: the Barman Cloud plugin ${BARMAN_PLUGIN_VERSION} manifest has sha256 $got, expected $BARMAN_PLUGIN_SHA256" >&2; exit 1; }
+  retry kubectl --context "$CTX" apply --server-side --force-conflicts -f "$PLUGIN_FILE"
+  # The manifest names its images by tag; move them to the pinned digests (the sidecar image is read from a Secret).
+  sidecar_secret="$(kubectl --context "$CTX" -n cnpg-system get deployment barman-cloud -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="SIDECAR_IMAGE")].valueFrom.secretKeyRef.name}')"
+  [ -n "$sidecar_secret" ] || { echo "error: could not find the SIDECAR_IMAGE Secret of deployment barman-cloud" >&2; exit 1; }
+  kubectl --context "$CTX" -n cnpg-system patch secret "$sidecar_secret" --type merge \
+    -p "{\"stringData\":{\"SIDECAR_IMAGE\":\"${BARMAN_SIDECAR_IMAGE}\"}}"
+  kubectl --context "$CTX" -n cnpg-system set image deployment/barman-cloud "barman-cloud=${BARMAN_PLUGIN_IMAGE}"
+  kubectl --context "$CTX" -n cnpg-system rollout status deployment/barman-cloud --timeout=300s
+
+  # The S3 store. Its throwaway key is generated once (an existing Secret is kept) and never printed or committed.
+  kubectl --context "$CTX" create namespace seaweedfs --dry-run=client -o yaml | kubectl --context "$CTX" apply -f -
+  if ! kubectl --context "$CTX" -n seaweedfs get secret seaweedfs-s3 >/dev/null 2>&1; then
+    KEYDIR="$(mktemp -d)"
+    trap 'rm -rf "${CONFIG:-}" "${CRD_FILE:-}" "${CHART_DIR:-}" "${PLUGIN_FILE:-}" "$KEYDIR"' EXIT
+    printf '%s' "$(openssl rand -hex 10)" > "$KEYDIR/access-key-id"
+    printf '%s' "$(openssl rand -hex 24)" > "$KEYDIR/secret-access-key"
+    printf '{"identities":[{"name":"backups","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' \
+      "$(cat "$KEYDIR/access-key-id")" "$(cat "$KEYDIR/secret-access-key")" > "$KEYDIR/s3.json"
+    kubectl --context "$CTX" -n seaweedfs create secret generic seaweedfs-s3 \
+      --from-file=access-key-id="$KEYDIR/access-key-id" --from-file=secret-access-key="$KEYDIR/secret-access-key" --from-file=s3.json="$KEYDIR/s3.json"
+  fi
+  SW_FILE="$(mktemp)"
+  sed "s|@SEAWEEDFS_IMAGE@|${SEAWEEDFS_IMAGE}|g" "$HERE/manifests/seaweedfs.yaml" > "$SW_FILE"
+  kubectl --context "$CTX" apply -f "$SW_FILE"
+  rm -f "$SW_FILE"
+  kubectl --context "$CTX" -n seaweedfs rollout status deployment/seaweedfs --timeout=300s
+fi
+
+# 7c. --fakes: Mailpit and the SMS sink, local only (namespace fakes). The sink's code travels as a ConfigMap and runs on
+# the pinned python image; both images are pinned by digest in versions.env.
+if [ "$FAKES" = 1 ]; then
+  FK_FILE="$(mktemp)"
+  sed -e "s|@MAILPIT_IMAGE@|${MAILPIT_IMAGE}|g" -e "s|@SMS_SINK_IMAGE@|${SMS_SINK_IMAGE}|g" "$HERE/manifests/fakes.yaml" > "$FK_FILE"
+  kubectl --context "$CTX" apply -f "$FK_FILE"
+  rm -f "$FK_FILE"
+  kubectl --context "$CTX" -n fakes create configmap sms-sink --from-file=sink.py="$HERE/sms-sink/sink.py" --dry-run=client -o yaml \
+    | kubectl --context "$CTX" apply -f -
+  kubectl --context "$CTX" -n fakes rollout restart deployment/sms-sink >/dev/null
+  kubectl --context "$CTX" -n fakes rollout status deployment/mailpit --timeout=300s
+  kubectl --context "$CTX" -n fakes rollout status deployment/sms-sink --timeout=300s
+fi
+
 # 8. The local git server: Argo CD syncs from git://kind-git:9418/<project>.git. Built from the pinned base image; the
 # daemon is read-only and publishes no host port (pushes go through push.sh, `docker exec`). The container is replaced
 # when it is not running or was built from a different base image than the pin.
@@ -144,4 +215,6 @@ if [ "$(docker inspect -f '{{.State.Running}}' "$GIT_NAME" 2>/dev/null || true)"
 fi
 docker exec "$GIT_NAME" sh -c "[ -d /srv/git/${PROJECT}.git ] || git init --bare --initial-branch=main /srv/git/${PROJECT}.git"
 
+if [ "$FULL" = 1 ]; then echo "full: cert-manager, the Barman Cloud plugin ${BARMAN_PLUGIN_VERSION} and the local S3 store (seaweedfs-s3.seaweedfs:8333) are installed; run the product's scripts/local_secrets.sh ${PROJECT} to create db-backup-s3"; fi
+if [ "$FAKES" = 1 ]; then echo "fakes: Mailpit smtp mailpit.fakes.svc.cluster.local:1025, UI/API http://mail.localtest.me:8080; SMS sink http://sms-sink.fakes.svc.cluster.local, http://sms.localtest.me:8080/messages (the product's routes and the Gateway must be up for the host names)"; fi
 echo "ready: context $CTX, registry localhost:${REGISTRY_PORT}, port 8080->Gateway :80, git git://kind-git:9418/${PROJECT}.git (in cluster; push with push.sh ${PROJECT})"

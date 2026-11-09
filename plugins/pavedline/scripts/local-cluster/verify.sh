@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
 # Verify the local cluster: Argo CD, the CNPG operator and Envoy Gateway are Available; a 1-instance Postgres becomes
-# Ready; the shared Gateway is Programmed and an HTTPRoute answers on 127.0.0.1:8080; Argo CD syncs from kind-git.
+# Ready (with --full: also cert-manager, the Barman Cloud plugin and the local S3 store are Available); the shared Gateway is Programmed and an HTTPRoute answers on 127.0.0.1:8080; Argo CD syncs from kind-git.
 set -euo pipefail
 
-[ "$#" -eq 1 ] || { echo "usage: verify.sh <project>" >&2; exit 2; }
-PROJECT="$1"
+FULL=0
+PROJECT=""
+for arg in "$@"; do
+  case "$arg" in
+    --full) FULL=1 ;;
+    -*) echo "usage: verify.sh <project> [--full]" >&2; exit 2 ;;
+    *) [ -z "$PROJECT" ] || { echo "usage: verify.sh <project> [--full]" >&2; exit 2; }; PROJECT="$arg" ;;
+  esac
+done
+[ -n "$PROJECT" ] || { echo "usage: verify.sh <project> [--full]" >&2; exit 2; }
 if ! [[ "$PROJECT" =~ ^[a-z0-9]([-a-z0-9]{0,40}[a-z0-9])?$ ]]; then
   echo "error: project must be a lowercase DNS label (a-z, 0-9, -), got: $PROJECT" >&2
   exit 2
@@ -27,6 +35,13 @@ kubectl --context "$CTX" -n argocd wait --for=condition=Available deployment/arg
   || fail "argocd-server is not Available in $CTX"
 kubectl --context "$CTX" -n cnpg-system wait --for=condition=Available deployment/cnpg-cloudnative-pg --timeout=180s \
   || fail "the CloudNativePG controller is not Available in $CTX"
+
+if [ "$FULL" = 1 ]; then
+  for target in cert-manager/cert-manager cert-manager/cert-manager-webhook cnpg-system/barman-cloud seaweedfs/seaweedfs; do
+    kubectl --context "$CTX" -n "${target%%/*}" wait --for=condition=Available "deployment/${target##*/}" --timeout=180s \
+      || fail "deployment ${target} is not Available in $CTX (up.sh ${PROJECT} --full installs it)"
+  done
+fi
 
 kubectl --context "$CTX" apply -f "$SMOKE" || fail "could not apply the smoke Cluster"
 if ! kubectl --context "$CTX" wait --for=condition=Ready cluster/smoke --timeout=600s; then

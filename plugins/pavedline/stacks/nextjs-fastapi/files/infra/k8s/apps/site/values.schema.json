@@ -64,7 +64,20 @@
         "command": {"type": "array", "items": {"type": "string"}},
         "args": {"type": "array", "items": {"type": "string"}},
         "env": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean"]}},
-        "envFromSecrets": {"type": "array", "items": {"type": "string"}},
+        "envFromSecrets": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"type": "string"},
+              {
+                "type": "object",
+                "required": ["name"],
+                "additionalProperties": false,
+                "properties": {"name": {"type": "string"}, "optional": {"type": "boolean"}}
+              }
+            ]
+          }
+        },
         "secretEnv": {
           "type": "array",
           "items": {

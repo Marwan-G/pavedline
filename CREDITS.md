@@ -13,6 +13,7 @@ only** (read for inspiration, no code or text used) · **used by templates or CI
 | [superpowers](https://github.com/obra/superpowers) | Jesse Vincent | MIT | **Installed** (`plugin.json` dependency): build discipline |
 | [mattpocock-skills](https://github.com/mattpocock/skills) | Matt Pocock | MIT | **Installed** (`plugin.json` dependency): grilling, to-tickets, retro |
 | [product-management](https://github.com/anthropics/knowledge-work-plugins) (from knowledge-work-plugins) | Anthropic | Apache-2.0 | **Installed** (`plugin.json` dependency): competitive brief, research synthesis |
+| [marketing](https://github.com/anthropics/knowledge-work-plugins) (from knowledge-work-plugins) | Anthropic | Apache-2.0 | **Installed** (optional plugin, doctor lists it): `seo-audit`, `content-creation`, `draft-content`, `performance-report` for the Grow loop |
 | [@playwright/mcp](https://github.com/microsoft/playwright-mcp) | Microsoft | Apache-2.0 | **Shipped** in the plugin's `.mcp.json`, pinned: competitor research in a browser |
 | [crawl4ai](https://github.com/unclecode/crawl4ai) | unclecode | Apache-2.0 (attribution required) | **Optional**: bulk crawling, only if you have it installed |
 | [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | nextlevelbuilder | MIT | **Optional**: step 7 style reference, used only if installed, never copied; `doctor` lists it as optional |
@@ -34,8 +35,18 @@ only** (read for inspiration, no code or text used) · **used by templates or CI
 | [Helm](https://github.com/helm/helm) | Helm contributors | Apache-2.0 | **Used by the local cluster scripts and CI**: installs the add-ons |
 | [Argo CD](https://github.com/argoproj/argo-cd) | Argo Project | Apache-2.0 | **Used by the local cluster scripts and templates**: GitOps |
 | [CloudNativePG](https://github.com/cloudnative-pg/cloudnative-pg) | CloudNativePG contributors | Apache-2.0 | **Used by the local cluster scripts and templates**: Postgres on Kubernetes |
+| [CloudNativePG Barman Cloud plugin](https://github.com/cloudnative-pg/plugin-barman-cloud) | CloudNativePG contributors | Apache-2.0 (checked 2026-11-09) | **Used by templates and CI**: database backups and restores, installed by the cluster scripts at a pinned release |
+| [cert-manager](https://github.com/cert-manager/cert-manager) | cert-manager contributors | Apache-2.0 (checked 2026-11-09) | **Used by templates and the cluster scripts**: the Barman Cloud plugin's certificates, pinned chart |
+| [SeaweedFS](https://github.com/seaweedfs/seaweedfs) | SeaweedFS contributors | Apache-2.0 (checked 2026-11-09) | **Used by the local cluster scripts** (`up.sh --full`): a local S3 store for backup tests, pinned image |
+| [Mailpit](https://github.com/axllent/mailpit) | Ralph Slooten | MIT (checked 2026-11-09) | **Used by the local cluster scripts** (`up.sh --fakes`): local email inbox for the integration wave, pinned image |
+| [cloudflared](https://github.com/cloudflare/cloudflared) | Cloudflare | Apache-2.0 (checked 2026-11-09) | **Used by the local cluster scripts and the bring-your-own profile**: quick tunnel for webhook tests and the optional production tunnel, pinned image |
+| [OpenTofu](https://github.com/opentofu/opentofu) | OpenTofu contributors | MPL-2.0 (checked 2026-11-09) | **Used by CI** to validate the OCI profile; you may run Terraform instead |
+| [terraform-provider-oci](https://github.com/oracle/terraform-provider-oci) | Oracle | MPL-2.0 (checked 2026-11-09) | **Used by the OCI profile**: pinned provider, downloaded by `tofu init`, never copied |
+| [terraform-provider-kubernetes](https://github.com/hashicorp/terraform-provider-kubernetes) | HashiCorp | MPL-2.0 (checked 2026-11-09) | **Used by the OCI profile**: pinned provider, downloaded by `tofu init`, never copied |
+| [Stripe CLI](https://github.com/stripe/stripe-cli) | Stripe | Apache-2.0 (checked 2026-11-09) | **Optional**: `stripe listen` forwards test webhooks in the integration wave; not installed by Pavedline |
+| [Svix webhook format](https://github.com/svix/svix-webhooks) | Svix | MIT (checked 2026-11-09) | **Ideas only**: the signature format is documented by Svix; the checker in the stack pack is written for Pavedline and copies no Svix code |
 
-Trivy, Checkov and ZAP (all Apache-2.0) are planned for the v0.3 security scanners and are not used in v0.1.
+Terraform (BUSL-1.1) is not required: the OCI profile's plain files work with either CLI. Trivy, Checkov and ZAP (all Apache-2.0) are planned for the v0.3 security scanners and are not used in v0.1.
 
 Thank you to every maintainer above. If a row is wrong, or you would like a credit changed or removed, open an
 issue.

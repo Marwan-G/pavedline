@@ -76,3 +76,15 @@ A product that renders user-generated content moves to nonces (per-request rende
 **Exact versions.** `.npmrc` sets `save-exact=true`, so `pnpm add` writes exact versions (the pack's rule); keep
 `minimumReleaseAge` in `pnpm-workspace.yaml`.
 <!-- pavedline-end -->
+
+<!-- pavedline-begin: api -->
+**Backups and the restore drill (local).** The database ships with backups: WAL archiving and a daily base backup
+through the Barman Cloud plugin, switched on by `backup.enabled`. Staging and production ship it `false` with placeholder endpoint and bucket; step 12 fills
+them in, creates the `db-backup-s3` Secret and turns it on, and the chart refuses to render enabled backups that still
+point at a placeholder. To try them on kind, create the cluster with `scripts/local-cluster/up.sh <project> --full`
+(cert-manager, the plugin and a local S3 store), run `scripts/local_secrets.sh <project>` (it copies the store's throwaway key
+into `db-backup-s3`), and deploy with `backup.enabled: true` and three instances in `infra/k8s/apps/postgres/values-local.yaml`
+(`cluster.antiAffinity: preferred` on a one-node cluster). Then `scripts/restore_drill.sh <project>` writes a marker row, takes a
+backup, restores it into a new cluster `db-restore`, reads the marker back, deletes the restore cluster and prints
+`RESTORE DRILL PASS` (exit 0) or `RESTORE DRILL FAIL` (exit 1). It refuses any context that is not `kind-pavedline-*`.
+<!-- pavedline-end -->

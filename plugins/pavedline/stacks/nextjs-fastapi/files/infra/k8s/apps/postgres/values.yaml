@@ -1,15 +1,24 @@
 # Shared by every environment; values-<environment>.yaml overrides it. No credential lives in this chart: the three role
 # passwords are Secrets named below (locally scripts/local_secrets.sh creates them; in the cloud the vault does, PR 3).
 
-# Postgres 16 (the major the service's tests run against). Pinned by tag AND digest (the multi-arch index; linux/arm64
-# and linux/amd64): 16.15 built 2026-10-19. Facts and date: skills/fastapi-service/references/sources.md.
+# The PostgreSQL major comes from the product's database decision: apply_stack.py --postgres-major N writes the image
+# the pack pins for that major (pack.yaml `postgres:`). Pinned by tag AND digest (the multi-arch index; linux/arm64
+# and linux/amd64). The default below is 16.15 built 2026-10-19. Facts and dates: skills/fastapi-service/references/sources.md.
 image: ghcr.io/cloudnative-pg/postgresql:16.15-202610190958-standard-trixie@sha256:f105e137d731f6ac4f69667383f2373345ce8b72dadcc10ab6d385a7a32d6e7f
 
 cluster:
   name: db                 # services db-rw (direct, for migrations) and db-ro; the pooler is db-pooler-rw
   database: app            # owned by app_owner
   instances: 1
+  # required: no two instances on one node (production). A one-node kind cluster cannot satisfy it, so the local full
+  # check sets preferred; never set preferred in staging or production.
+  antiAffinity: required
   priorityClassName: app-critical
+  # Where the instances may run: empty by default. On a cloud profile with a dedicated, tainted data pool set both to
+  # that pool (the OCI profile's is nodeSelector workload: data and a workload=data:NoSchedule toleration), or the
+  # instances stay Pending. Rendered into the Cluster's spec.affinity.
+  nodeSelector: {}
+  tolerations: []
   storage:
     size: 1Gi
   resources:
@@ -25,6 +34,9 @@ secrets:
 pooler:
   name: db-pooler-rw
   instances: 1
+  # PgBouncer, pinned by tag AND digest (multi-arch index): 1.26.1 built 2026-10-22. The operator's own default is not
+  # used, so the supply chain does not move with the operator version. Facts and date: sources.md.
+  image: ghcr.io/cloudnative-pg/pgbouncer:1.26.1-202610221428-trixie@sha256:4bc1a2f2310e9ca5b3211e72edab97b1e1c2370c36961c253a279a341d5d2ee6
   maxClientConn: "200"
   defaultPoolSize: "10"
 
@@ -35,3 +47,19 @@ networkPolicy:
     - namespace: api
       ports: [5432]
     - namespace: cnpg-system   # the operator reads instance status and drives the instances
+
+# Backups: continuous WAL archiving and scheduled base backups to S3-compatible storage through the Barman Cloud
+# CNPG-I plugin (the in-tree barmanObjectStore is deprecated and removed in CloudNativePG 1.32). Off by default and
+# locally; staging and production turn it on. The plugin and cert-manager must be installed with the operator.
+# The credentials Secret (keys access-key-id and secret-access-key) comes from the vault in the cloud and from
+# scripts/local_secrets.sh locally; nothing secret lives here.
+backup:
+  enabled: false
+  objectStore:
+    name: db-backups
+    destinationPath: ""     # s3://<bucket>/<path>
+    endpointURL: ""         # https://<s3 endpoint>
+    credentialsSecret: db-backup-s3
+    walCompression: gzip
+  schedule: "0 0 2 * * *"   # six fields (seconds first): every day at 02:00
+  retention: 30d            # [1-9][0-9]*[dwm]

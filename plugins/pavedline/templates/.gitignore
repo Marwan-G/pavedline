@@ -1,0 +1,8 @@
+# Slice worktrees (quality-gates builds each slice in .worktrees/<slice-id>)
+.worktrees/
+
+# Local environment and secrets
+.env.local
+
+# Editors and OS
+.DS_Store

@@ -193,6 +193,24 @@ class Neutral(unittest.TestCase):
         self.assertIn("versions.env", json.dumps(cfg["customManagers"]))
         self.assertGreaterEqual(len(cfg["customManagers"]), 7)
 
+    def test_pavedlines_own_renovate_json_tracks_the_gitleaks_pin_and_never_automerges_it(self):
+        cfg = json.loads(read(ROOT / "renovate.json"))
+        mgrs = [m for m in cfg["customManagers"] if "gitleaks" in json.dumps(m)]
+        self.assertEqual(len(mgrs), 1)
+        m = mgrs[0]
+        self.assertEqual(m["customType"], "regex")
+        self.assertEqual(m["datasourceTemplate"], "docker")
+        self.assertIn("gitleaks", " ".join(m["managerFilePatterns"]))
+        import re
+        line = [l for l in read(ROOT / "scripts/gitleaks.env").splitlines() if l.startswith("GITLEAKS_IMAGE=")][0]
+        hit = re.search(m["matchStrings"][0].replace("(?<", "(?P<"), line)
+        self.assertIsNotNone(hit)
+        self.assertEqual(hit.group("depName"), "ghcr.io/gitleaks/gitleaks")
+        self.assertRegex(hit.group("currentValue"), r"^v\d+\.\d+\.\d+$")
+        self.assertRegex(hit.group("currentDigest"), r"^sha256:[0-9a-f]{64}$")
+        rules = [r for r in cfg["packageRules"] if r.get("automerge") is False and "scripts/gitleaks.env" in r.get("matchFileNames", [])]
+        self.assertTrue(rules)
+
     def test_pavedlines_own_renovate_json_never_automerges_images_either(self):
         cfg = json.loads(read(ROOT / "renovate.json"))
         rules = cfg["packageRules"]

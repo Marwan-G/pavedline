@@ -12,10 +12,16 @@ class CiDownloads(unittest.TestCase):
     def setUp(self):
         self.ci = CI.read_text()
 
-    def test_gitleaks_runs_from_its_official_image_pinned_by_digest(self):
-        self.assertRegex(self.ci, r"uses: docker://ghcr\.io/gitleaks/gitleaks:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}\n")
+    def test_gitleaks_pin_lives_in_one_file_that_ci_and_the_starter_check_both_read(self):
+        env = (ROOT / "scripts/gitleaks.env").read_text()
+        self.assertRegex(env, r"(?m)^GITLEAKS_IMAGE=ghcr\.io/gitleaks/gitleaks:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$")
+        self.assertNotIn("ghcr.io/gitleaks", self.ci)
         self.assertNotIn("gitleaks/gitleaks/releases/download", self.ci)
-        self.assertIn("args: dir /github/workspace --no-banner --redact", self.ci)
+        self.assertIn("scripts/gitleaks.env", self.ci)
+        self.assertIn("--no-banner --redact", self.ci)
+        starter = (ROOT / "scripts/starter_check.sh").read_text()
+        self.assertIn("gitleaks.env", starter)
+        self.assertNotIn("ghcr.io/gitleaks", starter)
 
     def test_every_download_retries_and_fails_loudly(self):
         curls = [l for l in self.ci.splitlines() if re.search(r"\bcurl\b", l) and not l.strip().startswith("#")]

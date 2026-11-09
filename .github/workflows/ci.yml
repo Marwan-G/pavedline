@@ -108,6 +108,8 @@ jobs:
       - run: npm i -g @anthropic-ai/claude-code@2.1.319
       - run: claude plugin validate . --strict
       - run: claude plugin validate plugins/pavedline --strict
+      - run: claude plugin validate plugins/pavedline-cockpit --strict
+      - run: claude plugin test plugins/pavedline-cockpit
 
   gitleaks:
     runs-on: ubuntu-24.04
@@ -116,11 +118,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # Official image (github.com/gitleaks/gitleaks README), pinned by digest: ghcr.io, not GitHub release downloads.
-      - name: Scan for secrets (gitleaks v8.30.1)
-        uses: docker://ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
-        with:
-          args: dir /github/workspace --no-banner --redact
+      # Official image (github.com/gitleaks/gitleaks README), pinned by digest in scripts/gitleaks.env (one pin, also
+      # read by scripts/starter_check.sh): ghcr.io, not GitHub release downloads.
+      - name: Scan for secrets (pinned gitleaks image)
+        run: |
+          . scripts/gitleaks.env
+          docker run --rm -v "$PWD:/repo:ro" "$GITLEAKS_IMAGE" dir /repo --no-banner --redact
 
   local-cluster:
     runs-on: ubuntu-24.04-arm
@@ -200,6 +203,44 @@ jobs:
           tar -xzf actionlint_1.7.12_linux_arm64.tar.gz actionlint
           sudo install -m 0755 actionlint /usr/local/bin/actionlint
       - run: scripts/starter_check.sh --stage all
+
+  profile-oci:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install OpenTofu v1.13.2 (checksum verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          base=https://github.com/opentofu/opentofu/releases/download/v1.13.2
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 20 --retry-all-errors -O "$base/tofu_1.13.2_linux_amd64.tar.gz"
+          # Expected sha256 from $base/tofu_1.13.2_SHA256SUMS
+          echo "ac05d9952662c7db28dd57e93f0a68018837bfdf9342384ec0987977c16a9645  tofu_1.13.2_linux_amd64.tar.gz" | sha256sum --check --strict
+          tar -xzf tofu_1.13.2_linux_amd64.tar.gz tofu
+          sudo install -m 0755 tofu /usr/local/bin/tofu
+      - name: OpenTofu format, init, validate
+        working-directory: plugins/pavedline/templates/infra/profiles/oci-oke
+        run: |
+          tofu fmt -check -recursive
+          tofu init -backend=false -lockfile=readonly
+          tofu validate
+      - run: python3 -m unittest tests.test_profile_oci -v
+      # The scanner image is the one the product's own security workflow pins (one Checkov pin, read from there).
+      - name: Checkov on the profile
+        run: |
+          image="$(sed -n 's/^ *CHECKOV_IMAGE: *//p' plugins/pavedline/stacks/nextjs-fastapi/files/.github/workflows/security.yml | head -n 1)"
+          test -n "$image"
+          cid="$(docker create "$image" -d /tf --framework terraform --compact --quiet)"
+          docker cp plugins/pavedline/templates/infra/profiles/oci-oke/. "$cid:/tf"
+          rc=0
+          docker start -a "$cid" || rc=$?
+          docker rm -f "$cid" >/dev/null
+          exit "$rc"
 
   pr-body:
     if: github.event_name == 'pull_request'

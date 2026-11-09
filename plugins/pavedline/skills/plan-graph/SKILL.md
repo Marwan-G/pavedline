@@ -59,7 +59,19 @@ Show the plan as a short table (slice · tests · surfaces · depends on) and th
 
 ## 5. Re-entry and the light path
 
-A changed answer in steps 1 to 7, or a new accepted intent, is a new decision that lists the plan as stale; replan only the slices not yet merged. `plan_graph.py status` says which slices are merged (a commit on the default branch whose subject starts `Slice <id>`, or with a `Slice: <id>` trailer; a revert un-merges it) and prints `feature-complete` only when every test maps to a merged slice. A small change (a bug fix or a copy edit) skips steps 1 to 8: it is one slice-sized branch with its own gates.
+A changed answer in steps 1 to 7, or a new accepted intent, is a new decision that lists the plan as stale; replan only the slices not yet merged. `plan_graph.py status` says which slices are merged (a commit on the default branch whose subject starts `Slice <id>`, or with a `Slice: <id>` trailer; a revert un-merges it) and prints `feature-complete` only when every test maps to a merged slice, then one line `integration wave: not due | due | planned | done` (section 5b). A small change (a bug fix or a copy edit) skips steps 1 to 8: it is one slice-sized branch with its own gates.
+
+## 5b. The integration wave
+
+Local verification cannot prove a real provider (spec 11.6). Once `plan_graph.py status` prints `feature-complete` it also prints `integration wave: due`: plan one more wave, **once**, before step 12. It is an ordinary plan file (`docs/plans/<date>-integration.md`) with a header line `Wave: integration`, slices `### Slice int.<n>: <title>` with `Tests: none` and the usual `Surfaces`, `Branch`, `Depends on`, and the same approval question as any wave. `status` then prints `integration wave: planned`.
+
+What it contains, only for the providers the product uses (each is a service, so `SERVICES.md` already has it; every account is a founder step in `WAITING.md`, see `templates/WAITING.md`):
+
+- **Provider test modes:** payments (the provider's sandbox or test keys), email (the local Mailpit first, then the real sender's test mode), SMS (the local sink first, then the provider's test credentials), auth (the identity provider's development instance). Keys live in the gitignored `.env.local`, read only by `scripts/local_secrets.sh`; never in chat, a prompt or git.
+- **Real webhooks:** the API's signed receivers (`fastapi-service`, webhooks). Stripe: `stripe listen --forward-to` (no tunnel). Clerk and any other provider: `scripts/local-cluster/tunnel.sh` (a Cloudflare quick tunnel: free, no account, testing only, the URL changes each start; it needs the founder's approval row in `SERVICES.md`). One slice sends a real event through, and shows it accepted once and a replay refused.
+- **Mobile:** simulator and emulator builds of the integration branch (`mobile-build`). TestFlight and the Play internal track are founder steps with store accounts from `docs/production/LEAD-TIME.md`; they are not proven here.
+
+Exit: every slice merged and a line `Verified: local — <date>, <what was seen>` in the plan's header block (above the first slice; one inside a slice does not count); then `plan_graph.py status` prints exactly `integration wave: done`. **Step 12 refuses to start until it does.** Say plainly what local still does not prove (real DNS and TLS, cloud IAM, multi-node failure, load); never write `Verified: cloud`.
 
 ## 6. Close step 8
 

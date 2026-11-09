@@ -1,0 +1,6 @@
+apiVersion: v2
+name: alerts
+description: Three alerts from inside the cluster - public endpoints up, the database backup recent, scheduled jobs on time - plus a heartbeat ping.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

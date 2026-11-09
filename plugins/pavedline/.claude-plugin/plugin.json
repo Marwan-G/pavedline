@@ -10,7 +10,13 @@
   "homepage": "https://github.com/Marwan-G/pavedline",
   "repository": "https://github.com/Marwan-G/pavedline",
   "license": "MIT",
-  "keywords": ["gitops", "kubernetes", "saas", "workflow", "software-factory"],
+  "keywords": [
+    "gitops",
+    "kubernetes",
+    "saas",
+    "workflow",
+    "software-factory"
+  ],
   "dependencies": [
     "superpowers@claude-plugins-official",
     "mattpocock-skills@claude-plugins-official",

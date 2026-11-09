@@ -1,0 +1,139 @@
+# up.sh --fakes: local email and SMS fakes in namespace `fakes`, local cluster only. Not a service: no account, no
+# network egress, data in memory (lives and dies with the pod).
+#   Mailpit (MIT)  SMTP  mailpit.fakes.svc.cluster.local:1025   web UI + API http://mail.localtest.me:8080 (Gateway)
+#   SMS sink       HTTP  sms-sink.fakes.svc.cluster.local:80    http://sms.localtest.me:8080/messages (Gateway)
+# The sink's code is the ConfigMap sms-sink (created by up.sh from sms-sink/sink.py); it runs on the pinned python image.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fakes
+  labels:
+    gateway-access: shared
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailpit
+  namespace: fakes
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: mailpit}
+  template:
+    metadata:
+      labels: {app: mailpit}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: mailpit
+          image: "@MAILPIT_IMAGE@"
+          env:
+            - {name: MP_MAX_MESSAGES, value: "500"}
+            - {name: MP_DATABASE, value: /tmp/mailpit.db}
+          ports:
+            - {name: smtp, containerPort: 1025}
+            - {name: http, containerPort: 8025}
+          readinessProbe:
+            tcpSocket: {port: 8025}
+            periodSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 10001
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            limits: {cpu: 250m, memory: 128Mi}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailpit
+  namespace: fakes
+spec:
+  selector: {app: mailpit}
+  ports:
+    - {name: smtp, port: 1025, targetPort: 1025}
+    - {name: http, port: 80, targetPort: 8025}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sms-sink
+  namespace: fakes
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: sms-sink}
+  template:
+    metadata:
+      labels: {app: sms-sink}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: sms-sink
+          image: "@SMS_SINK_IMAGE@"
+          command: ["python", "/app/sink.py"]
+          env:
+            - {name: PORT, value: "8080"}
+            - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+            periodSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 10001
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: code, mountPath: /app, readOnly: true}
+          resources:
+            limits: {cpu: 250m, memory: 128Mi}
+      volumes:
+        - name: code
+          configMap:
+            name: sms-sink
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sms-sink
+  namespace: fakes
+spec:
+  selector: {app: sms-sink}
+  ports:
+    - {name: http, port: 80, targetPort: 8080}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mailpit
+  namespace: fakes
+spec:
+  parentRefs:
+    - {name: shared, namespace: gateway, sectionName: http}
+  hostnames: ["mail.localtest.me"]
+  rules:
+    - backendRefs:
+        - {name: mailpit, port: 80}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sms-sink
+  namespace: fakes
+spec:
+  parentRefs:
+    - {name: shared, namespace: gateway, sectionName: http}
+  hostnames: ["sms.localtest.me"]
+  rules:
+    - backendRefs:
+        - {name: sms-sink, port: 80}

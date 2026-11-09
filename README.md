@@ -94,7 +94,7 @@ your-product/
 
 Add the dependency marketplaces first: Pavedline's dependencies (`superpowers`, `mattpocock-skills`,
 `product-management`, `figma`) install automatically only from marketplaces you have already added. Without them the install
-warns that Pavedline will not load. The `ui-ux-pro-max-skill` marketplace line is optional: `ui-ux-pro-max` is a step-7 style reference, used only if installed. (Verified on a clean profile with `scripts/install_test.sh`.)
+warns that Pavedline will not load. The `ui-ux-pro-max-skill` marketplace line is optional: `ui-ux-pro-max` is a step-7 style reference, used only if installed. (Verified on a clean profile with `scripts/install_test.sh`.) Optional: `claude plugin install marketing@knowledge-work-plugins` for the Grow loop after launch, and `claude plugin install pavedline-cockpit@pavedline` adds a status pane (needs Claude Code 2.1.287 or newer; nothing in Pavedline depends on it). For step 12 on OCI you also need OpenTofu or Terraform; the bring-your-own profile needs neither.
 
 **If `/pavedline:start` is not found:** a missing dependency stops Pavedline from loading at all. Run
 `claude plugin list`, which shows the dependency warning, then add the missing marketplace or plugin with the commands
@@ -111,10 +111,10 @@ new paid service or account still needs your go first.
   ships in v0.2.
 - **Memory in your repository:** `PRODUCT.md`, `STATE.md`, `WAITING.md`, `GLOSSARY.md` and numbered decision records,
   so a fresh session resumes from files.
-- **Ten hooks:** block `.env` reads and secrets written into files; block cluster commands outside the local
+- **Eleven hooks:** block `.env` reads and secrets written into files; block cluster commands outside the local
   `kind-pavedline-*` cluster; block `--no-verify` and force-pushes to the main branch; block a `STATE.md` over 60
   lines; warn when `CLAUDE.md` passes 150 lines; warn when a pull request body lacks the gates line; warn when code
-  changes under a folder whose `ARCHITECTURE.dot` did not; print the project state when a session starts; keep the key `STATE.md` lines through compaction; remind Claude to commit uncommitted records when a turn ends.
+  changes under a folder whose `ARCHITECTURE.dot` did not; print the project state when a session starts; keep the key `STATE.md` lines through compaction; remind Claude to commit uncommitted records when a turn ends; ask a builder agent once to finish a report that lacks its status or gates line.
 - **`/pavedline:doctor`:** checks the machine and plugins; for anything missing it tells you what it will install and why, then installs it.
 - **Local cluster scripts:** a kind cluster with Argo CD, CloudNativePG and a local image registry, with `up`,
   `verify` and `down` scripts. See [environments](docs/environments.md).

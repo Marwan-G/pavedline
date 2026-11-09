@@ -346,11 +346,38 @@ class NeverOverwrites(Base):
         self.assertIn("conflict: services/api/app/main.py", r.stdout)
         self.assertEqual({rel: (self.dir / rel).read_bytes() for rel in tree(self.dir)}, before)
 
-    def test_existing_gitignore_is_kept(self):
-        (self.dir / ".gitignore").write_text("mine\n")
+    def test_existing_gitignore_keeps_its_lines_and_gains_the_packs_missing_ones(self):
+        (self.dir / ".gitignore").write_text("mine\n.worktrees/\n")
         r = self.ok("api")
+        text = self.read(".gitignore")
+        self.assertTrue(text.startswith("mine\n.worktrees/\n"))
+        self.assertEqual(text.count(".worktrees/"), 1)
+        self.assertIn(".venv/", text)
+        self.assertIn("node_modules/", text)
+        self.assertIn("appended: .gitignore", r.stdout)
+        self.assertNotIn("kept: .gitignore", r.stdout)
+
+    def test_gitignore_that_already_has_every_line_is_left_alone(self):
+        (self.dir / ".gitignore").write_text((PACK / "files/.gitignore").read_text())
+        before = self.read(".gitignore")
+        r = self.ok("api")
+        self.assertEqual(self.read(".gitignore"), before)
+        self.assertNotIn(".gitignore", r.stdout.replace("STACK-SOURCES", ""))
+
+    def test_gitignore_from_start_project_gets_the_stack_lines(self):
+        r = self.ok("api")
+        text = self.read(".gitignore")
+        self.assertIn(".worktrees/", text)
+        self.assertIn(".env.local", text)
+        self.assertIn(".venv/", text)
+        self.assertIn("appended: .gitignore", r.stdout)
+
+    def test_dry_run_reports_the_gitignore_append_and_writes_nothing(self):
+        (self.dir / ".gitignore").write_text("mine\n")
+        r = self.apply("api", "--dry-run")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("would append: .gitignore", r.stdout)
         self.assertEqual(self.read(".gitignore"), "mine\n")
-        self.assertIn("kept: .gitignore", r.stdout)
 
     def test_dry_run_writes_nothing(self):
         before = tree(self.dir)
@@ -415,7 +442,7 @@ class NeutralTemplates(Base):
         m = re.search(r"copied (\d+), kept (\d+)", r.stdout)
         self.assertIsNotNone(m)
         self.assertEqual(m.group(2), "1")
-        self.assertEqual(int(m.group(1)), r.stdout.count("created: "))
+        self.assertEqual(int(m.group(1)), r.stdout.count("created: ") + r.stdout.count("appended: .gitignore"))
 
 
 class Renames(Base):
@@ -762,3 +789,93 @@ class StaticChecksOnTheCopiedTree(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PostgresMajor(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = pathlib.Path(self.tmp.name)
+        self.pack = load_module().parse_pack((PACK / "pack.yaml").read_text())["postgres"]
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def apply(self, *extra):
+        return run("--target", str(self.dir), "--pack", "nextjs-fastapi", "--surfaces", "api", "--name", "example", *extra)
+
+    def image_line(self):
+        text = (self.dir / "infra/k8s/apps/postgres/values.yaml").read_text()
+        return re.search(r"(?m)^image: (.+)$", text).group(1)
+
+    def test_pack_lists_its_pinned_majors_by_digest(self):
+        self.assertEqual(str(self.pack["default_major"]), "16")
+        self.assertEqual(sorted(self.pack["majors"]), ["16", "18"])
+        for major, pins in self.pack["majors"].items():
+            self.assertRegex(pins["test"], r"^postgres:%s\.\d+@sha256:[0-9a-f]{64}$" % major)
+            image = pins["cluster"]
+            self.assertRegex(image, r"^ghcr\.io/cloudnative-pg/postgresql:%s\.\d+-\d{12}-standard-trixie@sha256:[0-9a-f]{64}$" % major)
+
+    def test_default_writes_the_default_majors_image(self):
+        r = self.apply()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.image_line(), self.pack["majors"]["16"]["cluster"])
+
+    def test_major_18_rewrites_the_image_line(self):
+        r = self.apply("--postgres-major", "18")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.image_line(), self.pack["majors"]["18"]["cluster"])
+        self.assertEqual(
+            (self.dir / "infra/k8s/apps/postgres/values.yaml").read_text().count("image: ghcr.io/cloudnative-pg/postgresql"), 1
+        )
+
+    def ci_image(self):
+        text = (self.dir / ".github/workflows/ci-api.yml").read_text()
+        return re.findall(r"(?m)^        image: (postgres:\S+)$", text)
+
+    def test_ci_test_image_follows_the_major(self):
+        self.assertEqual(self.apply("--postgres-major", "18").returncode, 0)
+        self.assertEqual(self.ci_image(), [self.pack["majors"]["18"]["test"]])
+        self.assertIn(":18.", self.image_line())
+
+    def test_ci_test_image_is_the_packs_own_with_the_default(self):
+        self.assertEqual(self.apply().returncode, 0)
+        self.assertEqual(self.ci_image(), [self.pack["majors"]["16"]["test"]])
+        packed = (PACK / "files/.github/workflows/ci-api.yml").read_text()
+        self.assertIn(self.pack["majors"]["16"]["test"], packed)
+
+    def test_a_file_without_the_image_line_is_an_error_not_a_no_op(self):
+        mod = load_module()
+        with self.assertRaises(mod.UsageError) as cm:
+            mod.sub_once(r"(?m)^image: .*$", "image: x", "cluster:\n  instances: 1\n", "infra/k8s/apps/postgres/values.yaml")
+        self.assertIn("no Postgres image line", str(cm.exception))
+        self.assertEqual(mod.sub_once(r"(?m)^image: .*$", "image: x", "a: 1\nimage: y\n", "v"), "a: 1\nimage: x\n")
+
+    def test_unlisted_major_exits_1_and_writes_nothing(self):
+        r = self.apply("--postgres-major", "17")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("postgres major 17 not pinned in this pack", r.stderr + r.stdout)
+        self.assertEqual(tree(self.dir), [])
+
+    def test_the_step_6_skill_names_the_comparison(self):
+        t = (ROOT / "plugins/pavedline/skills/system-architecture/SKILL.md").read_text()
+        self.assertIn("--postgres-major", t)
+        self.assertIn("0006", t)
+        self.assertIn("SYSTEM-DESIGN.md", t)
+        self.assertRegex(t, r"(?i)stop[^\n]*(mismatch|differs|not pinned)")
+
+    def test_pooler_image_is_a_digest_pinned_value_on_the_pgbouncer_container(self):
+        base = PACK / "files/infra/k8s/apps/postgres"
+        values = (base / "values.yaml").read_text()
+        self.assertRegex(values, r"(?m)^  image: ghcr\.io/cloudnative-pg/pgbouncer:\d+\.\d+\.\d+-\d{12}-trixie@sha256:[0-9a-f]{64}$")
+        tpl = (base / "templates/pooler.yaml").read_text()
+        self.assertIn("template:", tpl)
+        self.assertIn("name: pgbouncer", tpl)
+        self.assertIn("image: {{ $p.image }}", tpl)
+        self.assertLess(tpl.index("name: pgbouncer"), tpl.index("image: {{ $p.image }}"))
+
+    def test_quality_gates_runs_gitleaks_before_the_push(self):
+        t = (ROOT / "plugins/pavedline/skills/quality-gates/SKILL.md").read_text()
+        self.assertIn("gitleaks", t)
+        self.assertRegex(t, r"(?i)before (every|each|the) push|pre-push")
+        self.assertIn("git archive", t)
+        self.assertIn("$HOME", t)

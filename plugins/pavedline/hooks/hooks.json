@@ -90,6 +90,18 @@
         ]
       }
     ],
+    "SubagentStop": [
+      {
+        "matcher": "pavedline:builder",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/check_builder_report.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

@@ -83,8 +83,16 @@ spec:
           {{- with $w.envFromSecrets }}
           envFrom:
             {{- range . }}
+            {{- if kindIs "string" . }}
             - secretRef:
                 name: {{ . }}
+            {{- else }}
+            - secretRef:
+                name: {{ .name | required "envFromSecrets entries need a name" }}
+                {{- if .optional }}
+                optional: true
+                {{- end }}
+            {{- end }}
             {{- end }}
           {{- end }}
           livenessProbe:

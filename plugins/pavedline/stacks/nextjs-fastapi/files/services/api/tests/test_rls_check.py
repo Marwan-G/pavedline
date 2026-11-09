@@ -75,11 +75,12 @@ def test_a_global_table_needs_to_be_listed_with_a_reason(
     listed = tmp_path / "global.txt"
     listed.write_text(
         "tenants  # the tenant directory\nalembic_version  # migration bookkeeping\n"
+        "webhook_events  # replay ids\n"
         "countries  # reference data shared by every tenant\n"
     )
     code, out = rls(fresh_database, "--global-tables", str(listed))
     assert code == 0, out
-    listed.write_text("tenants  # x\nalembic_version  # y\ncountries\n")
+    listed.write_text("tenants  # x\nalembic_version  # y\nwebhook_events  # z\ncountries\n")
     code, out = rls(fresh_database, "--global-tables", str(listed))
     assert code == 1 and "reason" in out
 
@@ -180,7 +181,8 @@ def test_a_custom_policy_needs_an_allow_list_entry_with_a_reason(
     assert code == 1 and "custom" in out
     listed = tmp_path / "g.txt"
     listed.write_text(
-        "tenants  # x\nalembic_version  # y\npolicy:custom.tenant_isolation  # extra id filter, reviewed\n"
+        "tenants  # x\nalembic_version  # y\nwebhook_events  # z\n"
+        "policy:custom.tenant_isolation  # extra id filter, reviewed\n"
     )
     code, out = rls(fresh_database, "--global-tables", str(listed))
     assert code == 0, out

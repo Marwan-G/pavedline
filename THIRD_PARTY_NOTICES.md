@@ -2,7 +2,7 @@
 
 This file lists third-party code or text that has been copied or adapted into this repository, with the licence
 notice each licence requires. Projects that are only installed from their makers, or only used as tools, are
-credited in [`CREDITS.md`](CREDITS.md) and are not listed here.
+credited in [`CREDITS.md`](CREDITS.md) and are not listed here. Nothing new was copied or adapted for the production work (the Barman Cloud plugin, cert-manager, SeaweedFS, Mailpit, cloudflared, OpenTofu, the OCI and Kubernetes providers, the Stripe CLI and the Svix webhook format are installed, pinned or documented only), so no notice is added for them.
 
 ## saas-multi-tenant (adapted in v0.2)
 

@@ -204,6 +204,14 @@ class Rendering(unittest.TestCase):
             self.assertRegex(dep, r"envFrom:\n\s+- secretRef:\n\s+name: api-auth", env)
             self.assertRegex(dep, r"name: APP_ENV\n\s+value: \"?(development|production)\"?", env)
 
+    def test_local_api_mounts_the_webhook_secret_as_optional_and_never_the_provider_keys(self):
+        dep = self.docs(self.api, "local", "Deployment")[0]
+        self.assertRegex(dep, r"- secretRef:\n\s+name: api-webhooks\n\s+optional: true")
+        self.assertNotRegex(dep, r"name: api-auth\n\s+optional")
+        self.assertNotIn("api-provider-keys", dep)
+        for env in ("staging", "production"):
+            self.assertNotIn("api-webhooks", self.docs(self.api, env, "Deployment")[0], env)
+
     def test_app_env_per_environment(self):
         expect = {"local": "development", "staging": "production", "production": "production"}
         for env, val in expect.items():
@@ -344,8 +352,11 @@ class Rendering(unittest.TestCase):
         self.assertIn("port: 5432", np)
 
     def test_production_readiness_is_marked(self):
+        # Backups and the restore drill exist since v0.4; the endpoint and bucket stay placeholders until step 12.
         t = (PG_CHART / "values-production.yaml").read_text() + (PG_CHART / "templates/cluster.yaml").read_text()
-        self.assertIn("PR 3", t)
+        self.assertIn("PLACEHOLDERS", t)
+        self.assertIn("step 12", t)
+        self.assertIn("restore_drill.sh", t)
 
 
 class LocalSecretsScript(unittest.TestCase):
@@ -422,6 +433,49 @@ class LocalSecretsScript(unittest.TestCase):
         env = dict(os.environ, PATH=str(stub) + os.pathsep + os.environ["PATH"])
         r = subprocess.run([BASH, str(SECRETS), "ci"], capture_output=True, text=True, env=env, cwd=tmp)
         return r, log.read_text()
+
+    def run_provider_keys(self, env_text):
+        tmp = pathlib.Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        stub = tmp / "bin"
+        stub.mkdir()
+        k = stub / "kubectl"
+        k.write_text(
+            "#!/usr/bin/env bash\n"
+            "case \"$*\" in\n"
+            "  *'config get-contexts'*) echo kind-pavedline-ci ;;\n"
+            "  *'get nodes'*) echo pavedline-ci-control-plane ;;\n"
+            "  *'create secret generic api-webhooks'*) cat > \"%s/api-webhooks.env\" ;;\n"
+            "  *'create secret generic api-provider-keys'*) cat > \"%s/api-provider-keys.env\" ;;\n"
+            "esac\nexit 0\n" % (tmp, tmp))
+        k.chmod(0o755)
+        envf = tmp / "env"
+        envf.write_text(env_text)
+        env = dict(os.environ, PATH=str(stub) + os.pathsep + os.environ["PATH"], ENV_FILE=str(envf))
+        r = subprocess.run([BASH, str(SECRETS), "ci"], capture_output=True, text=True, env=env, cwd=tmp)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("sk_test_abc", r.stdout + r.stderr)
+        return tmp
+
+    def test_provider_test_keys_go_to_their_own_secret_only_when_non_empty(self):
+        example = (FILES / ".env.local.example").read_text()
+        for key in ("WEBHOOK_CLERK_SECRET", "WEBHOOK_STRIPE_SECRET"):
+            self.assertRegex(example, r"(?m)^%s=$" % key)
+        for key in ("CLERK_SECRET_KEY", "STRIPE_SECRET_KEY"):  # commented: the product's own slices enable them
+            self.assertRegex(example, r"(?m)^# %s=$" % key)
+        self.assertIn("api-provider-keys", example)
+        tmp = self.run_provider_keys(
+            "CLERK_SECRET_KEY=sk_test_abc\nSTRIPE_SECRET_KEY=\nWEBHOOK_CLERK_SECRET=whsec_x\n")
+        self.assertEqual((tmp / "api-webhooks.env").read_text(), "WEBHOOK_CLERK_SECRET=whsec_x\n")
+        self.assertEqual((tmp / "api-provider-keys.env").read_text(), "CLERK_SECRET_KEY=sk_test_abc\n")
+        # no provider key given: the Secret is not created at all
+        tmp = self.run_provider_keys("WEBHOOK_STRIPE_SECRET=whsec_y\n")
+        self.assertEqual((tmp / "api-webhooks.env").read_text(), "WEBHOOK_STRIPE_SECRET=whsec_y\n")
+        self.assertFalse((tmp / "api-provider-keys.env").exists())
+
+    def test_env_local_is_ignored_in_both_gitignores(self):
+        for g in (PLUGIN / "templates/.gitignore", FILES / ".gitignore"):
+            self.assertIn(".env.local", [l.strip() for l in g.read_text().splitlines()], g)
 
     def test_a_transient_kubectl_error_never_regenerates_a_password(self):
         r, log = self.run_with_secret_lookup("echo 'Unable to connect to the server' >&2; exit 1")

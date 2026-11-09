@@ -1,0 +1,28 @@
+{{- if .Values.enabled }}
+{{- $names := list }}
+{{- range .Values.checks.endpoints }}{{ $names = append $names .name }}{{ end }}
+{{- if ne (len $names) (len (uniq $names)) }}
+{{- fail "checks.endpoints names must be unique" }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alerts-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: alerts
+data:
+  config.json: {{ toJson .Values.checks | quote }}
+  checker.py: |-
+{{ .Files.Get "files/checker.py" | indent 4 }}
+---
+# State for the repeat window: one key per failing check (epoch seconds of the last message). The checker patches it.
+# It carries no data here, so a sync never overwrites what the checker recorded.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alerts-state
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: alerts
+{{- end }}
