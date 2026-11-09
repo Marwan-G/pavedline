@@ -13,8 +13,8 @@ Pavedline uses these words with one meaning each.
 | **slice** | the smallest change with its own tests, review gates and pull request |
 | **feature-complete** | every acceptance test in `docs/spec/SPEC.md` mapped to a merged slice and passing on local. An integration wave follows it, before step 12 |
 
-In v0.1 only **local** exists as something you can run: the cluster scripts. Staging, production and the "verified"
-checks belong to later releases (see the [roadmap](../README.md#roadmap)).
+**Local** runs on your machine from step 6 on. **Staging** and **production** are created once, at step 12, from an
+infra profile (bring your own Kubernetes, or OCI/OKE); production is promoted from the verified staging SHA by pull request.
 
 ## The local cluster
 

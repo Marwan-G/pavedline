@@ -44,7 +44,10 @@ class Docs(unittest.TestCase):
                     self.assertIn(arg.rsplit("@", 1)[0], credits, arg)
 
     def test_readme_status_line(self):
-        self.assertIn("Status: v0.1.", (ROOT / "README.md").read_text())
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("Status: steps 0–12 work", readme)
+        # no new release during this work (founder): the status line must say the tagged release is still v0.1
+        self.assertIn("latest tagged release is\n> still v0.1", readme)
 
     def test_readme_says_what_it_sets_up(self):
         t = (ROOT / "README.md").read_text()
