@@ -5,8 +5,9 @@
 The GitOps software factory for serious builders: idea → market → spec → system design → Figma → tested code →
 local Kubernetes → cloud staging → production. Website, blog, web app and mobile app, built as one product.
 
-> **Status: v0.1.** Steps 0–3, project memory, hooks and the local Kubernetes cluster work today; later steps are on
-> the [roadmap](#roadmap). Every feature below is marked with the release that delivers it.
+> **Status: steps 0–12 work, from the first question to production.** Each step was run on a private trial product,
+> and CI deploys a generated starter product to local Kubernetes on every pull request. The latest tagged release is
+> still v0.1; the next release will carry all of it. Every feature below is marked with the release that delivers it.
 
 <p align="center"><img src="docs/flow.svg" alt="The Pavedline flow in four bands: Discover (steps 0-3), Design (4-7), Deliver on local Kubernetes with GitOps (8-11, repeated per wave), then Production once (integration wave, step 12, launch, grow). You approve each step." width="100%"></p>
 
@@ -104,17 +105,23 @@ Once Pavedline loads, `/pavedline:doctor` checks every tool and skill Pavedline 
 the exact command, then installs it; Claude Code asks your permission for each command. It never uses `sudo`, and a
 new paid service or account still needs your go first.
 
-## What works in v0.1
+## What works today
 
-- **Steps 0–3:** [start](docs/steps/00-start.md) · [market and SEO research](docs/steps/01-market.md) ·
-  [grill](docs/steps/02-grill.md) · [spec](docs/steps/03-spec.md). The guided flow stops after the spec; step 4
-  ships in v0.2.
+- **Steps 0–3, discover:** [start](docs/steps/00-start.md) · [market and SEO research](docs/steps/01-market.md) ·
+  [grill](docs/steps/02-grill.md) · [spec](docs/steps/03-spec.md).
+- **Steps 4–7, design:** [system design](docs/steps/04-system-design.md) · [data and API](docs/steps/05-data-and-api.md) ·
+  [architecture](docs/steps/06-architecture.md) · [Figma](docs/steps/07-figma.md).
+- **Steps 8–11, deliver on local Kubernetes:** [plan](docs/steps/08-plan.md) · [build with five gates](docs/steps/09-build.md) ·
+  [deploy to local](docs/steps/10-deploy.md) · [learn](docs/steps/11-learn.md), with the `nextjs-fastapi` stack pack.
+- **Production, once:** [the integration wave](docs/steps/integration-wave.md) · [step 12, go to production](docs/steps/12-go-to-production.md)
+  (two infra profiles, staging then production, a blocking launch checklist, backups and a restore drill, three alerts) ·
+  then [the Grow loop](docs/steps/grow.md).
 - **Memory in your repository:** `PRODUCT.md`, `STATE.md`, `WAITING.md`, `GLOSSARY.md` and numbered decision records,
   so a fresh session resumes from files.
 - **Eleven hooks:** block `.env` reads and secrets written into files; block cluster commands outside the local
   `kind-pavedline-*` cluster; block `--no-verify` and force-pushes to the main branch; block a `STATE.md` over 60
   lines; warn when `CLAUDE.md` passes 150 lines; warn when a pull request body lacks the gates line; warn when code
-  changes under a folder whose `ARCHITECTURE.dot` did not; print the project state when a session starts; keep the key `STATE.md` lines through compaction; remind Claude to commit uncommitted records when a turn ends; ask a builder agent once to finish a report that lacks its status or gates line.
+  changes under a folder whose `ARCHITECTURE.dot` did not; print the project state when a session starts; keep the key `STATE.md` lines through compaction; remind Claude to commit uncommitted records when a turn ends; warn when a builder agent's report lacks its status or gates line.
 - **`/pavedline:doctor`:** checks the machine and plugins; for anything missing it tells you what it will install and why, then installs it.
 - **Local cluster scripts:** a kind cluster with Argo CD, CloudNativePG and a local image registry, with `up`,
   `verify` and `down` scripts. See [environments](docs/environments.md).
@@ -198,13 +205,13 @@ Asked for **just in time**, never all on day one:
 
 ## Roadmap
 
-| Release | What works |
-|---|---|
-| **v0.1** | steps 0–3 · memory files and hooks · `doctor` · local Kubernetes cluster (kind + ArgoCD + CNPG) · CI for the factory itself |
-| **v0.2** | steps 4–7: system design, compliance, data and API, architecture, Figma |
-| **v0.3** | steps 8–11: plan, build with the five gates and scanners, the `nextjs-fastapi` stack pack, Helm base chart, deploy to local, learn |
-| **v0.4** | integration wave, step 12 (cloud staging, production, launch checklist), the optional cockpit pane |
-| **v1.0** | an example product completes steps 0–11 on local Kubernetes, proven in CI on every PR |
+| Release | What works | State |
+|---|---|---|
+| **v0.1** | steps 0–3 · memory files and hooks · `doctor` · local Kubernetes cluster (kind + ArgoCD + CNPG) · CI for the factory itself | released |
+| **v0.2** | steps 4–7: system design, compliance, data and API, architecture, Figma | on `main`, not yet released |
+| **v0.3** | steps 8–11: plan, build with the five gates and scanners, the `nextjs-fastapi` stack pack, Helm base chart, deploy to local, learn | on `main`, not yet released |
+| **v0.4** | integration wave, step 12 (infra profiles, staging, production, launch checklist), the Grow loop, the optional cockpit pane | on `main`, not yet released |
+| **v1.0** | Pavedline's CI deploys a generated starter product to kind on every PR, and a private trial product has completed steps 0–11 on local | next |
 
 ## Contributing
 
