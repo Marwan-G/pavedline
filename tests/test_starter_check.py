@@ -183,6 +183,7 @@ class StarterWorkflows(unittest.TestCase):
         body = body[:body.index("\n  }\n")]
         self.assertIn("--dry-run=client -o json", body)
         self.assertIn('pop("ownerReferences"', body)
+        self.assertIn('create -f -', body)
 
     def test_full_is_a_known_stage(self):
         text = SCRIPT.read_text()
