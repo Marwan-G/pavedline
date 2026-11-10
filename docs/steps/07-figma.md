@@ -8,7 +8,7 @@ Designing the whole product once, in Figma, in the vocabulary of your records: t
 
 ## Before you start
 
-You need a Figma account logged in through the Figma plugin. If the login is missing, the step stops and adds it to `WAITING.md`. Code Connect mapping may need an Organization or Enterprise plan; if Figma refuses it, the step writes a name table instead and says so.
+You need a Figma account logged in through the Figma plugin. If the login is missing, the step stops and adds it to `WAITING.md`. Screenshots you put in `docs/business/references/` are used as references, never copied. Code Connect mapping may need an Organization or Enterprise plan; if Figma refuses it, the step writes a name table instead and says so.
 
 ## What you will be asked
 

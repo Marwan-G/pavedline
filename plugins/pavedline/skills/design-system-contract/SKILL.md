@@ -17,7 +17,7 @@ Follow the shared step rules in `${CLAUDE_PLUGIN_ROOT}/skills/state/references/s
 
 ## 1. Read first, in order
 
-After the records of the shared rules: `docs/spec/SPEC.md`, `docs/architecture/SYSTEM-DESIGN.md`, `TENANCY-LIFECYCLE.md`, `DEPLOYMENT.md`, `docs/data/DOMAIN.md` and `SCHEMA.md`, `docs/api/openapi.yaml`, any existing `docs/design/`, and the screenshots in `docs/business/references/` if present: style and layout references for the `designer`, never copied. Surfaces come from decision 0005 (a dropped surface gets no frames). Continue when `STATE.md` says `STEP: 7 — Figma`.
+After the records of the shared rules: `docs/spec/SPEC.md`, `docs/architecture/SYSTEM-DESIGN.md`, `TENANCY-LIFECYCLE.md`, `DEPLOYMENT.md`, `docs/data/DOMAIN.md` and `SCHEMA.md`, `docs/api/openapi.yaml`, any existing `docs/design/`, and the screenshots in `docs/business/references/` if present (optional; a missing folder is not an error): style and layout references for the `designer`, never copied. Surfaces come from decision 0005 (a dropped surface gets no frames). Continue when `STATE.md` says `STEP: 7 — Figma`.
 
 ## 2. Questions (one area at a time; options, recommended default, what it changes; wait)
 

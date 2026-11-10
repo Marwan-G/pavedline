@@ -577,10 +577,6 @@ class SharedStepRules(unittest.TestCase):
         self.assertIn("2026-11-09", s)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class FounderInputs(unittest.TestCase):
     VISION = "docs/business/VISION.md"
     REFS = "docs/business/references/"
@@ -596,7 +592,8 @@ class FounderInputs(unittest.TestCase):
     def test_named_choice_is_checked_not_compared(self):
         q = (SKILLS / "system-design/references/questions.md").read_text()
         for s in ("already named", "do not list options or compare", "Compare alternatives only if the check finds a blocker",
-                  "founder's choice"):
+                  "founder's choice", "only when the founder confirms", "ask-before-adding",
+                  "checks the named backend instead of FastAPI", "names the founder's provider instead of Clerk"):
             self.assertIn(s, q)
         self.assertIn("named by the founder", RULES.read_text())
 
@@ -624,5 +621,10 @@ class FounderInputs(unittest.TestCase):
     def test_reference_images_are_read(self):
         for name in ("competitor-teardown", "design-system-contract"):
             t = (SKILLS / name / "SKILL.md").read_text()
-            self.assertIn(self.REFS, t, name)
-            self.assertIn("never copied", t, name)
+            i = t.index(self.REFS)
+            self.assertIn("never copied", t[i:i + 400], name)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
