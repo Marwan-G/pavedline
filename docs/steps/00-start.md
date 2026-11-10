@@ -14,7 +14,7 @@ An empty (or nearly empty) git repository. If it is not a git repository, you ar
 
 ## What you will be asked
 
-One question at a time, each with its default. You can answer "default".
+One question at a time, each with its default. You can answer "default". If you put your full vision in `docs/business/VISION.md` first, the answers are proposed from it; you still confirm each one.
 
 1. What are you building? One paragraph: who it serves, the problem, the one thing it must do well.
 2. Multi-tenant? Single-tenant, multi-tenant for businesses, or for consumers. If multi-tenant, which isolation

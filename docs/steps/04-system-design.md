@@ -8,7 +8,9 @@ Settling every system-level question before the data model, so nothing is discov
 
 ## What you will be asked
 
-Three short rounds: **platform** (backend, auth, tenancy lifecycle, security and compliance), **behaviour** (concurrency through billing, with generated documents and AI and models), **reach** (accessibility, languages and right-to-left, regions, mesh, website and SEO, search, availability). A choice you already named (for example a database or storage provider in `docs/business/VISION.md`) is checked with sources, not compared; alternatives are compared only if the check finds a blocker. One area at a time, with options and a recommended default. "Default" is a valid answer; "not needed" is valid only with a recorded reason. Areas of a surface you dropped in step 0 are skipped. Auth is asked, not assumed: "Clerk (default), or do you need something else?" Any new service is introduced with what it is, what it will do, why nothing in use does it and its verified cost, and is never designed to a free tier; nothing is added until you say so.
+Three short rounds: **platform** (backend, auth, tenancy lifecycle, security and compliance), **behaviour** (concurrency through billing, with generated documents and AI and models), **reach** (accessibility, languages and right-to-left, regions, mesh, website and SEO, search, availability).
+
+A choice you already named (for example a database or storage provider in `docs/business/VISION.md`) is checked with sources, not compared, and recorded only when you confirm it. Alternatives are compared only if the check finds a blocker. One area at a time, with options and a recommended default. "Default" is a valid answer; "not needed" is valid only with a recorded reason. Areas of a surface you dropped in step 0 are skipped. Auth is asked, not assumed: "Clerk (default), or do you need something else?" Any new service is introduced with what it is, what it will do, why nothing in use does it and its verified cost, and is never designed to a free tier; nothing is added until you say so.
 
 ## Output files
 

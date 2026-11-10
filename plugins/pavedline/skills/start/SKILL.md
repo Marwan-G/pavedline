@@ -27,7 +27,7 @@ Pavedline collects nothing. Every answer stays in your own repository.
 
 ## 3. Ask the questions, one at a time
 
-If `docs/business/VISION.md` exists, read it first: it is the founder's full vision. Propose answer 1 as one paragraph drawn from it, and offer what it already says as the default of each later question. Every question is still asked and recorded; the file itself is not changed.
+Before question 1: if `docs/business/VISION.md` exists, read it; it is the founder's full vision. Propose answer 1 as one paragraph drawn from it. For each later question, what the vision says is offered as the default, never taken as the answer: every question is still asked as its skill says (`architecture-intake`, `compliance`) and recorded. The file itself is not changed.
 
 Ask one question, wait for the answer, then ask the next. State the default with each question; the user can answer "default". Keep the order.
 

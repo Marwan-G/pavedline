@@ -2,15 +2,15 @@
 
 None may be skipped. "Not needed" is valid only with a recorded reason. Per area: question, options, recommended default, what the answer changes. Each answer feeds a decision, `SYSTEM-DESIGN.md` (with numbers), the architecture diagram (step 6), `SERVICES.md` for any new service, and the data design and plan (locking becomes columns, file locations become storage keys, targets become tests). Any new service: ask before adding (what it is, what it will do, why nothing in use does it, verified cost; the founder approves), never designed to a free tier.
 
-**A choice the founder already named** (in `docs/business/VISION.md`, `PRODUCT.md` or a decision), such as a provider or a service, is the answer: do not list options or compare. Check it once, with sources: verified cost at expected volume, limits, regions and data residency, and fit with the spec and the design. Record it as the founder's choice, with the results of the check. Compare alternatives only if the check finds a blocker: name the blocker, then ask; the founder decides. A named new service still follows the ask-before-adding rule.
+**A choice the founder already named** (in `docs/business/VISION.md`, `PRODUCT.md` or a decision), such as a provider or a service, is proposed as the answer: do not list options or compare. Check it once, with sources: verified cost at expected volume, limits, regions and data residency, and fit with the spec and the design. Show the result and ask the founder to confirm; record it as the founder's choice, with the results of the check, only when the founder confirms. Compare alternatives only if the check finds a blocker: name the blocker, then ask; the founder decides. A named new service still follows the ask-before-adding rule. In Backend, `backend-evaluate` checks the named backend instead of FastAPI; in Auth, the question names the founder's provider instead of Clerk.
 
 ## Backend
 
-FastAPI is the preferred default. Run `backend-evaluate`; it recommends, the founder decides. **Next.js is frontend only:** no business logic; the only server code allowed is a pass-through auth-cookie proxy, enforced by a CI boundary check.
+FastAPI is the preferred default. Run `backend-evaluate`; it recommends, the founder decides. A backend the founder already named takes FastAPI's place in that check. **Next.js is frontend only:** no business logic; the only server code allowed is a pass-through auth-cookie proxy, enforced by a CI boundary check.
 
 ## Auth
 
-Ask exactly: "Clerk (default), or do you need something else?" Details in `auth-contract.md`.
+Ask exactly: "Clerk (default), or do you need something else?" If the founder already named a provider, ask "<that provider> (your choice), or something else?" instead. Details in `auth-contract.md`.
 
 ## Security and compliance
 
@@ -66,7 +66,7 @@ Target **WCAG 2.2 AA** (default) for website, web app and mobile · enforced as 
 
 ## Languages and right-to-left
 
-Languages at launch per surface (app, website, documents, emails, notifications) · right-to-left: mirrored layout, logical CSS properties, mixed-direction text, numbers, dates and identifiers · fonts per script · locale formats (dates, numbers, units, currency) · where strings live and who translates them · text a user types stays in its original language; a translation is stored beside it, never in its place. Website `hreflang` is asked in Website, blog and SEO.
+Default: one language, left-to-right. Languages at launch per surface (app, website, documents, emails, notifications) · right-to-left: mirrored layout, logical CSS properties, mixed-direction text, numbers, dates and identifiers · fonts per script · locale formats (dates, numbers, units, currency) · where strings live and who translates them · text a user types stays in its original language; a translation is stored beside it, never in its place. Website `hreflang` is asked in Website, blog and SEO.
 
 ## Mobile offline
 
