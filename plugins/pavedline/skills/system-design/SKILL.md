@@ -17,7 +17,7 @@ Surfaces: per decision 0005, questions for a dropped surface are skipped (no mob
 
 ## 2. How to ask
 
-Rounds, not one long session. In each round, take the areas of `${CLAUDE_SKILL_DIR}/references/questions.md` in order, **one area at a time**, as the shared rules say. Costs are checked on the web (see `${CLAUDE_SKILL_DIR}/references/sources.md`) at expected user counts.
+Rounds, not one long session. In each round, take the areas of `${CLAUDE_SKILL_DIR}/references/questions.md` in order, **one area at a time**, as the shared rules say. Costs are checked on the web (see `${CLAUDE_SKILL_DIR}/references/sources.md`) at expected user counts. A choice the founder already named is checked, not compared (see the top of `questions.md`).
 
 ### Round 1: platform
 
@@ -25,11 +25,11 @@ Backend (run the `backend-evaluate` skill; the founder decides) · Auth (`${CLAU
 
 ### Round 2: behaviour
 
-Concurrency · Time and scheduling · Scheduled jobs · Performance · Images and files · Real-time · Notifications · Payments taken by tenants · Billing.
+Concurrency · Time and scheduling · Scheduled jobs · Performance · Images and files · Generated documents · Real-time · Notifications · Payments taken by tenants · Billing · AI and models.
 
 ### Round 3: reach
 
-Accessibility (**WCAG 2.2 AA** default) · Mobile offline · Multi-region · Service mesh · Website, blog and SEO · Search · Availability and recovery.
+Accessibility (**WCAG 2.2 AA** default) · Languages and right-to-left · Mobile offline · Multi-region · Service mesh · Website, blog and SEO · Search · Availability and recovery.
 
 ## 3. Write the outputs
 

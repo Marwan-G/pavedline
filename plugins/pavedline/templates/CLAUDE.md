@@ -8,7 +8,8 @@ Pavedline collects nothing. Every answer stays in your own repository.
 ## Reading order (every session, before any work)
 
 1. `CLAUDE.md` (this file, at most 150 lines).
-2. `PRODUCT.md`: the one-paragraph product statement.
+2. `PRODUCT.md`: the one-paragraph product statement. `docs/business/VISION.md`, if it exists: the founder's full
+   vision, read by every step as input; it becomes a decision only when a step records one.
 3. `STATE.md` (at most 60 lines): STEP, WAVE, SLICES IN FLIGHT, LAST, NEXT, LEFT BEHIND, STALE, GROW DUE, OWNER, MODE.
    A missing MODE means review-only: write no code.
 4. `WAITING.md`: every step only the founder can take. Remove an item only on the founder's word.

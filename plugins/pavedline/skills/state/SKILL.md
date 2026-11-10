@@ -9,7 +9,7 @@ The repository is the memory. Never rely on a conversation.
 
 ## Session start: read, in order
 
-`CLAUDE.md`, `PRODUCT.md`, `STATE.md`, `WAITING.md`, then the newest files in `decisions/`, `GLOSSARY.md`, and any `handoff/<branch>.md`. Check `OWNER` and `MODE` in `STATE.md` before writing anything. If `MODE` is missing, work review-only.
+`CLAUDE.md`, `PRODUCT.md`, `docs/business/VISION.md` if it exists, `STATE.md`, `WAITING.md`, then the newest files in `decisions/`, `GLOSSARY.md`, and any `handoff/<branch>.md`. Check `OWNER` and `MODE` in `STATE.md` before writing anything. If `MODE` is missing, work review-only.
 
 Check the remote before redoing work: run `git fetch` and look at open branches and recent commits. A stalled agent may already have pushed.
 

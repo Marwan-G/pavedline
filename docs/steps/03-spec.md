@@ -8,7 +8,7 @@ Turning the decisions into something that can be built and tested. The spec does
 
 ## Inputs
 
-`PRODUCT.md`, `docs/business/BRIEF.md`, `docs/business/SEO-STRATEGY.md`, every file in `decisions/`, `GLOSSARY.md`
+`PRODUCT.md`, `docs/business/VISION.md` if present, `docs/business/BRIEF.md`, `docs/business/SEO-STRATEGY.md`, every file in `decisions/`, `GLOSSARY.md`
 and `STATE.md`. If step 2 looks unfinished, you are asked whether to continue.
 
 ## What you will be asked

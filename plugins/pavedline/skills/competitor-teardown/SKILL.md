@@ -9,7 +9,7 @@ Step 1 of Pavedline. Every claim in the output has a URL and a status: definite,
 
 ## 1. Start from the founder's sites
 
-Read `PRODUCT.md`, `decisions/` and `STATE.md`. Ask once: "Which competitors, products or sites do you already have in mind?" Accept a list of any length, including none. If none, the researcher finds candidates from `PRODUCT.md`; show the list of candidates and let the founder cut it before dispatching the researcher.
+Read `PRODUCT.md`, `docs/business/VISION.md` if it exists, `decisions/` and `STATE.md`. Competitors and sites named in the vision count as named by the founder; confirm them instead of asking again. If `docs/business/references/` holds screenshots, read them and give their paths to the researcher. They are references, never copied; a finding taken from one cites the file path as its source. Otherwise ask once: "Which competitors, products or sites do you already have in mind?" Accept a list of any length, including none. If none, the researcher finds candidates from `PRODUCT.md`; show the list of candidates and let the founder cut it before dispatching the researcher.
 
 If the compliance decision (`decisions/0003-*`) says compliance is in scope, also ask which countries or regions the product serves. The regulatory landscape for them is part of the research (see "Ask for these outputs").
 
