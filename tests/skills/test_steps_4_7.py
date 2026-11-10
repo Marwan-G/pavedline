@@ -618,6 +618,10 @@ class FounderInputs(unittest.TestCase):
                   SKILLS / "start/SKILL.md", SKILLS / "competitor-teardown/SKILL.md", SKILLS / "spec/SKILL.md"):
             self.assertIn(self.VISION, f.read_text(), f)
 
+    def test_vision_default_is_not_an_answer(self):
+        t = (SKILLS / "start/SKILL.md").read_text()
+        self.assertIn("never taken as the answer", t)
+
     def test_reference_images_are_read(self):
         for name in ("competitor-teardown", "design-system-contract"):
             t = (SKILLS / name / "SKILL.md").read_text()
