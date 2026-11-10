@@ -3,5 +3,6 @@
 __pycache__/
 *.pyc
 .superpowers/
+.obsidian/
 .DS_Store
 **/evals/results/
