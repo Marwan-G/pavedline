@@ -524,7 +524,11 @@ YAML
   }
   run_checker() {
     local j="proof-$RANDOM"
-    kc -n "$ns" create job "$j" --from=cronjob/alerts-check >/dev/null
+    # A copy of the CronJob's Job without its owner: the CronJob keeps one finished Job and could delete an owned copy
+    # before its log is read.
+    kc -n "$ns" create job "$j" --from=cronjob/alerts-check --dry-run=client -o json \
+      | python3 -c 'import json, sys; d = json.load(sys.stdin); d["metadata"].pop("ownerReferences", None); json.dump(d, sys.stdout)' \
+      | kc -n "$ns" create -f - >/dev/null
     kc -n "$ns" wait --for=condition=complete "job/$j" --timeout=240s || { kc -n "$ns" logs "job/$j" || true; return 1; }
     kc -n "$ns" logs "job/$j"
     kc -n "$ns" delete job "$j" --wait=false >/dev/null

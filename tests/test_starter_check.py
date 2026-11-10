@@ -176,6 +176,14 @@ class StarterWorkflows(unittest.TestCase):
                        "backup-db-daily", "never-runs", "--from=cronjob/alerts-check", "backupMaxAge: 1s", "auth can-i"):
             self.assertIn(needle, text, needle)
 
+    def test_proof_jobs_are_not_owned_by_the_cronjob(self):
+        # The CronJob keeps one finished Job; a copy it owns can be deleted before its log is read.
+        text = SCRIPT.read_text()
+        body = text[text.index("run_checker() {"):]
+        body = body[:body.index("\n  }\n")]
+        self.assertIn("--dry-run=client -o json", body)
+        self.assertIn('pop("ownerReferences"', body)
+
     def test_full_is_a_known_stage(self):
         text = SCRIPT.read_text()
         self.assertIn("generate|static|unit|cluster|full|all|selftest) ;;", text)
