@@ -4,9 +4,9 @@ Every guided step skill (`system-design`, `domain-model`, `db-schema`, `api-cont
 
 ## Read first
 
-Read the records in the order of the `state` skill: `CLAUDE.md`, `PRODUCT.md`, `STATE.md`, `WAITING.md`, every file in `decisions/`, `GLOSSARY.md`, then the files the skill names. If `STATE.md` names an earlier step than the skill's own, say so and ask. Ask only what is undecided: never re-ask an answer an earlier step or decision already gave.
+Read the records in the order of the `state` skill: `CLAUDE.md`, `PRODUCT.md`, `STATE.md`, `WAITING.md`, every file in `decisions/`, `GLOSSARY.md`, `docs/business/VISION.md` if it exists (the founder's full vision: input, not a decision), then the files the skill names. If `STATE.md` names an earlier step than the skill's own, say so and ask. Ask only what is undecided: never re-ask an answer an earlier step or decision already gave.
 
-An area already answered by a decision is shown as `decided in NNNN` and not re-asked; only its undecided detail is asked.
+An area already answered by a decision is shown as `decided in NNNN` and not re-asked; only its undecided detail is asked. A choice named by the founder in `docs/business/VISION.md` is proposed as the answer and checked, not compared; it is recorded as a decision once the founder confirms it.
 
 ## Agents
 

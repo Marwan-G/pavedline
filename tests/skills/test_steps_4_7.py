@@ -41,8 +41,9 @@ class Step4Contracts(unittest.TestCase):
     def test_every_area_has_a_heading(self):
         q = (SKILLS / "system-design/references/questions.md").read_text()
         areas = ["Backend", "Auth", "Security and compliance", "Concurrency", "Time and scheduling",
-                 "Scheduled jobs", "Performance", "Images and files", "Real-time", "Notifications",
-                 "Payments taken by tenants", "Billing", "Accessibility", "Mobile offline", "Multi-region",
+                 "Scheduled jobs", "Performance", "Images and files", "Generated documents", "Real-time",
+                 "Notifications", "Payments taken by tenants", "Billing", "AI and models", "Accessibility",
+                 "Languages and right-to-left", "Mobile offline", "Multi-region",
                  "Service mesh", "Website, blog and SEO", "Search", "Availability and recovery"]
         heads = re.findall(r"^## (.+)$", q, re.M)
         self.assertEqual(heads, areas)
@@ -578,3 +579,50 @@ class SharedStepRules(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FounderInputs(unittest.TestCase):
+    VISION = "docs/business/VISION.md"
+    REFS = "docs/business/references/"
+
+    def test_rounds_list_new_areas(self):
+        t = (SKILLS / "system-design/SKILL.md").read_text()
+        r2 = t[t.index("Round 2: behaviour"):t.index("Round 3: reach")]
+        r3 = t[t.index("Round 3: reach"):]
+        for a in ("Generated documents", "AI and models"):
+            self.assertIn(a, r2)
+        self.assertIn("Languages and right-to-left", r3.split("## 3.")[0])
+
+    def test_named_choice_is_checked_not_compared(self):
+        q = (SKILLS / "system-design/references/questions.md").read_text()
+        for s in ("already named", "do not list options or compare", "Compare alternatives only if the check finds a blocker",
+                  "founder's choice"):
+            self.assertIn(s, q)
+        self.assertIn("named by the founder", RULES.read_text())
+
+    def test_new_areas_cover_the_essentials(self):
+        q = (SKILLS / "system-design/references/questions.md").read_text()
+        def area(name):
+            i = q.index("## " + name + "\n")
+            j = q.find("\n## ", i + 1)
+            return q[i:j if j != -1 else None]
+        docs = area("Generated documents")
+        for s in ("PDF", "fonts", "golden-file test"):
+            self.assertIn(s, docs)
+        ai = area("AI and models")
+        for s in ("none", "never writes the source of truth", "self-hosting is never assumed cheaper", "evaluation set", "replaced"):
+            self.assertIn(s, ai)
+        lang = area("Languages and right-to-left")
+        for s in ("right-to-left", "original language", "fonts per script"):
+            self.assertIn(s, lang)
+
+    def test_vision_file_is_read(self):
+        for f in (ROOT / "plugins/pavedline/templates/CLAUDE.md", SKILLS / "state/SKILL.md", RULES,
+                  SKILLS / "start/SKILL.md", SKILLS / "competitor-teardown/SKILL.md", SKILLS / "spec/SKILL.md"):
+            self.assertIn(self.VISION, f.read_text(), f)
+
+    def test_reference_images_are_read(self):
+        for name in ("competitor-teardown", "design-system-contract"):
+            t = (SKILLS / name / "SKILL.md").read_text()
+            self.assertIn(self.REFS, t, name)
+            self.assertIn("never copied", t, name)

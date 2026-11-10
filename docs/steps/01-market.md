@@ -9,7 +9,7 @@ sources and not on memory. It gathers evidence; it does not decide product quest
 
 ## Inputs
 
-`PRODUCT.md`, `decisions/` and `STATE.md` from step 0. You are asked once: "Which competitors, products or sites do
+`PRODUCT.md`, `decisions/` and `STATE.md` from step 0, plus `docs/business/VISION.md` and the screenshots in `docs/business/references/` if you added them (references, never copied). You are asked once: "Which competitors, products or sites do
 you already have in mind?" A list of any length is fine, including none; the researcher then proposes candidates and
 you cut the list. If compliance is in scope, you are also asked which countries or regions the product serves.
 

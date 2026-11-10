@@ -9,7 +9,7 @@ Step 3. The spec turns the decisions into something that can be built and tested
 
 ## 1. Read first, in order
 
-`PRODUCT.md`, `docs/business/BRIEF.md`, `docs/business/SEO-STRATEGY.md`, every file in `decisions/`, `GLOSSARY.md`, `STATE.md`. Use the words of `GLOSSARY.md` exactly. If `STATE.md` says `STEP: 2 — Grill` and the founder confirms the decisions are complete, set `STEP: 3 — Spec` (fresh `date` timestamp in `LAST`) and continue. If step 2 is not finished (the `grilling` skill from `mattpocock-skills` has open questions, or `decisions/` has nothing beyond 0001–0007), say so and ask whether to continue; if the skill is missing, run `/pavedline:doctor`.
+`PRODUCT.md`, `docs/business/VISION.md` if it exists, `docs/business/BRIEF.md`, `docs/business/SEO-STRATEGY.md`, every file in `decisions/`, `GLOSSARY.md`, `STATE.md`. Use the words of `GLOSSARY.md` exactly. If `STATE.md` says `STEP: 2 — Grill` and the founder confirms the decisions are complete, set `STEP: 3 — Spec` (fresh `date` timestamp in `LAST`) and continue. If step 2 is not finished (the `grilling` skill from `mattpocock-skills` has open questions, or `decisions/` has nothing beyond 0001–0007), say so and ask whether to continue; if the skill is missing, run `/pavedline:doctor`.
 
 Ask who may be a data subject (age limit) and the default retention period for personal data, unless a decision already says.
 
