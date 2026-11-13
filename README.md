@@ -86,7 +86,8 @@ your-product/
 
 Pavedline is a Claude Code plugin. It is not in Claude Code's built-in list: you get it from this GitHub repository,
 `Marwan-G/pavedline`, which is also a plugin **marketplace** (a catalogue Claude Code can install plugins from).
-Pavedline needs a few plugins from two Anthropic marketplaces, so you add three marketplaces once, then install.
+Pavedline also needs plugins from Anthropic's official marketplace, which Claude Code already has, and from one more,
+so you add two marketplaces once, then install.
 
 You need [Claude Code](https://code.claude.com/docs/en/setup) installed and signed in.
 
@@ -101,7 +102,6 @@ claude
 one at a time:
 
 ```
-/plugin marketplace add anthropics/claude-plugins-official
 /plugin marketplace add anthropics/knowledge-work-plugins
 /plugin marketplace add Marwan-G/pavedline
 ```
@@ -111,9 +111,11 @@ downloads it and reads its catalogue file, `.claude-plugin/marketplace.json`. Th
 
 | Marketplace | Why you add it |
 |---|---|
-| `anthropics/claude-plugins-official` | Pavedline's dependencies `superpowers`, `mattpocock-skills` and `figma` |
 | `anthropics/knowledge-work-plugins` | Pavedline's dependency `product-management` |
 | `Marwan-G/pavedline` | Pavedline itself |
+
+Pavedline's other dependencies (`superpowers`, `mattpocock-skills`, `figma`) come from `claude-plugins-official`,
+which Claude Code adds the first time you start it.
 
 Optional: `/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill`. This marketplace line is optional:
 `ui-ux-pro-max` is a step-7 style reference, used only if installed.
@@ -135,8 +137,10 @@ summary says `Run /reload-plugins to apply.`, run `/reload-plugins` (or quit and
 ```
 
 **From your shell instead:** the same steps work outside Claude Code with `claude plugin marketplace add <name>` and
-`claude plugin install pavedline@pavedline`; the plugin loads the next time you run `claude`. (Verified on a clean
-profile with `scripts/install_test.sh`.)
+`claude plugin install pavedline@pavedline`; the plugin loads the next time you run `claude`. The shell commands do not
+add the official marketplace, so on a machine that has never run `claude`, first run
+`claude plugin marketplace add anthropics/claude-plugins-official`. (Verified on a clean profile with
+`scripts/install_test.sh`.)
 
 **Optional extras:** `claude plugin install marketing@knowledge-work-plugins` for the Grow loop after launch, and
 `claude plugin install pavedline-cockpit@pavedline` adds a status pane (needs Claude Code 2.1.287 or newer; nothing in
@@ -144,8 +148,8 @@ Pavedline depends on it). For step 12 on OCI you also need OpenTofu or Terraform
 neither.
 
 **If `/pavedline:start` is not found:** a missing dependency stops Pavedline from loading at all. Run
-`claude plugin list`, which shows the dependency warning, then add the missing marketplace from step 2 and install
-again. `Plugin "pavedline" not found in marketplace` means your copy of the catalogue is old: run
+`claude plugin list`, which shows the dependency warning, then add the missing marketplace and install again. If
+`claude-plugins-official` is the one missing, add it with `/plugin marketplace add anthropics/claude-plugins-official`. `Plugin "pavedline" not found in marketplace` means your copy of the catalogue is old: run
 `/plugin marketplace update pavedline`.
 
 Once Pavedline loads, `/pavedline:doctor` checks every tool and skill Pavedline needs. For anything missing, Pavedline tells you what it will install, why and
