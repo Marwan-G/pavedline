@@ -106,6 +106,9 @@ one at a time:
 /plugin marketplace add Marwan-G/pavedline
 ```
 
+Each name is short for a GitHub repository: `Marwan-G/pavedline` is `github.com/Marwan-G/pavedline`. Claude Code
+downloads it and reads its catalogue file, `.claude-plugin/marketplace.json`. The full address works too.
+
 | Marketplace | Why you add it |
 |---|---|
 | `anthropics/claude-plugins-official` | Pavedline's dependencies `superpowers`, `mattpocock-skills` and `figma` |
