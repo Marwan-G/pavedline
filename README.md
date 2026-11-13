@@ -84,22 +84,66 @@ your-product/
 
 ## Install
 
+Pavedline is a Claude Code plugin. It is not in Claude Code's built-in list: you get it from this GitHub repository,
+`Marwan-G/pavedline`, which is also a plugin **marketplace** (a catalogue Claude Code can install plugins from).
+Pavedline needs a few plugins from two Anthropic marketplaces, so you add three marketplaces once, then install.
+
+You need [Claude Code](https://code.claude.com/docs/en/setup) installed and signed in.
+
+**1. Start Claude Code** in a new, empty folder for your product:
+
+```bash
+mkdir my-product && cd my-product
+claude
+```
+
+**2. Add the marketplaces.** Type each line at the Claude Code prompt (where you chat with Claude, not in your shell),
+one at a time:
+
 ```
 /plugin marketplace add anthropics/claude-plugins-official
 /plugin marketplace add anthropics/knowledge-work-plugins
-/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill
 /plugin marketplace add Marwan-G/pavedline
+```
+
+| Marketplace | Why you add it |
+|---|---|
+| `anthropics/claude-plugins-official` | Pavedline's dependencies `superpowers`, `mattpocock-skills` and `figma` |
+| `anthropics/knowledge-work-plugins` | Pavedline's dependency `product-management` |
+| `Marwan-G/pavedline` | Pavedline itself |
+
+Optional: `/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill`. This marketplace line is optional:
+`ui-ux-pro-max` is a step-7 style reference, used only if installed.
+
+**3. Install Pavedline:**
+
+```
 /plugin install pavedline@pavedline
+```
+
+`pavedline@pavedline` means "the plugin `pavedline` from the marketplace `pavedline`". If Claude Code asks for a scope,
+choose user scope. The four dependencies install with it, because their marketplaces are already added. If the
+summary says `Run /reload-plugins to apply.`, run `/reload-plugins` (or quit and run `claude` again).
+
+**4. Start:**
+
+```
 /pavedline:start
 ```
 
-Add the dependency marketplaces first: Pavedline's dependencies (`superpowers`, `mattpocock-skills`,
-`product-management`, `figma`) install automatically only from marketplaces you have already added. Without them the install
-warns that Pavedline will not load. The `ui-ux-pro-max-skill` marketplace line is optional: `ui-ux-pro-max` is a step-7 style reference, used only if installed. (Verified on a clean profile with `scripts/install_test.sh`.) Optional: `claude plugin install marketing@knowledge-work-plugins` for the Grow loop after launch, and `claude plugin install pavedline-cockpit@pavedline` adds a status pane (needs Claude Code 2.1.287 or newer; nothing in Pavedline depends on it). For step 12 on OCI you also need OpenTofu or Terraform; the bring-your-own profile needs neither.
+**From your shell instead:** the same steps work outside Claude Code with `claude plugin marketplace add <name>` and
+`claude plugin install pavedline@pavedline`; the plugin loads the next time you run `claude`. (Verified on a clean
+profile with `scripts/install_test.sh`.)
+
+**Optional extras:** `claude plugin install marketing@knowledge-work-plugins` for the Grow loop after launch, and
+`claude plugin install pavedline-cockpit@pavedline` adds a status pane (needs Claude Code 2.1.287 or newer; nothing in
+Pavedline depends on it). For step 12 on OCI you also need OpenTofu or Terraform; the bring-your-own profile needs
+neither.
 
 **If `/pavedline:start` is not found:** a missing dependency stops Pavedline from loading at all. Run
-`claude plugin list`, which shows the dependency warning, then add the missing marketplace or plugin with the commands
-above.
+`claude plugin list`, which shows the dependency warning, then add the missing marketplace from step 2 and install
+again. `Plugin "pavedline" not found in marketplace` means your copy of the catalogue is old: run
+`/plugin marketplace update pavedline`.
 
 Once Pavedline loads, `/pavedline:doctor` checks every tool and skill Pavedline needs. For anything missing, Pavedline tells you what it will install, why and
 the exact command, then installs it; Claude Code asks your permission for each command. It never uses `sudo`, and a
