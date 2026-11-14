@@ -2,6 +2,7 @@
 
 import json
 import logging
+import time
 from typing import Any
 
 import httpx
@@ -13,6 +14,7 @@ from app.events import (
     configure_logging,
     log_event,
     request_id_var,
+    scrub,
     tenant_id_var,
 )
 from tests import probes
@@ -161,6 +163,60 @@ def test_secret_shaped_text_is_scrubbed_everywhere(capsys: pytest.CaptureFixture
     (line,) = lines(out)
     assert "page=2" in line["message"]
     assert "[parameters: [redacted]]" in line["exc"]
+
+
+def test_quoted_secrets_in_reprs_dicts_and_json_are_scrubbed(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    log_event(
+        log,
+        logging.WARNING,
+        "auth.checked",
+        "LoginIn(email='a@b.c', password='a-SENTINEL') body {'api_key': 'b-SENTINEL'}",
+        raw='{"token": "c-SENTINEL", "id": 3}',
+        detail="input_value={'username': 'bob', 'password': 'd-SENTINEL'}, input_type=dict",
+    )
+    assert "SENTINEL" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "[parameters: " * 80_000,
+        "input_value=" * 80_000,
+        "password='" * 80_000,
+        "://a:" * 80_000,
+        "token=" * 80_000,
+    ],
+)
+def test_the_scrub_stays_fast_on_hostile_text(text: str) -> None:
+    start = time.monotonic()
+    scrub(text, 8192)
+    assert time.monotonic() - start < 1.0
+
+
+def test_a_lone_surrogate_and_nan_still_write_a_valid_line(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    log_event(log, logging.INFO, "user.created", "hi \ud800", label="\ud800", score=float("nan"))
+    (line,) = lines(capsys.readouterr().out)
+    assert line["event"] == "user.created"
+    assert line["score"] == "nan"
+
+
+def test_bytes_header_pairs_are_redacted(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    log_event(
+        log, logging.INFO, "auth.checked", headers=[(b"x-api-key", b"e-SENTINEL"), (b"accept", b"json")]
+    )
+    assert "SENTINEL" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("path", ["//[x", "//a]", "/v1/x?token=f-SENTINEL#frag"])
+def test_the_access_filter_never_raises(path: str, capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    logging.getLogger("uvicorn.access").info('%s - "%s %s HTTP/%s" %d', "1.2.3.4", "GET", path, "1.1", 404)
+    (line,) = lines(capsys.readouterr().out)
+    assert "SENTINEL" not in line["message"]
+    assert "?" not in line["message"]
 
 
 def test_harmless_words_are_left_alone(capsys: pytest.CaptureFixture[str]) -> None:

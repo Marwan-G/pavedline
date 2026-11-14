@@ -214,7 +214,8 @@ def run_log_event(check, ctx, env, retries, deadline):
         if left <= 0:
             return problem or "checks timed out (the total time for all checks is capped)"
         try:
-            r = run_child(argv, env=env, timeout=min(60, left), cwd=env["HOME"])
+            # A log cut at --limit-bytes may end mid-character: decode leniently, never crash the run.
+            r = run_child(argv, env=env, timeout=min(60, left), cwd=env["HOME"], errors="replace")
         except subprocess.TimeoutExpired:
             problem = "kubectl logs deployment/%s -n %s timed out" % (deployment, ns)
             continue

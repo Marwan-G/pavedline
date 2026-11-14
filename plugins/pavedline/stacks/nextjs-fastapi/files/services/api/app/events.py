@@ -11,12 +11,12 @@ minimal line with the base fields says so. Standard library only.
 
 import json
 import logging
+import math
 import re
 import sys
 from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any, cast
-from urllib.parse import urlsplit, urlunsplit
 
 EVENT_NAME = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 REDACTED = "[redacted]"
@@ -31,16 +31,25 @@ _SECRET_NAME = re.compile(
     r"|signature|api_?key|(^|_)key$|(^|_)keys$|(^|_)otp($|_)|dsn|database_url|connection_string",
     re.IGNORECASE,
 )
+# Every quantifier is bounded or always matches, so each pattern runs in linear time on any input.
+_SENSITIVE_WORD = r"[a-z_]{0,40}(?:token|key|secret|password|passwd|signature|sig|credential)s?"
 _SCRUBS = (
-    (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]+"), r"\1 " + REDACTED),
-    (re.compile(r"(?i)(://)[^/\s:@]+:[^/\s@]+@"), r"\1" + REDACTED + "@"),
+    (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{1,1000}"), r"\1 " + REDACTED),
+    (re.compile(r"(?i)(://)[^/\s:@]{1,200}:[^/\s]{1,200}@"), r"\1" + REDACTED + "@"),
+    # password='x', "token": "x", 'api_key': 'x' (reprs, dicts, JSON)
     (
-        re.compile(r"(?i)\b([a-z_]*(?:token|key|secret|password|passwd|signature|sig)=)[^&\s'\"]+"),
-        r"\1" + REDACTED,
+        re.compile(r"(?i)(\b" + _SENSITIVE_WORD + r"['\"]?\s*[:=]\s*)('[^'\n]{0,500}'|\"[^\"\n]{0,500}\")"),
+        r"\1'" + REDACTED + "'",
     ),
-    (re.compile(r"(?i)(?<![a-z0-9_])(code=)[^&\s'\"]+"), r"\1" + REDACTED),  # an OAuth or magic-link code
-    (re.compile(r"\[parameters: .*?\](?=\s|$)", re.S), "[parameters: " + REDACTED + "]"),
-    (re.compile(r"(input_value=)('[^']*'|\"[^\"]*\"|[^,\s\]]+)"), r"\1" + REDACTED),
+    # token=x, ?api_key=x
+    (re.compile(r"(?i)(\b" + _SENSITIVE_WORD + r"\s*=\s*)(?!['\"])[^&\s,;)'\"]{1,500}"), r"\1" + REDACTED),
+    (
+        re.compile(r"(?i)(?<![a-z0-9_])(code=)[^&\s'\"]{1,500}"),
+        r"\1" + REDACTED,
+    ),  # an OAuth or magic-link code
+    # SQLAlchemy's bound values and pydantic's raw input: redact to the end of the line.
+    (re.compile(r"\[parameters: [^\n]*"), "[parameters: " + REDACTED + "]"),
+    (re.compile(r"(input_value=)[^\n]*"), r"\1" + REDACTED),
 )
 # Attributes every LogRecord has; anything else on a record came from `extra=` and becomes a field.
 _RECORD_ATTRS = frozenset(vars(logging.LogRecord("", 0, "", 0, "", None, None))) | {
@@ -87,13 +96,17 @@ def _clean(name: str, value: Any, depth: int = 0) -> Any:
         result = {str(k): _clean(str(k), v, depth + 1) for k, v in pairs}
     elif isinstance(value, (list, tuple, set, frozenset)):
         items = list(cast(list[Any], value))
-        # A (name, value) pair, as in a list of headers: redact the value by the pair's name.
-        if len(items) == 2 and isinstance(items[0], str) and _secret_name(items[0]):
-            result = [items[0], REDACTED]
+        # A (name, value) pair, as in a list of headers (str or bytes): redact the value by the pair's name.
+        first = items[0] if items else None
+        pair_name = first.decode("latin-1") if isinstance(first, bytes) else first
+        if len(items) == 2 and isinstance(pair_name, str) and _secret_name(pair_name):
+            result = [pair_name, REDACTED]
         else:
             result = [_clean(name, v, depth + 1) for v in items[:100]]
     elif isinstance(value, str):
         result = scrub(value)
+    elif isinstance(value, float) and not math.isfinite(value):
+        result = str(value)  # NaN and Infinity are not valid JSON
     elif value is None or isinstance(value, (bool, int, float)):
         result = value
     else:
@@ -102,7 +115,8 @@ def _clean(name: str, value: Any, depth: int = 0) -> Any:
 
 
 class JsonFormatter(logging.Formatter):
-    """One JSON object per record: the base fields, then the event's own fields."""
+    """One JSON object per record: the base fields, then the event's own fields. ASCII only, so a
+    lone surrogate or a cut multibyte character can never break the write or a reader."""
 
     def format(self, record: logging.LogRecord) -> str:
         try:
@@ -139,7 +153,7 @@ class JsonFormatter(logging.Formatter):
             line[name] = _clean(name, value)
         if record.exc_info:
             line["exc"] = scrub(self.formatException(record.exc_info), MAX_EXC)
-        return json.dumps(line, default=str, ensure_ascii=False)
+        return json.dumps(line, default=str, ensure_ascii=True)
 
 
 class _StdoutHandler(logging.StreamHandler):  # pyright: ignore[reportMissingTypeArgument]
@@ -156,8 +170,9 @@ class _DropQueryString(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         args = record.args
         if isinstance(args, tuple) and len(args) >= 3 and isinstance(args[2], str):
-            parts = urlsplit(args[2])
-            record.args = (*args[:2], urlunsplit((parts.scheme, parts.netloc, parts.path, "", "")), *args[3:])
+            # Split by hand: a URL parser raises on paths such as `//[x`, and a filter must never raise.
+            path = args[2].split("?", 1)[0].split("#", 1)[0]
+            record.args = (*args[:2], path, *args[3:])
         return True
 
 
