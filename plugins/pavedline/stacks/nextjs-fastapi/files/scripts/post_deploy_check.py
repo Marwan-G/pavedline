@@ -11,8 +11,9 @@ Each line is parsed with shlex and must be exactly one of:
         kubectl --context kind-pavedline-<project> -n <namespace> get <kind>[/<name>]; kinds: pod deployment service
         httproute cluster job configmap (never secret); --equals needs --jsonpath and compares the trimmed output
     log-event <namespace> <deployment> <event>
-        kubectl --context kind-pavedline-<project> -n <namespace> logs deployment/<deployment> --since=15m: passes
-        when one JSON line has "event": "<event>" (docs/observability/EVENTS.md); the log text is never printed
+        kubectl --context kind-pavedline-<project> -n <namespace> logs deployment/<deployment> --all-pods --since=15m
+        (at most 5 MB): passes when one JSON line has "event": "<event>" (docs/observability/EVENTS.md); the log
+        text is never printed
 
 Anything else, and any shell metacharacter (; | & $ ( ) < > ` backslash, control characters), is `rejected check`
 (exit 2) before ANY line runs. kubectl runs with an empty environment (a sanitised PATH, a temp HOME) and a temporary
@@ -44,7 +45,8 @@ PATH = re.compile(r"^/[A-Za-z0-9_./~%:@+=?-]{0,500}$")
 _SEG = r"[A-Za-z0-9_]{1,60}(?:\[(?:[0-9]{1,3}|\*)\])?"
 JSONPATH = re.compile(r"^--jsonpath=(\{(?:\.items\[(?:[0-9]{1,3}|\*)\])?\.(?:status(?:\.%s)*|spec\.replicas|metadata\.name|metadata\.labels(?:\.[A-Za-z0-9_-]{1,63})?)\})$" % _SEG)
 EVENT = re.compile(r"^[a-z][a-z0-9_]{0,60}(\.[a-z][a-z0-9_]{0,60}){1,5}$")
-LOG_LINES = "2000"
+LOG_LINES = "5000"  # per pod
+LOG_BYTES = "5000000"  # per pod
 EQUALS = re.compile(r"^--equals=([A-Za-z0-9_.:/-]{0,200})$")
 
 
@@ -198,12 +200,20 @@ def has_event(text, event):
     return False
 
 
-def run_log_event(check, ctx, env, retries):
+def run_log_event(check, ctx, env, retries, deadline):
     _, ns, deployment, event = check
-    argv = ["kubectl", "--context", ctx, "-n", ns, "logs", "deployment/" + deployment, "--since=15m", "--tail=" + LOG_LINES]
+    argv = ["kubectl", "--context", ctx, "-n", ns, "logs", "deployment/" + deployment, "--all-pods=true", "--since=15m",
+            "--tail=" + LOG_LINES, "--limit-bytes=" + LOG_BYTES]
     problem = None
     for attempt in range(max(1, retries)):
-        r = run_child(argv, env=env, timeout=60, cwd=env["HOME"])
+        left = deadline - time.monotonic()
+        if left <= 0:
+            return problem or "checks timed out (the total time for all checks is capped)"
+        try:
+            r = run_child(argv, env=env, timeout=min(60, left), cwd=env["HOME"])
+        except subprocess.TimeoutExpired:
+            problem = "kubectl logs deployment/%s -n %s timed out" % (deployment, ns)
+            continue
         if r.returncode != 0:
             problem = "kubectl logs deployment/%s -n %s failed: %s" % (deployment, ns, r.stderr.strip()[:200])
         elif has_event(r.stdout, event):
@@ -272,7 +282,7 @@ def main(argv=None):
             if c[0] == "http":
                 problem = run_http(c, args.retries)
             elif c[0] == "log-event":
-                problem = run_log_event(c, ctx, env, args.retries)
+                problem = run_log_event(c, ctx, env, args.retries, deadline)
             else:
                 problem = run_kubectl(c, ctx, env)
             print(("ok: " if problem is None else "FAILED: ") + (" ".join(str(x) for x in c if x is not None) if problem is None else problem))

@@ -3,9 +3,11 @@
 
     python3 scripts/events_check.py [--root DIR]
 
-Finds every `log_event(<logger>, <level>, "<name>"` in services/api/app and compares the names with the first
-column of the Events table. Exit 1 on an emitted event with no row, a duplicate row, or a name that is not
-`area.what_happened`; a row the code never emits is a warning only (it may be planned for a later slice).
+Finds every `log_event(<logger>, <level>, "<name>"` in services/api/app (also under an import alias, such as
+`from app.events import log_event as emit`, or as `events.log_event`) and compares the names with the first
+column of the Events table (rows inside a fenced code block do not count). Exit 1 on an emitted event with no
+row, a duplicate row, or a name that is not `area.what_happened`; a row the code never emits is a warning only
+(it may be planned for a later slice).
 """
 
 import argparse
@@ -21,8 +23,15 @@ ROW = re.compile(r"^\|\s*`([^`]*)`\s*\|")
 def emitted(app_dir: pathlib.Path) -> dict[str, list[str]]:
     """Event name -> the places that emit it. Only literal names count; a computed name is reported."""
     found: dict[str, list[str]] = {}
+    definition = (app_dir / "events.py").resolve()
     for path in sorted(app_dir.rglob("*.py")):
+        if path.resolve() == definition:
+            continue  # the module that defines log_event
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        names = {"log_event"}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                names.update(a.asname for a in node.names if a.name == "log_event" and a.asname)
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
@@ -34,7 +43,7 @@ def emitted(app_dir: pathlib.Path) -> dict[str, list[str]]:
                 if isinstance(func, ast.Attribute)
                 else ""
             )
-            if name != "log_event" or path.name == "events.py":
+            if name not in names:
                 continue
             where = f"{path}:{node.lineno}"
             arg = node.args[2] if len(node.args) >= 3 else None
@@ -48,8 +57,13 @@ def emitted(app_dir: pathlib.Path) -> dict[str, list[str]]:
 def registered(events_md: pathlib.Path) -> list[str]:
     """The names in the first column of the table under `## Events`."""
     names: list[str] = []
-    in_events = False
+    in_events = in_fence = False
     for line in events_md.read_text(encoding="utf-8").splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         if line.startswith("## "):
             in_events = line.strip() == "## Events"
             continue

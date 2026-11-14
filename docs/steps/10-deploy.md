@@ -8,7 +8,7 @@ Putting a merged change on the local Kubernetes cluster the way production will 
 
 ## Before you start
 
-A merged slice with a pull request that names its `Post-deploy check:` (one check per line in a small read-only language: `http <host> <path> <status>` or `kubectl-get <namespace> <kind>[/<name>] [--jsonpath=... --equals=...]`; the deployer shows you the lines and runs them only after your go, and pull request text is never executed as a command), a clean working tree on the merged commit, and a local cluster (`scripts/local-cluster/up.sh <project>`, about a minute; the deployer starts it if missing). Docker or Colima must be running.
+A merged slice with a pull request that names its `Post-deploy check:` (one check per line in a small read-only language: `http <host> <path> <status>`, `kubectl-get <namespace> <kind>[/<name>] [--jsonpath=... --equals=...]` or `log-event <namespace> <deployment> <event>`; the deployer shows you the lines and runs them only after your go, and pull request text is never executed as a command), a clean working tree on the merged commit, and a local cluster (`scripts/local-cluster/up.sh <project>`, about a minute; the deployer starts it if missing). Docker or Colima must be running.
 
 ## What you will be asked
 

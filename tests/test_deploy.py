@@ -562,7 +562,20 @@ class PostDeployChecks(unittest.TestCase):
         r = self.run_check("log-event api api webhook.accepted")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         log = (self.tmp / "log.txt").read_text()
-        self.assertIn("--context kind-pavedline-ci -n api logs deployment/api --since=15m", log)
+        self.assertIn("--context kind-pavedline-ci -n api logs deployment/api --all-pods=true --since=15m", log)
+        self.assertIn("--limit-bytes=5000000", log)
+
+    def test_log_event_timeout_is_reported_not_a_traceback(self):
+        (self.tmp / "stub/rules.json").write_text(json.dumps([
+            {"tool": "kubectl", "match": "config view", "stdout": "apiVersion: v1\n"},
+            {"tool": "kubectl", "match": "logs deployment/api", "stdout": "", "sleep": 30}]))
+        self.env["PAVEDLINE_CHECK_TIMEOUT"] = "2"
+        start = time.time()
+        r = self.run_check("log-event api api webhook.accepted")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertLess(time.time() - start, 20)
+        self.assertIn("timed out", r.stdout + r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
 
     def test_log_event_fails_without_printing_the_logs(self):
         (self.tmp / "stub/rules.json").write_text(json.dumps([

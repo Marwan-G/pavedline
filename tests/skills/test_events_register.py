@@ -46,6 +46,9 @@ class EventsRegister(unittest.TestCase):
             "skills/go-to-production/references/launch.md": ["docs/observability/EVENTS.md", "alert candidates"],
             "templates/docs/production/LAUNCH.md": ["docs/observability/EVENTS.md"],
             "templates/docs/rules-index.md": ["docs/observability/EVENTS.md"],
+            "templates/.github/pull_request_template.md": ["log-event <namespace> <deployment> <event>"],
+            "stacks/nextjs-fastapi/files/scripts/deploy_local.sh": ["log-event <ns> <deployment> <event>"],
+            "skills/fastapi-service/SKILL.md": ["clear_log_context()", "hide_parameters=True"],
         }.items():
             t = text(rel)
             for n in needles:
@@ -55,6 +58,9 @@ class EventsRegister(unittest.TestCase):
         t = text("agents/builder.md")
         nums = [int(line.split(".")[0]) for line in t.splitlines() if line[:2].rstrip(".").isdigit() and ". **" in line[:6]]
         self.assertEqual(nums, list(range(1, len(nums) + 1)))
+
+    def test_the_step_10_page_lists_the_verb(self):
+        self.assertIn("log-event <namespace> <deployment> <event>", (ROOT / "docs/steps/10-deploy.md").read_text())
 
     def test_the_spec_keeps_tools_out_and_events_in(self):
         spec = (ROOT / "docs/superpowers/specs/2026-11-07-pavedline-design.md").read_text()

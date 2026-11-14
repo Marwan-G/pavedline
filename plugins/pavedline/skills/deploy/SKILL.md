@@ -28,7 +28,7 @@ scripts/deploy_local.sh <project> [--apps api,web] --check "<check line>" [--che
 
 - `http <host> <path> <status>`: a GET through the Gateway at `127.0.0.1:8080` with that Host header; the host must end `.localtest.me` or `.localhost`.
 - `kubectl-get <namespace> <kind>[/<name>] [--jsonpath={<expr>} [--equals=<value>]]`: a read, on the forced `kind-pavedline-<project>` context with a temporary kubeconfig holding only that context and an empty environment; kinds `pod`, `deployment`, `service`, `httproute`, `cluster`, `job`, `configmap` (never `secret`).
-- `log-event <namespace> <deployment> <event>`: reads the deployment's logs of the last 15 minutes on the same forced context and passes when one JSON line has that `event` (a row of `docs/observability/EVENTS.md`); the log text is never printed.
+- `log-event <namespace> <deployment> <event>`: reads the logs of every pod of the deployment from the last 15 minutes (at most 5,000 lines and 5 MB per pod) on the same forced context, and passes when one JSON line has that `event` (a row of `docs/observability/EVENTS.md`); the log text is never printed. Trigger the event first (an `http` line before it) so it is in the window.
 
 `--jsonpath` may read only `.status...`, `.spec.replicas`, `.metadata.name` and `.metadata.labels` (optionally under `.items[i]`); `env`, `data`, `stringData`, annotations and pod specs are rejected because they can hold secrets. A mismatch says so and names the path; the check never prints the observed value. At most 20 lines, and all checks together are capped at 300 s (then `checks timed out`).
 
