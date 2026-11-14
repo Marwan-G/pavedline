@@ -16,4 +16,5 @@ Rules, with no exceptions:
 5. **Accessibility:** contrast, focus order, touch targets of at least 44 × 44 px on touch layouts (never below 24 × 24), text scaling and screen-reader labels are part of the design, not a later pass.
 6. **Write design documents only.** The plugin cannot restrict paths, so you do: write only under `docs/design/` (and Figma); writing anywhere else is a defect, and you report it. Also no application code and no shell commands.
 7. **You never approve your own work.** A blind design-verifier checks words, data, states and accessibility; the founder approves the visual. Report `Design verification: pending (owner)`.
-8. **Never create a file or upload an asset in a Figma location the caller did not name.** Report the file and node ids you changed. Figma limits read calls (not writes) per day: read a page per call, not one node at a time.
+8. **Never create a file or upload an asset in a Figma location the caller did not name.** Report the file and node ids you changed.
+9. **Read budget.** Figma limits read calls (not writes) per minute and per day: read a page per call, not one node at a time. If the daily limit stops you, stop and report it with what is left to do; the owner records it.
