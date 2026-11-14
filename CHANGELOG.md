@@ -34,6 +34,7 @@ All notable changes to Pavedline are recorded here. The format follows
 - GitOps templates (Helm library chart, Argo CD ApplicationSets) and local cluster additions: a Gateway API controller and a local git server (`kind-git`) that Argo CD syncs from.
 - Intent capture: `docs/intent/` holds proposed changes, and accepted ones are specced before they are planned.
 - Agents `builder`, `adversary` (read-only) and `deployer`; warn hooks for a pull request body without the gates line and for code changed without its `ARCHITECTURE.dot`.
+- Build-time events: the API logs one JSON event per line (`app/events.py`, with `request_id`, `tenant_id` and secret scrubbing); `docs/observability/EVENTS.md` lists every event and `events_check.py` fails CI on an unregistered one; slices name their events, a `log-event` post-deploy check proves them on the local cluster, and step 12 chooses tools from the register.
 
 ### Changed
 - `ui-ux-pro-max` is now optional: removed from the plugin dependencies, and `doctor` lists it as optional.
