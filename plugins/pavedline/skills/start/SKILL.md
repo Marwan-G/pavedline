@@ -29,7 +29,15 @@ Pavedline collects nothing. Every answer stays in your own repository.
 
 Before question 1: if `docs/business/VISION.md` exists, read it; it is the founder's full vision. Propose answer 1 as one paragraph drawn from it. For each later question, what the vision says is offered as the default, never taken as the answer: every question is still asked as its skill says (`architecture-intake`, `compliance`) and recorded. The file itself is not changed.
 
-Ask one question, wait for the answer, then ask the next. State the default with each question; the user can answer "default". Keep the order.
+Ask one question at a time, in this order, through the question dialog (`AskUserQuestion`), so the user always sees where they are and what to do next:
+
+- The header shows the place: `Q1 of 7`, `Q2 of 7` and so on; a follow-up keeps its number (`Q3.1 of 7`).
+- The default is the first option, labelled "(Recommended)". Each option's description says what it changes. "Other" takes the user's own words; "default" is a valid answer.
+- Question 1 is free text: put the proposed paragraph in the question and offer "Accept as written (Recommended)" and "Change it". On "Change it", take the new paragraph and confirm it once.
+- Surfaces is a multi-select. The compliance question keeps its exact wording as the question text.
+- Once the user answers, note it and ask the next question in the same turn. Never end a turn on a question asked only in text.
+
+If the dialog is not available (a headless run), end each message with one line: `Reply: accept · default · or your own answer. Next: question N of 7 — <topic>.`
 
 1. **What are you building?** One paragraph: who it serves, the problem, the one thing it must do well. No options.
 2. **Multi-tenant?** Follow the `architecture-intake` skill for this question.
