@@ -12,16 +12,22 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from app.events import tenant_id_var
+
 
 @asynccontextmanager
 async def tenant_transaction(engine: AsyncEngine, tenant_id: UUID) -> AsyncGenerator[AsyncConnection]:
     """One transaction scoped to `tenant_id`; commits on success, rolls back on any exception."""
-    async with engine.connect() as conn, conn.begin():
-        await conn.execute(
-            text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
-            {"tenant_id": str(tenant_id)},
-        )
-        yield conn
+    token = tenant_id_var.set(str(tenant_id))  # log lines inside the transaction carry the tenant
+    try:
+        async with engine.connect() as conn, conn.begin():
+            await conn.execute(
+                text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
+                {"tenant_id": str(tenant_id)},
+            )
+            yield conn
+    finally:
+        tenant_id_var.reset(token)
 
 
 async def resolve_tenant(engine: AsyncEngine, external_id: str) -> UUID | None:

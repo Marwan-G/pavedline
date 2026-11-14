@@ -53,8 +53,10 @@ proved and fixing what hurt it (§15).
 ## 4. Non-goals and anti-goals
 
 **Non-goals (now):**
-- **Observability and tracing (decided).** A clean seam is left for a future observability agent (§12.5). The only
-  exception is **three alerts** (decided, §11.11).
+- **Observability and tracing tools (decided).** A clean seam is left for a future observability agent (§12.5). The only
+  exception is **three alerts** (decided, §11.11). The events themselves are defined during the build, in
+  `docs/observability/EVENTS.md`, and the tools are chosen at step 12 (founder, 2026-11-14; design
+  `2026-11-14-build-time-events-design.md`).
 - Building any product inside this repo; naming any product built with it (decided).
 - Replacing the plugins it depends on.
 
@@ -588,7 +590,8 @@ target path is readable.
 - **`pavedline-cockpit`** (optional, separate plugin): a pane showing the step, wave, next action, the open slice's
   gates and `WAITING.md`, plus `/pavedline-status`. Mods run inside Claude Code (v2.1.287+), are not sandboxed, and
   draw nothing in `claude -p`. Nothing depends on the cockpit.
-- **The observability seam:** a reserved `k8s/addons/` slot and `docs/extending.md`, for a future observability agent.
+- **The observability seam:** a reserved `k8s/addons/` slot and `docs/extending.md`, for a future observability agent,
+  and the events register `docs/observability/EVENTS.md` it starts from.
 
 ### 12.6 The ask-before-adding rule (its one home)
 Before any new service or billable resource, even a free one, state what it is, what it will do, why nothing already
@@ -675,7 +678,8 @@ pavedline/
 ## 16. Constraints and sanitisation
 
 Public repo, MIT, no secrets, no private identifiers. Free and open-source tools only **inside** the factory. Claude
-Code plugin format, distributed as a marketplace. Solo and team. Observability excluded except the three alerts.
+Code plugin format, distributed as a marketplace. Solo and team. Observability tools excluded except the three alerts; the events are defined during the build
+(`docs/observability/EVENTS.md`) and the tools chosen at step 12.
 Every vendor fact carries a date and a source.
 
 **Sanitisation (CI):** a deny-list scan over **all tracked files, docs included** fails on generic patterns (cloud

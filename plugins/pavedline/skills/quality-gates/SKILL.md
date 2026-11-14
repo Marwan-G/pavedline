@@ -27,7 +27,7 @@ Red first, then the code, then the regression cases (`superpowers:test-driven-de
 
 ## Gate 2: code review
 
-Write the diff to a file (`git diff origin/<default>...<branch> > <file>`) and run the scanner output next to it: lint, types, Semgrep, Trivy, Checkov and the repo's boundary, row-level-security and contract checks. Dispatch a blind `pavedline:reviewer` with the diff file, the scanner output and the records (spec, `GLOSSARY.md`, decisions), never the builder's summary. It ends `VERDICT: APPROVE` or `VERDICT: REJECT — <one sentence>`; a reject is reworked and re-checked, never argued past. Use the prompt in `${CLAUDE_SKILL_DIR}/references/reviewer-prompts.md`.
+Write the diff to a file (`git diff origin/<default>...<branch> > <file>`) and run the scanner output next to it: lint, types, Semgrep, Trivy, Checkov and the repo's boundary, row-level-security and contract checks. Dispatch a blind `pavedline:reviewer` with the diff file, the scanner output and the records (spec, `GLOSSARY.md`, decisions), never the builder's summary. The reviewer also checks the events: every event the slice plan names is emitted through `log_event` and has its row in `docs/observability/EVENTS.md`, and every new error path logs one. It ends `VERDICT: APPROVE` or `VERDICT: REJECT — <one sentence>`; a reject is reworked and re-checked, never argued past. Use the prompt in `${CLAUDE_SKILL_DIR}/references/reviewer-prompts.md`.
 
 ## Gate 3: security review
 
@@ -39,7 +39,7 @@ Run the built-in `security-review` skill on the branch, briefed with the slice's
 
 ## Gate 4: verification
 
-**The orchestrator runs these itself after each builder commit; "all green" in a builder's report is a claim, not evidence.** In the worktree: typecheck; lint only where its config exists and CI runs it; the tests of the touched packages (red first, counts reported); migrations applied to a throwaway Postgres; accessibility checks (axe on web pages; the mobile accessibility linter and screen-reader labels); every image builds and boots (the in-image check); `git diff --stat` matches the slice's stated scope. The FULL suite runs once, at the merge gate, on a branch up to date with the default branch (label `ci:db` for the DB tests); reviewers run only targeted checks for their findings.
+**The orchestrator runs these itself after each builder commit; "all green" in a builder's report is a claim, not evidence.** In the worktree: typecheck; lint only where its config exists and CI runs it; the tests of the touched packages (red first, counts reported); migrations applied to a throwaway Postgres; accessibility checks (axe on web pages; the mobile accessibility linter and screen-reader labels); every image builds and boots (the in-image check); `git diff --stat` matches the slice's stated scope; `python3 scripts/events_check.py` passes (every emitted event has its row). The FULL suite runs once, at the merge gate, on a branch up to date with the default branch (label `ci:db` for the DB tests); reviewers run only targeted checks for their findings.
 
 ## Gate 5: merge
 
@@ -50,7 +50,7 @@ Run the built-in `security-review` skill on the branch, briefed with the slice's
 Gates: TDD ✓ · review ✓ (n found, m fixed) · security ✓ · adversarial ✓|n/a · verification ✓
 ```
 
-   `✗` is not valid: a slice with a failing gate is not done. When `m < n`, list every unfixed finding as `accepted — <reason>`. Also the `Post-deploy check:` line (one read-only command, used by step 10) and, when a diagram folder changed, the diagram update or `diagram unchanged: <reason>`.
+   `✗` is not valid: a slice with a failing gate is not done. When `m < n`, list every unfixed finding as `accepted — <reason>`. Also the `Post-deploy check:` line (one read-only command, used by step 10; a slice that adds an event names its key one as `log-event <namespace> <deployment> <event>`) and, when a diagram folder changed, the diagram update or `diagram unchanged: <reason>`.
 3. **Before every push** (the first push of a branch and each push after), run the pinned secret scanner on an export of what is about to leave: `git archive HEAD | tar -x -C "$EXPORT"` with `EXPORT=$(mktemp -d "$HOME/.gitleaks.XXXXXX")` (under `$HOME`: Colima and Docker Desktop cannot mount `/private/tmp`), then `docker run --rm -v "$EXPORT:/repo:ro" <the gitleaks image> dir /repo --no-banner --redact`. The image is the one `.github/workflows/records.yml` pins by digest (read it there, never type a version); remove the export afterwards. Any finding stops the push: rotate the credential first (a `WAITING.md` item), then remove it from the tree. When docker is absent, say so and leave the check to CI; never skip silently.
 4. Squash-merge on the remote (`gh pr merge --squash`), subject `Slice <id>: <title>`. Pull the default branch. Clean up the worktree and branch only after the merge succeeded.
 5. Fold `handoff/<branch>.md` into the records (`STATE.md ▶ LEFT BEHIND` for what is open) and delete the file.

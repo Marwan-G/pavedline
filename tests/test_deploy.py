@@ -544,6 +544,37 @@ class PostDeployChecks(unittest.TestCase):
             r = self.run_check(line, validate=True)
             self.assertEqual(r.returncode, 0, line + r.stderr)
 
+    def test_log_event_lines(self):
+        for line in ("log-event api api request.unhandled_error", "log-event web web-app job.created_now"):
+            r = self.run_check(line, validate=True)
+            self.assertEqual(r.returncode, 0, line + r.stderr)
+        for line in ("log-event api api JobCreated", "log-event api api job", "log-event Bad_NS api job.created",
+                     "log-event api api/x job.created", "log-event api api job.created extra", "log-event api api",
+                     "log-event api api job.created;id", "log-event api api $(id)"):
+            r = self.run_check(line, validate=True)
+            self.assertEqual(r.returncode, 2, line)
+            self.assertIn("rejected check", r.stderr, line)
+
+    def test_log_event_passes_on_a_matching_json_line(self):
+        (self.tmp / "stub/rules.json").write_text(json.dumps([
+            {"tool": "kubectl", "match": "config view", "stdout": "apiVersion: v1\n"},
+            {"tool": "kubectl", "match": "logs deployment/api", "stdout": 'plain text\n{"event": "webhook.accepted", "provider": "stripe"}\n'}]))
+        r = self.run_check("log-event api api webhook.accepted")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        log = (self.tmp / "log.txt").read_text()
+        self.assertIn("--context kind-pavedline-ci -n api logs deployment/api --since=15m", log)
+
+    def test_log_event_fails_without_printing_the_logs(self):
+        (self.tmp / "stub/rules.json").write_text(json.dumps([
+            {"tool": "kubectl", "match": "config view", "stdout": "apiVersion: v1\n"},
+            {"tool": "kubectl", "match": "logs deployment/api", "stdout": '{"event": "other.thing", "token": "SENTINEL"}\nnot json\n'}]))
+        r = self.run_check("log-event api api webhook.accepted")
+        self.assertEqual(r.returncode, 1)
+        out = r.stdout + r.stderr
+        self.assertIn("has event webhook.accepted", out)
+        self.assertNotIn("SENTINEL", out)
+        self.assertNotIn("other.thing", out)
+
     def test_rejected_lines(self):
         marker = self.tmp / "x"
         bad = ["", "true", "echo hi", "http x.example.com / 200", "http app.localtest.me.evil.com / 200", "http app.localtest.me healthz 200",

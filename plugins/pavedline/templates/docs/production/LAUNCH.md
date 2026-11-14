@@ -13,4 +13,4 @@ block too.
 - [ ] The load targets of the system design met
 - [ ] An accessibility audit passed (automated plus one manual screen-reader pass)
 - [ ] The three alerts tested: uptime of the public endpoints, a backup failed, a scheduled job failed or is late
-- [ ] The observability decision recorded (install the observability extension, or accept the risk in an ADR)
+- [ ] The observability decision recorded from `docs/observability/EVENTS.md` (install the observability extension, or accept the risk in an ADR); the "Alert later: yes" rows are the alert candidates

@@ -1,7 +1,6 @@
 """The application factory. `app.main:app` is created lazily so importing this module has no side effects."""
 
 import json
-import logging
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
@@ -18,6 +17,7 @@ from app.errors import (
     envelope_body,
     install_error_handlers,
 )
+from app.events import configure_logging, request_id_var, tenant_id_var
 from app.routes import health, webhooks
 from app.routes.v1 import build_router
 from app.settings import Settings
@@ -41,6 +41,9 @@ class RequestIdMiddleware:
         )
         request_id = clean_request_id(wanted)
         scope.setdefault("state", {})["request_id"] = request_id
+        # Every log line of this request carries its id; no tenant until the principal is resolved.
+        request_id_var.set(request_id)
+        tenant_id_var.set(None)
 
         async def send_with_id(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -142,7 +145,7 @@ def create_app(
 ) -> FastAPI:
     """Build the app. `jwks_client` and `extra_v1_routers` are seams for tests."""
     settings = settings or Settings()  # pyright: ignore[reportCallIssue]
-    logging.basicConfig(level=settings.log_level.upper())
+    configure_logging(settings.log_level)
     engine = make_engine(settings)
 
     @asynccontextmanager

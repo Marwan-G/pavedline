@@ -33,7 +33,8 @@ Every lesson ends in exactly one outcome:
 
 1. **A rule.** Find its home in `docs/rules-index.md` and edit that home. If the home is new, add a row to the index. Never a second copy: a rule stated in two files is a defect. Prefer a check (a script, a hook, a CI step) over prose when the violation is mechanical.
 2. **An intent.** A change to the product or the process that needs the founder's decision: write `docs/intent/<YYYY-MM-DD>-<slug>.md` from `docs/intent/0000-template.md` with `Status: proposed` and `Source: retro <date>`. `spec` change mode picks it up once accepted.
-3. **Dropped**, with a one-line reason in the retro.
+3. **An event.** A problem that was hard to find in the logs: add the event to the code and its row to `docs/observability/EVENTS.md` (a small change on the light path).
+4. **Dropped**, with a one-line reason in the retro.
 
 Show the lessons as one table (lesson, outcome, where) and ask the founder to approve; "default" approves the recommended outcome for all. Apply only what is approved; record the rest as dropped.
 

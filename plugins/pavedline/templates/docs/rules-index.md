@@ -16,6 +16,7 @@ nothing else.
 | System shape, auth, tenancy, deployment, threats | `docs/architecture/` |
 | Domain model, schema, migrations | `docs/data/` |
 | The API contract | `docs/api/` |
+| Event names and the log line's base fields | `docs/observability/EVENTS.md` |
 | Design system and tokens | `docs/design/` |
 | Things with a long wait, started early | `docs/production/LEAD-TIME.md` |
 | Proposed changes, before they are specced | `docs/intent/` |

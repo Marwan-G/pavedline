@@ -15,6 +15,8 @@ on:
       - "services/api/**"
       - "scripts/rls_check.py"
       - "scripts/contract_check.py"
+      - "scripts/events_check.py"
+      - "docs/observability/EVENTS.md"
       - "docs/api/openapi.yaml"
       - ".github/workflows/ci-api.yml"
       - ".github/workflows/image.yml"
@@ -53,6 +55,8 @@ jobs:
       - run: uv run ruff format --check . ../../scripts
       - run: uv run pyright
       - run: uv run lint-imports
+      # docs/observability/EVENTS.md lists every event the API emits (the step-12 observability input).
+      - run: python3 ../../scripts/events_check.py --root ../..
 
   db-tests:
     if: >-

@@ -10,6 +10,8 @@ surfaces:
       - services/api
       - scripts/rls_check.py
       - scripts/contract_check.py
+      - scripts/events_check.py
+      - docs/observability/EVENTS.md
       - scripts/local_secrets.sh
       - scripts/restore_drill.sh
       - .env.local.example
@@ -27,6 +29,7 @@ surfaces:
       format_check: uv run ruff format --check . ../../scripts
       types: uv run pyright
       imports: uv run lint-imports
+      events: python3 ../../scripts/events_check.py --root ../..   # EVENTS.md lists every emitted event
       test: uv run pytest -q          # needs DATABASE_URL: an administrator URL of a THROWAWAY Postgres
       # run from the repository root, against the migrated database and the product's contract
       rls_check: uv run --project services/api python scripts/rls_check.py --database-url "$DATABASE_OWNER_URL"

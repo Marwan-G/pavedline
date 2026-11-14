@@ -293,6 +293,7 @@ a_ruff() { (cd services/api && uv run ruff check . ../../scripts); }
 a_format() { (cd services/api && uv run ruff format --check . ../../scripts); }
 a_pyright() { (cd services/api && uv run pyright); }
 a_imports() { (cd services/api && uv run lint-imports); }
+a_events() { python3 scripts/events_check.py; }
 
 PG_PORT=""
 start_postgres() {
@@ -370,6 +371,7 @@ run_unit() {
     step api-format a_format
     step api-pyright a_pyright
     step api-lint-imports a_imports
+    step api-events-check a_events
     step api-postgres a_postgres
     step api-pytest a_pytest
     step api-migrate a_migrate
