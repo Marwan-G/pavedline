@@ -629,6 +629,55 @@ class FounderInputs(unittest.TestCase):
             self.assertIn("never copied", t[i:i + 400], name)
 
 
+class DesignRules(unittest.TestCase):
+    """Step 7 rules: touch targets, status classes, state copy, missing
+    backend data, the Figma read limit; and the shared question dialog."""
+
+    AGENTS = ROOT / "plugins" / "pavedline" / "agents"
+
+    def texts(self):
+        return {"skill": read("design-system-contract"),
+                "designer": (self.AGENTS / "designer.md").read_text(),
+                "verifier": (self.AGENTS / "design-verifier.md").read_text()}
+
+    def test_touch_target_sizes(self):
+        for name, t in self.texts().items():
+            self.assertIn("44 × 44", t, name)
+            self.assertIn("24 × 24", t, name)
+        self.assertIn("44 × 44", (SKILLS / "design-system-contract/references/areas.md").read_text())
+
+    def test_one_class_per_status(self):
+        for name, t in self.texts().items():
+            self.assertIn("one visual class", t, name)
+        self.assertIn("status table", read("design-system-contract"))
+
+    def test_state_copy(self):
+        for name, t in self.texts().items():
+            self.assertIn("what happened, what the user can do, and what happens next", t, name)
+
+    def test_missing_backend_data_flagged(self):
+        for name, t in self.texts().items():
+            self.assertIn("NEEDS BUILD PLUMBING", t, name)
+        self.assertIn("is a blocker", self.texts()["verifier"])
+
+    def test_figma_read_limit(self):
+        src = (SKILLS / "design-system-contract/references/sources.md").read_text()
+        self.assertIn("rate-limits-access", src)
+        self.assertIn("Tools that write to Figma files are exempt", src)
+        self.assertIn("w3.org/WAI/WCAG22", src)
+        for name, t in self.texts().items():
+            self.assertIn("a page per call", t, name)
+        self.assertIn("WAITING.md", read("design-system-contract").split("## 1.")[0])
+
+    def test_shared_rules_use_the_dialog(self):
+        t = (SKILLS / "state/references/step-rules.md").read_text()
+        how = t.split("## How to ask")[1].split("## ")[0]
+        for s in ("AskUserQuestion", "`Area 3 of 9`", "(Recommended)", "same turn",
+                  "default for the rest of this round", "Go (Recommended)", "Next: <"):
+            self.assertIn(s, how, s)
+        self.assertIn("question dialog", read("design-system-contract").split("## 3.")[0])
+
+
 if __name__ == "__main__":
     unittest.main()
 
