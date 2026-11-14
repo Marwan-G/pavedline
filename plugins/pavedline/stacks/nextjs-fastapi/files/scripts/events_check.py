@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Keep docs/observability/EVENTS.md true: every event the API emits has a row there.
 
-    python3 scripts/events_check.py [--root DIR]
+    uv run --project services/api python scripts/events_check.py [--root DIR]
+
+Run it with the API's Python: it parses the API code, which may use syntax an older system python3 rejects.
 
 Finds every `log_event(<logger>, <level>, "<name>"` in services/api/app (also under an import alias, such as
 `from app.events import log_event as emit`, or as `events.log_event`) and compares the names with the first
@@ -20,6 +22,10 @@ NAME = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 ROW = re.compile(r"^\|\s*`([^`]*)`\s*\|")
 
 
+class CheckError(Exception):
+    """A problem that stops the check (exit 1 with one clear line)."""
+
+
 def emitted(app_dir: pathlib.Path) -> dict[str, list[str]]:
     """Event name -> the places that emit it. Only literal names count; a computed name is reported."""
     found: dict[str, list[str]] = {}
@@ -27,7 +33,13 @@ def emitted(app_dir: pathlib.Path) -> dict[str, list[str]]:
     for path in sorted(app_dir.rglob("*.py")):
         if path.resolve() == definition:
             continue  # the module that defines log_event
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        except SyntaxError as exc:
+            raise CheckError(
+                f"cannot parse {path}:{exc.lineno} with Python {sys.version.split()[0]}; "
+                "run this check with the API's Python (uv run --project services/api python ...)"
+            ) from exc
         names = {"log_event"}
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
@@ -87,7 +99,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {app_dir} is missing", file=sys.stderr)
         return 1
     rows = registered(events_md)
-    code = emitted(app_dir)
+    try:
+        code = emitted(app_dir)
+    except CheckError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     problems: list[str] = []
     for name in sorted({n for n in rows if rows.count(n) > 1}):
         problems.append(f"duplicate row in EVENTS.md: {name}")
