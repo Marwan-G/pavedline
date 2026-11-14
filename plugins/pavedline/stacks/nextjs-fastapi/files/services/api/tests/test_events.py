@@ -219,6 +219,29 @@ def test_the_access_filter_never_raises(path: str, capsys: pytest.CaptureFixture
     assert "?" not in line["message"]
 
 
+def test_database_detail_and_long_tokens_are_redacted_whole(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    jwt = "eyJ" + "a" * 900 + ".SIGTAIL"
+    try:
+        raise RuntimeError(
+            "duplicate key value violates unique constraint\n"
+            "DETAIL:  Key (email)=(g-SENTINEL@example.com) already exists."
+        )
+    except RuntimeError as exc:
+        log_event(
+            log,
+            logging.ERROR,
+            "request.unhandled_error",
+            f"callback https://x/cb?access_token={jwt} failed; Authorization: Bearer {'b' * 1500}TAIL2",
+            exc_info=exc,
+            quoted="password='" + "q" * 600 + "QTAIL'",
+            unclosed='token="' + "u" * 50 + "UTAIL",
+        )
+    out = capsys.readouterr().out
+    for leak in ("SENTINEL", "SIGTAIL", "TAIL2", "QTAIL", "UTAIL"):
+        assert leak not in out, leak
+
+
 def test_harmless_words_are_left_alone(capsys: pytest.CaptureFixture[str]) -> None:
     configure_logging("INFO")
     log_event(log, logging.INFO, "job.created", "status_code=500 footprint", footprint=3, error_code="E1")
