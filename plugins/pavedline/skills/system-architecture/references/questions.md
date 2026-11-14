@@ -21,7 +21,7 @@ Asks only pool size, replicas and backups, given decision 0006 and the step 4 av
 Secret store to Kubernetes Secret, never in Git; who owns rotation (`SERVICES.md`). Changes: bootstrap steps, `WAITING.md` items.
 
 ## Observability seam
-Structured JSON logs to stdout; one collector and one vendor, if any (a new service: ask). Changes: nodes, alert routing, cost.
+Structured JSON logs to stdout with the base fields of `docs/observability/EVENTS.md` (copied with the API); the events are written into that file during the build, and the collector and vendor are chosen at step 12 (a new service: ask). Default: no tool before step 12. Changes: nodes, alert routing, cost.
 
 ## Release and rollback
 Image tag bump by pull request, manual sync for apps, migrations as a pre-release job, expand/contract so a revert never meets a schema it cannot read. Changes: release order, mobile compatibility window.

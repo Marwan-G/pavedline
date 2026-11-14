@@ -12,6 +12,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.events import log_event
+
 log = logging.getLogger("app.errors")
 
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -112,7 +114,7 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        log.error("unhandled error", exc_info=exc, extra={"request_id": request_id_of(request)})
+        log_event(log, logging.ERROR, "request.unhandled_error", "unhandled error", exc_info=exc)
         # This response is built by the server-error layer, outside the user middleware, so it sets the
         # request id and the minimum app version headers itself.
         return error_response(
@@ -128,7 +130,7 @@ def install_error_handlers(app: FastAPI) -> None:
 
     async def data_error(request: Request, exc: Exception) -> JSONResponse:
         # The database refused a value (bad cast, out of range, NUL byte): the client's input, not our bug.
-        log.warning("database data error: %s", type(exc).__name__)
+        log_event(log, logging.WARNING, "db.data_error", "database data error", error_type=type(exc).__name__)
         return error_response(request, 422, "invalid_value", "A value in the request is not acceptable")
 
     app.add_exception_handler(sqlalchemy.exc.DataError, data_error)

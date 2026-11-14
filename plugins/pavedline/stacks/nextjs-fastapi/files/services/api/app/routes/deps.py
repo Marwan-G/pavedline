@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from app.auth import Principal, TokenVerifier, unauthorized
 from app.db.tenant import resolve_tenant
 from app.errors import ApiError
+from app.events import tenant_id_var
 from app.services.idempotency import MAX_KEY_LENGTH
 
 bearer = HTTPBearer(auto_error=False)
@@ -42,6 +43,7 @@ async def get_principal(
     tenant_id = await resolve_tenant(engine, claims.tenant_external_id)
     if tenant_id is None:
         raise ApiError(403, "forbidden", "The token does not belong to a known tenant")
+    tenant_id_var.set(str(tenant_id))  # the rest of this request's log lines carry the tenant
     return Principal(claims.subject, tenant_id)
 
 

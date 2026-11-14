@@ -10,6 +10,9 @@ Each line is parsed with shlex and must be exactly one of:
     kubectl-get <namespace> <kind>[/<name>] [--jsonpath={<expr>} [--equals=<value>]]
         kubectl --context kind-pavedline-<project> -n <namespace> get <kind>[/<name>]; kinds: pod deployment service
         httproute cluster job configmap (never secret); --equals needs --jsonpath and compares the trimmed output
+    log-event <namespace> <deployment> <event>
+        kubectl --context kind-pavedline-<project> -n <namespace> logs deployment/<deployment> --since=15m: passes
+        when one JSON line has "event": "<event>" (docs/observability/EVENTS.md); the log text is never printed
 
 Anything else, and any shell metacharacter (; | & $ ( ) < > ` backslash, control characters), is `rejected check`
 (exit 2) before ANY line runs. kubectl runs with an empty environment (a sanitised PATH, a temp HOME) and a temporary
@@ -17,6 +20,7 @@ kubeconfig that holds only the kind context. Exit 0 all passed, 1 a check failed
 """
 import argparse
 import http.client
+import json
 import os
 import pathlib
 import re
@@ -39,6 +43,8 @@ PATH = re.compile(r"^/[A-Za-z0-9_./~%:@+=?-]{0,500}$")
 # pod spec (they can hold secret material, and --equals would be a guessing oracle on them).
 _SEG = r"[A-Za-z0-9_]{1,60}(?:\[(?:[0-9]{1,3}|\*)\])?"
 JSONPATH = re.compile(r"^--jsonpath=(\{(?:\.items\[(?:[0-9]{1,3}|\*)\])?\.(?:status(?:\.%s)*|spec\.replicas|metadata\.name|metadata\.labels(?:\.[A-Za-z0-9_-]{1,63})?)\})$" % _SEG)
+EVENT = re.compile(r"^[a-z][a-z0-9_]{0,60}(\.[a-z][a-z0-9_]{0,60}){1,5}$")
+LOG_LINES = "2000"
 EQUALS = re.compile(r"^--equals=([A-Za-z0-9_.:/-]{0,200})$")
 
 
@@ -127,7 +133,16 @@ def parse(line):
         if equals is not None and jsonpath is None:
             raise Rejected("--equals needs --jsonpath")
         return ("kubectl-get", ns, res, jsonpath, equals)
-    raise Rejected("unknown verb or wrong number of arguments (http <host> <path> <status> | kubectl-get <ns> <kind>[/<name>] ...)")
+    if tok[0] == "log-event" and len(tok) == 4:
+        _, ns, deployment, event = tok
+        if not LABEL.match(ns):
+            raise Rejected("bad namespace")
+        if not LABEL.match(deployment):
+            raise Rejected("bad deployment name")
+        if not EVENT.match(event):
+            raise Rejected("event must be area.what_happened (lowercase snake case)")
+        return ("log-event", ns, deployment, event)
+    raise Rejected("unknown verb or wrong number of arguments (http <host> <path> <status> | kubectl-get <ns> <kind>[/<name>] ... | log-event <ns> <deployment> <event>)")
 
 
 def run_http(check, retries):
@@ -170,6 +185,34 @@ def run_kubectl(check, ctx, env):
     if equals is not None and r.stdout.strip() != equals:
         return "kubectl get %s -n %s %s does not equal the expected value (the observed value is never printed)" % (res, ns, jsonpath)
     return None
+
+
+def has_event(text, event):
+    for line in text.splitlines():
+        try:
+            obj = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(obj, dict) and obj.get("event") == event:
+            return True
+    return False
+
+
+def run_log_event(check, ctx, env, retries):
+    _, ns, deployment, event = check
+    argv = ["kubectl", "--context", ctx, "-n", ns, "logs", "deployment/" + deployment, "--since=15m", "--tail=" + LOG_LINES]
+    problem = None
+    for attempt in range(max(1, retries)):
+        r = run_child(argv, env=env, timeout=60, cwd=env["HOME"])
+        if r.returncode != 0:
+            problem = "kubectl logs deployment/%s -n %s failed: %s" % (deployment, ns, r.stderr.strip()[:200])
+        elif has_event(r.stdout, event):
+            return None
+        else:
+            problem = "no log line of deployment/%s -n %s has event %s in the last 15 minutes (the log text is never printed)" % (deployment, ns, event)
+        if attempt + 1 < retries:
+            time.sleep(1)
+    return problem
 
 
 def main(argv=None):
@@ -219,14 +262,19 @@ def main(argv=None):
     try:
         kdir = os.path.dirname(shutil.which("kubectl") or "/usr/bin/kubectl")
         env = {"PATH": ":".join(dict.fromkeys([kdir, "/usr/local/bin", "/usr/bin", "/bin"])), "HOME": home}
-        if any(c[0] == "kubectl-get" for c in checks):
+        if any(c[0] in ("kubectl-get", "log-event") for c in checks):
             env["KUBECONFIG"] = kubeconfig(ctx, work)
         for c in checks:
             if time.monotonic() >= deadline:
                 print("FAILED: checks timed out (the total time for all checks is capped)")
                 failed += 1
                 break
-            problem = run_http(c, args.retries) if c[0] == "http" else run_kubectl(c, ctx, env)
+            if c[0] == "http":
+                problem = run_http(c, args.retries)
+            elif c[0] == "log-event":
+                problem = run_log_event(c, ctx, env, args.retries)
+            else:
+                problem = run_kubectl(c, ctx, env)
             print(("ok: " if problem is None else "FAILED: ") + (" ".join(str(x) for x in c if x is not None) if problem is None else problem))
             failed += problem is not None
     finally:

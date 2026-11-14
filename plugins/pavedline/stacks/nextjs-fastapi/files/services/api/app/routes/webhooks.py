@@ -19,6 +19,7 @@ from fastapi import APIRouter, Header, Request
 from fastapi.responses import JSONResponse
 
 from app.errors import ApiError
+from app.events import log_event
 from app.routes.deps import DbEngine
 from app.services.webhook_events import MAX_EVENT_ID_LENGTH, claim_event
 from app.services.webhook_signatures import (
@@ -56,7 +57,7 @@ async def _accept(engine: DbEngine, verified: VerifiedEvent, event_id: str) -> J
             # Already accepted: acknowledge (a provider retries non-2xx) and do nothing.
             return JSONResponse({"data": {"status": "duplicate"}})
         # Skeleton: handle or enqueue the event here, in this transaction, then return fast.
-    log.info("webhook accepted", extra={"provider": verified.provider})
+    log_event(log, logging.INFO, "webhook.accepted", "webhook accepted", provider=verified.provider)
     return JSONResponse({"data": {"status": "accepted"}})
 
 

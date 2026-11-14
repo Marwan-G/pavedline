@@ -30,9 +30,10 @@ Tests: AT-001, AT-004
 Surfaces: web, api
 Branch: <name>
 Depends on: <slice ids, or none>
+Events: <event names this slice adds, or none>
 ```
 
-Under each slice: scope (what a person can do when it is merged), the files and folders it touches, the `AT-` ids it proves (the same as `Tests:`), and its gates: TDD, code review, security review, verification, plus the adversarial review (3b) when the slice touches auth, tenancy, IAM, infrastructure, CI, secrets, input parsing, payments or migrations. A slice that reopens an old test says `Re-tests: AT-001` and does not list it under `Tests:`.
+Under each slice: scope (what a person can do when it is merged), the files and folders it touches, the `AT-` ids it proves (the same as `Tests:`), and its gates: TDD, code review, security review, verification, plus the adversarial review (3b) when the slice touches auth, tenancy, IAM, infrastructure, CI, secrets, input parsing, payments or migrations. `Events:` names the events the slice must emit (`area.what_happened`, rows of `docs/observability/EVENTS.md`): its failure paths and its key business moments, so step 12 has them. A slice that reopens an old test says `Re-tests: AT-001` and does not list it under `Tests:`.
 
 Rules for the shape of a wave:
 

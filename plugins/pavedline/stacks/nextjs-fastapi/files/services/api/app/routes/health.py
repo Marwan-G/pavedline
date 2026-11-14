@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from sqlalchemy import text
 
 from app.errors import ApiError
+from app.events import log_event
 from app.routes.deps import DbEngine
 
 router = APIRouter(include_in_schema=False)
@@ -25,6 +26,12 @@ async def readyz(engine: DbEngine) -> dict[str, dict[str, str]]:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
     except Exception as exc:
-        log.warning("readiness check failed: %s", type(exc).__name__)
+        log_event(
+            log,
+            logging.WARNING,
+            "health.readiness_failed",
+            "readiness check failed",
+            error_type=type(exc).__name__,
+        )
         raise ApiError(503, "not_ready", "The database is not reachable") from exc
     return {"data": {"status": "ready"}}

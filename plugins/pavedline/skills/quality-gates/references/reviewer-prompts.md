@@ -9,7 +9,7 @@ Each prompt is self-contained. Pass files, never summaries. Run the agents in th
 
 ## Gate 3: security review
 
-- Brief the `security-review` skill with: tenant isolation (`tenant_id` on every query, row-level security), authentication and authorisation on every route, secrets in code, logs or images, injection (SQL, shell, template), unsafe input parsing, sensitive data in logs, dependency and image findings from the scanners.
+- Brief the `security-review` skill with: tenant isolation (`tenant_id` on every query, row-level security), authentication and authorisation on every route, secrets in code, logs or images, injection (SQL, shell, template), unsafe input parsing, sensitive data in logs (no secret, token, body or personal data in any `log_event` field or message), dependency and image findings from the scanners.
 
 ## Gate 3b: `pavedline:adversary`
 
