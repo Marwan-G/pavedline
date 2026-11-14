@@ -197,7 +197,7 @@ def has_event(text, event):
         line = POD_PREFIX.sub("", line, count=1)
         try:
             obj = json.loads(line)
-        except ValueError:
+        except (ValueError, RecursionError):  # not JSON, or nested too deep to parse
             continue
         if isinstance(obj, dict) and obj.get("event") == event:
             return True

@@ -31,25 +31,26 @@ _SECRET_NAME = re.compile(
     r"|signature|api_?key|(^|_)key$|(^|_)keys$|(^|_)otp($|_)|dsn|database_url|connection_string",
     re.IGNORECASE,
 )
-# Every quantifier is bounded or always matches, so each pattern runs in linear time on any input.
+# Each pattern scans forward through one negated class or always matches, so it runs in linear
+# time; `scrub` also cuts its input first. No upper bounds on values: a long token is redacted whole.
 _SENSITIVE_WORD = r"[a-z_]{0,40}(?:token|key|secret|password|passwd|signature|sig|credential)s?"
 _SCRUBS = (
-    (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{1,1000}"), r"\1 " + REDACTED),
+    (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]+"), r"\1 " + REDACTED),
     (re.compile(r"(?i)(://)[^/\s:@]{1,200}:[^/\s]{1,200}@"), r"\1" + REDACTED + "@"),
-    # password='x', "token": "x", 'api_key': 'x' (reprs, dicts, JSON)
+    # password='x', "token": "x", 'api_key': 'x' (reprs, dicts, JSON); an unclosed quote runs to the line end
     (
-        re.compile(r"(?i)(\b" + _SENSITIVE_WORD + r"['\"]?\s*[:=]\s*)('[^'\n]{0,500}'|\"[^\"\n]{0,500}\")"),
+        re.compile(r"(?i)(\b" + _SENSITIVE_WORD + r"['\"]?\s*[:=]\s*)('[^'\n]*'?|\"[^\"\n]*\"?)"),
         r"\1'" + REDACTED + "'",
     ),
     # token=x, ?api_key=x
-    (re.compile(r"(?i)(\b" + _SENSITIVE_WORD + r"\s*=\s*)(?!['\"])[^&\s,;)'\"]{1,500}"), r"\1" + REDACTED),
-    (
-        re.compile(r"(?i)(?<![a-z0-9_])(code=)[^&\s'\"]{1,500}"),
-        r"\1" + REDACTED,
-    ),  # an OAuth or magic-link code
-    # SQLAlchemy's bound values and pydantic's raw input: redact to the end of the line.
+    (re.compile(r"(?i)(\b" + _SENSITIVE_WORD + r"\s*=\s*)(?!['\"])[^&\s,;)'\"]+"), r"\1" + REDACTED),
+    (re.compile(r"(?i)(?<![a-z0-9_])(code=)[^&\s'\"]+"), r"\1" + REDACTED),  # an OAuth or magic-link code
+    # SQLAlchemy's bound values, pydantic's raw input and Postgres's DETAIL line (it carries the row's
+    # values, e.g. `Key (email)=(a@b.c) already exists`): redact to the end of the line.
     (re.compile(r"\[parameters: [^\n]*"), "[parameters: " + REDACTED + "]"),
     (re.compile(r"(input_value=)[^\n]*"), r"\1" + REDACTED),
+    (re.compile(r"(?m)^(\s*DETAIL:)[^\n]*"), r"\1 " + REDACTED),
+    (re.compile(r"(\bKey \([^)\n]{0,200}\)=)\([^\n]*"), r"\1(" + REDACTED + ")"),
 )
 # Attributes every LogRecord has; anything else on a record came from `extra=` and becomes a field.
 _RECORD_ATTRS = frozenset(vars(logging.LogRecord("", 0, "", 0, "", None, None))) | {
