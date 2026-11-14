@@ -164,6 +164,8 @@ new paid service or account still needs your go first.
   [architecture](docs/steps/06-architecture.md) · [Figma](docs/steps/07-figma.md).
 - **Steps 8–11, deliver on local Kubernetes:** [plan](docs/steps/08-plan.md) · [build with five gates](docs/steps/09-build.md) ·
   [deploy to local](docs/steps/10-deploy.md) · [learn](docs/steps/11-learn.md), with the `nextjs-fastapi` stack pack.
+- **Build-time events:** structured JSON logs with secrets scrubbed, a register CI keeps true, and a post-deploy
+  check that proves each event shows up. See [traceable from the first slice](#traceable-from-the-first-slice).
 - **Production, once:** [the integration wave](docs/steps/integration-wave.md) · [step 12, go to production](docs/steps/12-go-to-production.md)
   (two infra profiles, staging then production, a blocking launch checklist, backups and a restore drill, three alerts) ·
   then [the Grow loop](docs/steps/grow.md).
@@ -179,6 +181,40 @@ new paid service or account still needs your go first.
 - **CI for the factory itself:** tests, secret scan, diagram checks and a full local-cluster smoke test (kind, Argo CD, CloudNativePG, Postgres) on Linux arm64, on every pull request.
 
 Questions: [FAQ](docs/faq.md).
+
+## Traceable from the first slice
+
+Most products add logging after the first incident, when nobody remembers what the code does. Pavedline writes it
+down **while it builds**: the API logs structured JSON **events**, every event the code emits has a row in your repository,
+and when you choose monitoring at step 12, the list of what to watch is already there.
+
+One line from the API template (wrapped here; on stdout it is a single line):
+
+```json
+{"ts": "2026-11-14T18:02:57.123+00:00", "level": "info", "event": "webhook.accepted",
+ "message": "webhook accepted", "logger": "app.webhooks",
+ "request_id": "9b2e4c7d1f8a4e0b9c3d5a6f7e8b1c2d", "provider": "stripe"}
+```
+
+**Every step plays its part:**
+
+| Step | What happens to events |
+|---|---|
+| **8 Plan** | each slice names the events it adds, next to the tests it proves |
+| **9 Build** | the builder emits through `log_event` and adds the rows to `docs/observability/EVENTS.md` in the same pull request; reviewers check names and fields; **CI fails on any event without a row** |
+| **10 Deploy** | a `log-event` post-deploy check proves the event really appears in the pods' logs on your local cluster |
+| **11 Learn** | anything that was hard to debug in the wave becomes a new event |
+| **12 Production** | `EVENTS.md` is the input for choosing log, trace and alert tools; its *Alert later* column says what should page someone |
+
+**Safe by default:**
+- **Follow one request end to end.** Every line logged during a request carries the `request_id` the caller sees in
+  the `X-Request-ID` header, and the `tenant_id` once the tenant is known.
+- **Secrets stay out.** Secret-named fields are redacted, and bearer tokens, passwords in URLs, secret query values,
+  SQL parameters and database detail lines are scrubbed from every string and traceback. Query strings never reach
+  the access log.
+- **Logging never breaks a request.** A field that clashes with a base field is renamed, not refused, and a line
+  that cannot be formatted still writes its base fields.
+- **No tool chosen too early.** Plain JSON on stdout works with whichever collector you pick at step 12.
 
 ---
 
@@ -216,6 +252,7 @@ end to end, and from every place where that went wrong.
 | Questions asked again and again | **Each kind of question has one owner** and is asked once, at the step where it matters | v0.1 |
 | Multi-tenancy bolted on later | **The first architecture question.** Row-level security forced on every table; a cross-tenant leak test at the merge gate | v0.2 → v0.3 |
 | "The agent wrote it, looks fine" | **Five gates per change:** tests first · blind code review · security review · adversarial review · verification. Scanners fail CI like a failing test | v0.3 |
+| Logging and tracing figured out after the first incident | **[Events defined while you build](#traceable-from-the-first-slice):** one JSON event per log line, a register CI keeps true, and step 12 picks monitoring from it | v0.3 → v0.4 |
 | Deployment is "your problem" | **GitOps from day one:** Helm and ArgoCD, every wave verified on Kubernetes on your machine | v0.1 (cluster) → v0.3 |
 | The website is an afterthought | **Website, blog, web app and mobile app** from one design system, with SEO and accessibility gates | v0.2 → v0.3 |
 | You find out late what it needs | **Accounts asked just in time.** Production infrastructure is asked once, at the end, with a list of exactly what is needed from you | v0.4 |
