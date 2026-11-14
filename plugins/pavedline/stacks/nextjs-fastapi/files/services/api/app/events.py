@@ -49,7 +49,7 @@ _SCRUBS = (
     # values, e.g. `Key (email)=(a@b.c) already exists`): redact to the end of the line.
     (re.compile(r"\[parameters: [^\n]*"), "[parameters: " + REDACTED + "]"),
     (re.compile(r"(input_value=)[^\n]*"), r"\1" + REDACTED),
-    (re.compile(r"(?m)^(\s*DETAIL:)[^\n]*"), r"\1 " + REDACTED),
+    (re.compile(r"(?m)^([ \t]*DETAIL:)[^\n]*"), r"\1 " + REDACTED),
     (re.compile(r"(\bKey \([^)\n]{0,200}\)=)\([^\n]*"), r"\1(" + REDACTED + ")"),
 )
 # Attributes every LogRecord has; anything else on a record came from `extra=` and becomes a field.

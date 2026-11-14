@@ -186,12 +186,18 @@ def test_quoted_secrets_in_reprs_dicts_and_json_are_scrubbed(capsys: pytest.Capt
         "password='" * 80_000,
         "://a:" * 80_000,
         "token=" * 80_000,
+        "\n" * 200_000,
+        " \n" * 100_000,
+        "Key (" * 80_000,
+        "bearer " * 80_000,
+        "token " * 80_000 + "=",
+        "DETAIL:" * 80_000,
     ],
 )
 def test_the_scrub_stays_fast_on_hostile_text(text: str) -> None:
     start = time.monotonic()
-    scrub(text, 8192)
-    assert time.monotonic() - start < 1.0
+    scrub(text, 8192)  # 4x cut = 32768 characters, the traceback's budget
+    assert time.monotonic() - start < 0.25
 
 
 def test_a_lone_surrogate_and_nan_still_write_a_valid_line(capsys: pytest.CaptureFixture[str]) -> None:
