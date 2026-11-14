@@ -636,7 +636,7 @@ class DesignRules(unittest.TestCase):
     AGENTS = ROOT / "plugins" / "pavedline" / "agents"
 
     def texts(self):
-        return {"skill": read("design-system-contract"),
+        return {"skill": (SKILLS / "design-system-contract/SKILL.md").read_text(),
                 "designer": (self.AGENTS / "designer.md").read_text(),
                 "verifier": (self.AGENTS / "design-verifier.md").read_text()}
 
@@ -649,7 +649,7 @@ class DesignRules(unittest.TestCase):
     def test_one_class_per_status(self):
         for name, t in self.texts().items():
             self.assertIn("one visual class", t, name)
-        self.assertIn("status table", read("design-system-contract"))
+        self.assertIn("status table", self.texts()["skill"].split("## 4.")[1].split("## 5.")[0])
 
     def test_state_copy(self):
         for name, t in self.texts().items():
@@ -667,12 +667,19 @@ class DesignRules(unittest.TestCase):
         self.assertIn("w3.org/WAI/WCAG22", src)
         for name, t in self.texts().items():
             self.assertIn("a page per call", t, name)
-        self.assertIn("WAITING.md", read("design-system-contract").split("## 1.")[0])
+        sec0 = self.texts()["skill"].split("## 1.")[0]
+        self.assertIn("daily limit", sec0)
+        self.assertIn("wait a minute", sec0)
 
     def test_shared_rules_use_the_dialog(self):
         t = (SKILLS / "state/references/step-rules.md").read_text()
         how = t.split("## How to ask")[1].split("## ")[0]
-        for s in ("AskUserQuestion", "`Area 3 of 9`", "(Recommended)", "same turn",
+        heads = re.findall(r"`(Area \d+/\d+)`", how)
+        self.assertIn("Area 10/10", heads)
+        for h in heads + ["Area 99/99"]:
+            self.assertLessEqual(len(h), 12, h)
+        self.assertNotIn(" of 9`", how)
+        for s in ("AskUserQuestion", "`Area 3/9`", "(Recommended)", "same turn",
                   "default for the rest of this round", "Go (Recommended)", "Next: <"):
             self.assertIn(s, how, s)
         self.assertIn("question dialog", read("design-system-contract").split("## 3.")[0])

@@ -13,14 +13,14 @@ Follow the shared step rules in `${CLAUDE_PLUGIN_ROOT}/skills/state/references/s
 
 - If the Figma login is missing, stop and add it to `WAITING.md` (what: connect the Figma plugin and log in; where: `/mcp`, then the Figma sign-in; unblocks: step 7). Do not design offline.
 - Check the plan and seat with the Figma `whoami` tool. Code Connect is documented for a Full or Dev seat on a Professional or higher plan, but the MCP mapping tool refused a Professional plan in a real run (it said mappings need an Organization or Enterprise plan; `${CLAUDE_SKILL_DIR}/references/sources.md`). So: try the mapping once; if it is refused, use the name table and say why. Do not promise Code Connect to the founder in advance.
-- Figma limits read calls for the MCP (`${CLAUDE_SKILL_DIR}/references/sources.md`): on a Full or Dev seat, 200 a day and 10 a minute on Professional. Writes are exempt. The designer and the blind check both read, so read a page or frame set per call (`get_metadata` on the page), never one node at a time. If the limit is hit, stop, add it to `WAITING.md` (what: the Figma read limit; unblocks: step 7 resumes after the reset) and resume from the records.
+- Figma limits read calls for the MCP (`${CLAUDE_SKILL_DIR}/references/sources.md`): on a Full or Dev seat, 200 a day and 10 a minute on Professional. Writes are exempt. The designer and the blind check both read, so read a page or frame set per call (`get_metadata` on the page), never one node at a time. If the per-minute limit is hit, wait a minute and go on. If the daily limit is hit, stop, add it to `WAITING.md` (what: the Figma daily read limit; unblocks: step 7 resumes the next day) and resume from the records.
 - A Figma file is a new resource: follow the ask-before-adding rule (what it is, what it will do, why nothing in use does it, its verified cost) and create ONE new private file only after the founder says so. Never put its link, file key or node ids in anything outside `docs/design/DESIGN.md` (node ids may also appear in `docs/reviews/07-figma-review.md`).
 
 ## 1. Read first, in order
 
 After the records of the shared rules: `docs/spec/SPEC.md`, `docs/architecture/SYSTEM-DESIGN.md`, `TENANCY-LIFECYCLE.md`, `DEPLOYMENT.md`, `docs/data/DOMAIN.md` and `SCHEMA.md`, `docs/api/openapi.yaml`, any existing `docs/design/`, and the screenshots in `docs/business/references/` if present (optional; a missing folder is not an error): style and layout references for the `designer`, never copied. Surfaces come from decision 0005 (a dropped surface gets no frames). Continue when `STATE.md` says `STEP: 7 — Figma`.
 
-## 2. Questions (one area at a time, in the question dialog of the shared rules: `Area n of 9`, the recommended default first)
+## 2. Questions (one area at a time, in the question dialog of the shared rules: `Area n/9`, the recommended default first)
 
 Areas, in order, details in `${CLAUDE_SKILL_DIR}/references/areas.md`: Figma account and file · brand and style direction (`ui-ux-pro-max` is an optional style reference: use `ui-ux-pro-max` only if installed, never copied; `impeccable` is optional critique, use it only if installed) · tokens and themes · type and spacing · component set · surfaces and navigation · FigJam flows · accessibility targets · the code naming rule. A new service or plugin: ask-before-adding.
 
