@@ -24,6 +24,9 @@ Every log line of the API is one JSON object on stdout (`app/events.py`). The ba
 - Emit an event only through `log_event(logger, level, "area.what_happened", **fields)`; add its row here in the same pull request.
 - Names are `area.what_happened`, lowercase snake case, for example `job.created` or `auth.token_rejected`.
 - Fields carry ids, codes and counts. Never secrets, tokens, passwords, request or response bodies, or personal data (email, name, address, phone). A field whose name looks secret is redacted to `[redacted]` anyway.
+- The formatter's own lines are not rows: `log.message` (a plain log call from a library) and `log.format_failed` (a line that could not be written; the base fields still are).
+- Redaction is a safety net, not the rule: the formatter redacts secret-named fields, scrubs secret-shaped text (bearer tokens, passwords in URLs, secret query values, SQL parameters, raw validation input) from every string and the traceback, and cuts long values. It cannot recognise personal data in free text, so never put it there.
+- A background task or job loop started from a request calls `clear_log_context()` first.
 - **Alert later** says whether the event should page someone once a tool exists, and why. It is a candidate for step 12, not an alert today.
 
 ## Events

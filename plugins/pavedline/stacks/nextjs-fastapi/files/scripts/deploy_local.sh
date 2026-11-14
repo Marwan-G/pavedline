@@ -8,7 +8,8 @@
 #   --revision <sha>  deploy that earlier deploy commit again, without building (the rollback); implies --no-build
 #   --no-build        do not build images (only valid with --revision)
 #   --check "<line>"  one check of the PR's `Post-deploy check:`, repeatable, in the allow-listed language of
-#                     scripts/post_deploy_check.py (`http <host> <path> <status>`, `kubectl-get <ns> <kind>[/<name>] ...`).
+#                     scripts/post_deploy_check.py (`http <host> <path> <status>`, `kubectl-get <ns> <kind>[/<name>] ...`,
+#                     `log-event <ns> <deployment> <event>`).
 #                     No shell: anything else is rejected (exit 2) before the deploy starts. All must pass.
 #
 # What it does: builds each selected app image with a unique tag <git short sha>-<unix time>, pushes it to the local

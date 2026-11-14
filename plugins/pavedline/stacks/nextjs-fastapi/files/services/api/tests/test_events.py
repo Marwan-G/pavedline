@@ -7,7 +7,14 @@ from typing import Any
 import httpx
 import pytest
 
-from app.events import REDACTED, configure_logging, log_event, request_id_var, tenant_id_var
+from app.events import (
+    REDACTED,
+    clear_log_context,
+    configure_logging,
+    log_event,
+    request_id_var,
+    tenant_id_var,
+)
 from tests import probes
 
 log = logging.getLogger("tests.events")
@@ -81,11 +88,141 @@ def test_a_bad_event_name_is_refused(name: str) -> None:
         log_event(log, logging.INFO, name)
 
 
-@pytest.mark.parametrize("field", ["request_id", "tenant_id", "level", "message", "event", "msg", "args"])
-def test_a_field_cannot_overwrite_a_base_field(field: str) -> None:
+@pytest.mark.parametrize("field", ["request_id", "tenant_id", "level", "message", "event", "name", "args"])
+def test_a_clashing_field_is_renamed_not_raised(field: str, capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
     fields: dict[str, Any] = {field: "x"}
-    with pytest.raises(ValueError, match="reserved"):
-        log_event(log, logging.INFO, "job.created", **fields)
+    log_event(log, logging.INFO, "job.created", **fields)
+    (line,) = lines(capsys.readouterr().out)
+    assert line["event"] == "job.created"
+    assert line[f"field_{field}"] == "x"
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "jwt",
+        "session",
+        "credentials",
+        "auth_header",
+        "bearer",
+        "x-api-key",
+        "X-Auth-Token",
+        "private_key",
+        "database_url",
+        "client_secret",
+        "signature",
+        "pwd",
+        "otp",
+    ],
+)
+def test_more_secret_names_are_redacted(field: str, capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    fields: dict[str, Any] = {field: "v-SENTINEL"}
+    log_event(log, logging.INFO, "auth.checked", **fields)
+    assert "SENTINEL" not in capsys.readouterr().out
+
+
+def test_lists_tuples_and_header_pairs_are_walked(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    log_event(
+        log,
+        logging.INFO,
+        "auth.checked",
+        headers=[("authorization", "Bearer a-SENTINEL"), ("accept", "json")],
+        items=[{"token": "b-SENTINEL"}, {"id": 7}],
+        nested={"a": [{"b": ({"password": "c-SENTINEL"},)}]},
+    )
+    out = capsys.readouterr().out
+    assert "SENTINEL" not in out
+    (line,) = lines(out)
+    assert line["headers"][1] == ["accept", "json"]
+    assert line["items"][1] == {"id": 7}
+
+
+def test_secret_shaped_text_is_scrubbed_everywhere(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    try:
+        raise RuntimeError(
+            "boom Authorization: Bearer e-SENTINEL [parameters: ('f-SENTINEL@example.com', 3)] done"
+        )
+    except RuntimeError as exc:
+        log_event(
+            log,
+            logging.ERROR,
+            "job.failed",
+            "call to https://user:g-SENTINEL@host/x?token=h-SENTINEL&page=2 failed",
+            exc_info=exc,
+            detail="input_value='i-SENTINEL', input_type=str",
+            link="https://app/login?code=j-SENTINEL",
+        )
+    out = capsys.readouterr().out
+    assert "SENTINEL" not in out
+    (line,) = lines(out)
+    assert "page=2" in line["message"]
+    assert "[parameters: [redacted]]" in line["exc"]
+
+
+def test_harmless_words_are_left_alone(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    log_event(log, logging.INFO, "job.created", "status_code=500 footprint", footprint=3, error_code="E1")
+    (line,) = lines(capsys.readouterr().out)
+    assert line["message"] == "status_code=500 footprint"
+    assert line["footprint"] == 3
+    assert line["error_code"] == "E1"
+
+
+def test_cycles_depth_and_size_never_drop_the_line(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    loop: dict[str, Any] = {}
+    loop["self"] = loop
+    ring: list[Any] = []
+    ring.append(ring)
+    log_event(log, logging.INFO, "job.created", loop=loop, ring=ring, big="x" * 100_000, odd={(1, 2): "t"})
+    (line,) = lines(capsys.readouterr().out)
+    assert line["event"] == "job.created"
+    assert len(line["big"]) < 3000
+    assert "[too deep]" in json.dumps(line["loop"])
+
+
+def test_a_value_that_cannot_be_written_gives_a_fallback_line(capsys: pytest.CaptureFixture[str]) -> None:
+    class Bad:
+        def __str__(self) -> str:
+            raise RuntimeError("no")
+
+    configure_logging("INFO")
+    log_event(log, logging.INFO, "job.created", bad=Bad())
+    (line,) = lines(capsys.readouterr().out)
+    assert line["event"] == "log.format_failed"
+    assert line["original_event"] == "job.created"
+
+
+def test_clear_log_context_forgets_the_ids(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    request_id_var.set("req-old")
+    tenant_id_var.set("t-old")
+    clear_log_context()
+    log_event(log, logging.INFO, "job.started")
+    (line,) = lines(capsys.readouterr().out)
+    assert "request_id" not in line
+    assert "tenant_id" not in line
+
+
+def test_the_access_log_drops_the_query_string(capsys: pytest.CaptureFixture[str]) -> None:
+    configure_logging("INFO")
+    logging.getLogger("uvicorn.access").info(
+        '%s - "%s %s HTTP/%s" %d', "1.2.3.4", "GET", "/v1/login?magic=k-SENTINEL", "1.1", 200
+    )
+    out = capsys.readouterr().out
+    assert "SENTINEL" not in out
+    assert "/v1/login" in out
+
+
+def test_caplog_still_sees_lines_after_configure(caplog: pytest.LogCaptureFixture) -> None:
+    configure_logging("INFO")
+    with caplog.at_level(logging.INFO):
+        log_event(log, logging.INFO, "job.created")
+    assert any(getattr(r, "event", None) == "job.created" for r in caplog.records)
 
 
 async def test_an_unhandled_error_logs_its_event_with_the_request_id(
@@ -126,3 +263,16 @@ async def test_a_request_body_is_never_logged(app_factory: Any, capsys: pytest.C
         await c.post("/v1/_echo", content=b'{"note": "body-SENTINEL"}')
         await c.get("/v1/_boom")
     assert "body-SENTINEL" not in capsys.readouterr().out
+
+
+async def test_the_tenant_of_one_request_never_reaches_the_next(
+    app_factory: Any, world: Any, capsys: pytest.CaptureFixture[str]
+) -> None:
+    app = app_factory(extra_v1_routers=[probes.router])
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        await c.get("/v1/_dataerror", headers=world.headers())
+        await c.get("/v1/_boom", headers={"X-Request-ID": "req-anon"})
+    (line,) = events(capsys.readouterr().out, "request.unhandled_error")
+    assert line["request_id"] == "req-anon"
+    assert "tenant_id" not in line
