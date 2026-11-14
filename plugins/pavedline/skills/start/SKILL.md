@@ -31,15 +31,16 @@ Before question 1: if `docs/business/VISION.md` exists, read it; it is the found
 
 Ask one question at a time, in this order, through the question dialog (`AskUserQuestion`), so the user always sees where they are and what to do next:
 
-- The header shows the place: `Q1 of 7`, `Q2 of 7` and so on; a follow-up keeps its number (`Q3.1 of 7`).
-- The default is the first option, labelled "(Recommended)". Each option's description says what it changes. "Other" takes the user's own words; "default" is a valid answer.
-- Question 1 is free text: put the proposed paragraph in the question and offer "Accept as written (Recommended)" and "Change it". On "Change it", take the new paragraph and confirm it once.
-- Surfaces is a multi-select. The compliance question keeps its exact wording as the question text.
-- Once the user answers, note it and ask the next question in the same turn. Never end a turn on a question asked only in text.
+- **Header.** `Q1 of 7` to `Q7 of 7`. A follow-up adds a part number: the isolation model is `Q2.1 of 7`, the compliance follow-ups are `Q3.1 of 7` to `Q3.3 of 7`. Follow-ups come before the next numbered question. A header is at most 12 characters.
+- **Options.** A dialog has 2 to 4 options; Claude Code adds "Other" for the user's own words, and "default" typed there means the default. In a single-choice question the default is the first option, labelled "(Recommended)", and each option's description says what it changes.
+- **Question 1.** With `docs/business/VISION.md`, the proposed paragraph is the question text, with the options "Accept as written (Recommended)" and "Change it". On "Change it", take the new paragraph and confirm it once. Without `docs/business/VISION.md`, ask it in plain text.
+- **Surfaces** is a multi-select of the four surfaces. The question text says "Recommended: all four".
+- **Open questions** (question 1 without a vision, the compliance countries and rule set) have no options and are asked in plain text.
+- Once the user answers, note it and ask the next question in the same turn.
 
-If the dialog is not available (a headless run), end each message with one line: `Reply: accept · default · or your own answer. Next: question N of 7 — <topic>.`
+**Plain text** (an open question, or a headless run with no dialog). List the options, the default and what each changes, then end the message with one line: `Reply with an option, "default" or your own answer. Next: <the next question, by number and topic>.` After question 7 the next thing is "create the project files" (section 4). Never end a turn on a question without this line or the dialog.
 
-1. **What are you building?** One paragraph: who it serves, the problem, the one thing it must do well. No options.
+1. **What are you building?** One paragraph: who it serves, the problem, the one thing it must do well. Options only when a vision gives a proposed paragraph (above).
 2. **Multi-tenant?** Follow the `architecture-intake` skill for this question.
 3. **Compliance.** Follow the `compliance` skill. It uses its own exact wording.
 4. **Solo or team?** Default: solo. Team means parallel sessions in their own worktrees, and approvals move to GitHub pull requests.

@@ -9,13 +9,13 @@ Ask exactly this, word for word:
 
 Should we design with compliance in mind (privacy laws such as GDPR, health or payment rules)? Recommended: yes.
 
-Ask it in the question dialog, with this sentence unchanged as the question text, "Yes (Recommended)" first and "No" second. The three follow-ups below go one at a time in the same dialog.
+Ask it in the question dialog (header `Q3 of 7`), with this sentence unchanged as the question text, "Yes (Recommended)" first and "No" second.
 
 Say once that the answers stay in the user's own repository.
 
 ## If yes
 
-Ask three short questions, one at a time, and nothing more:
+Ask three short questions, one at a time, and nothing more. The first is a multi-select in the question dialog (`Q3.1 of 7`) with the four kinds as options; "Other" takes anything else, or "unknown". The other two (`Q3.2 of 7`, `Q3.3 of 7`) are open, so ask them in plain text as the `start` skill says.
 
 1. Which kinds of data will the product hold: personal, health, payment, children's?
 2. Which countries will it serve?

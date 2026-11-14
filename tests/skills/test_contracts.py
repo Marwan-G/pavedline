@@ -63,15 +63,31 @@ class StepZeroContracts(unittest.TestCase):
 
     def test_step_zero_questions_use_the_dialog(self):
         # Every step-0 question ends in a clear prompt: the question dialog,
-        # with the place shown, or a text fallback naming the next question.
+        # with the place shown, or a text fallback naming the next step.
         t = read("start")
+        intake, comp = read("architecture-intake"), read("compliance")
         self.assertIn("AskUserQuestion", t)
-        self.assertIn("Q1 of 7", t)
+        self.assertIn("same turn", t)
+        # Headers: one pattern, every example at most 12 characters.
+        heads = set(re.findall(r"`(Q\d(?:\.\d)? of 7)`", t + intake + comp))
+        for h in ("Q1 of 7", "Q2.1 of 7", "Q3.1 of 7", "Q3.3 of 7"):
+            self.assertIn(h, heads)
+        for h in heads:
+            self.assertLessEqual(len(h), 12, h)
+        self.assertIn("`Q2.1 of 7`", intake)
+        self.assertIn("`Q3.1 of 7`", comp)
+        # Single choice: default first, recommended; multi-select: in the text.
         self.assertIn("(Recommended)", t)
+        self.assertIn("Recommended: all four", t)
+        self.assertIn("Yes (Recommended)", comp)
+        self.assertLess(comp.index(COMPLIANCE), comp.index("Yes (Recommended)"))
+        # Question 1 with and without VISION.md.
         self.assertIn("Accept as written", t)
-        self.assertIn("Next: question", t)
-        for name in ("architecture-intake", "compliance"):
-            self.assertIn("question dialog", read(name), name)
+        self.assertIn("Without `docs/business/VISION.md`", t)
+        # Plain-text fallback states the options and names what comes next,
+        # including after question 7.
+        self.assertIn("Next: <", t)
+        self.assertIn("create the project files", t)
 
     def test_intake_question_order(self):
         t = read("architecture-intake")
