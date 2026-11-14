@@ -9,6 +9,8 @@ Ask exactly this, word for word:
 
 Should we design with compliance in mind (privacy laws such as GDPR, health or payment rules)? Recommended: yes.
 
+Ask it in the question dialog, with this sentence unchanged as the question text, "Yes (Recommended)" first and "No" second. The three follow-ups below go one at a time in the same dialog.
+
 Say once that the answers stay in the user's own repository.
 
 ## If yes

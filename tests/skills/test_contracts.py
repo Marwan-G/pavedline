@@ -61,6 +61,18 @@ class StepZeroContracts(unittest.TestCase):
         idx = [t.index(m) for m in marks]
         self.assertEqual(idx, sorted(idx))
 
+    def test_step_zero_questions_use_the_dialog(self):
+        # Every step-0 question ends in a clear prompt: the question dialog,
+        # with the place shown, or a text fallback naming the next question.
+        t = read("start")
+        self.assertIn("AskUserQuestion", t)
+        self.assertIn("Q1 of 7", t)
+        self.assertIn("(Recommended)", t)
+        self.assertIn("Accept as written", t)
+        self.assertIn("Next: question", t)
+        for name in ("architecture-intake", "compliance"):
+            self.assertIn("question dialog", read(name), name)
+
     def test_intake_question_order(self):
         t = read("architecture-intake")
         idx = [t.index("## Question %d" % n) for n in (2, 4, 5, 6, 7)]

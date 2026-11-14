@@ -5,7 +5,7 @@ description: Asks the platform questions of step 0 - tenancy, solo or team, surf
 
 # architecture-intake
 
-Questions 2, 4, 5, 6 and 7 of step 0. Ask them one at a time. For each: say what the question is, list the options, state the default and what it changes, then wait. "Default" is a valid answer. Record each answer as a decision in `decisions/` (format of `decisions/0000-template.md`).
+Questions 2, 4, 5, 6 and 7 of step 0. Ask them one at a time. Ask each one in the question dialog, as the `start` skill says: the options, the default first as "(Recommended)", and what each one changes in its description. Then wait for the answer. "Default" is a valid answer. Record each answer as a decision in `decisions/` (format of `decisions/0000-template.md`).
 
 Do not ask a question already answered in `decisions/` or `PRODUCT.md`.
 
