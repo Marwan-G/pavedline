@@ -63,6 +63,7 @@ def clear_log_context() -> None:
 
 def scrub(text: str, limit: int = MAX_VALUE) -> str:
     """Remove secret-shaped text and cut the result to `limit` characters."""
+    text = text[: limit * 4]  # bound the work of the patterns below on a huge string
     for pattern, repl in _SCRUBS:
         text = pattern.sub(repl, text)
     if len(text) > limit:

@@ -189,8 +189,12 @@ def run_kubectl(check, ctx, env):
     return None
 
 
+POD_PREFIX = re.compile(r"^\[[^\]\s]{1,300}\] ")  # `--all-pods` prefixes each line with [pod/<name>/<container>]
+
+
 def has_event(text, event):
     for line in text.splitlines():
+        line = POD_PREFIX.sub("", line, count=1)
         try:
             obj = json.loads(line)
         except ValueError:

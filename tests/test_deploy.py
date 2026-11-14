@@ -577,6 +577,14 @@ class PostDeployChecks(unittest.TestCase):
         self.assertIn("timed out", r.stdout + r.stderr)
         self.assertNotIn("Traceback", r.stderr)
 
+    def test_log_event_reads_lines_with_the_all_pods_prefix(self):
+        (self.tmp / "stub/rules.json").write_text(json.dumps([
+            {"tool": "kubectl", "match": "config view", "stdout": "apiVersion: v1\n"},
+            {"tool": "kubectl", "match": "logs deployment/api",
+             "stdout": '[pod/api-7d9f-abc/api] {"event": "other.thing"}\n[pod/api-7d9f-xyz/api] {"event": "webhook.accepted"}\n'}]))
+        r = self.run_check("log-event api api webhook.accepted")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
     def test_log_event_fails_without_printing_the_logs(self):
         (self.tmp / "stub/rules.json").write_text(json.dumps([
             {"tool": "kubectl", "match": "config view", "stdout": "apiVersion: v1\n"},
