@@ -13,7 +13,7 @@ Do not ask a question already answered in `decisions/` or `PRODUCT.md`.
 
 Options: single-tenant, multi-tenant for businesses (organisations), or multi-tenant for consumers (B2C).
 
-If multi-tenant, ask the isolation model:
+If multi-tenant, ask the isolation model next, as `Q2.1 of 7`:
 
 - **Shared schema with a `tenant_id` column and row-level security** (default). One database, cheapest to run; isolation is enforced by the database and proved by a leak test.
 - **Schema per tenant.** Stronger separation, harder migrations.
