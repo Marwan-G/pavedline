@@ -293,7 +293,7 @@ a_ruff() { (cd services/api && uv run ruff check . ../../scripts); }
 a_format() { (cd services/api && uv run ruff format --check . ../../scripts); }
 a_pyright() { (cd services/api && uv run pyright); }
 a_imports() { (cd services/api && uv run lint-imports); }
-a_events() { python3 scripts/events_check.py; }
+a_events() { (cd services/api && uv run python ../../scripts/events_check.py --root ../..); }
 
 PG_PORT=""
 start_postgres() {

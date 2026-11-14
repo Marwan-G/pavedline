@@ -121,3 +121,12 @@ def test_a_row_inside_a_code_block_does_not_count(tmp_path: pathlib.Path) -> Non
     r = run_script("events_check.py", "--root", str(root))
     assert r.returncode == 1
     assert "'job.created' has no row" in r.stderr
+
+
+def test_a_file_it_cannot_parse_fails_with_one_clear_line(tmp_path: pathlib.Path) -> None:
+    root = product(tmp_path)
+    (root / "services" / "api" / "app" / "broken.py").write_text("def f(:\n")
+    r = run_script("events_check.py", "--root", str(root))
+    assert r.returncode == 1
+    assert "cannot parse" in r.stderr
+    assert "Traceback" not in r.stderr

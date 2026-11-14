@@ -39,7 +39,7 @@ Run the built-in `security-review` skill on the branch, briefed with the slice's
 
 ## Gate 4: verification
 
-**The orchestrator runs these itself after each builder commit; "all green" in a builder's report is a claim, not evidence.** In the worktree: typecheck; lint only where its config exists and CI runs it; the tests of the touched packages (red first, counts reported); migrations applied to a throwaway Postgres; accessibility checks (axe on web pages; the mobile accessibility linter and screen-reader labels); every image builds and boots (the in-image check); `git diff --stat` matches the slice's stated scope; `python3 scripts/events_check.py` passes (every emitted event has its row). The FULL suite runs once, at the merge gate, on a branch up to date with the default branch (label `ci:db` for the DB tests); reviewers run only targeted checks for their findings.
+**The orchestrator runs these itself after each builder commit; "all green" in a builder's report is a claim, not evidence.** In the worktree: typecheck; lint only where its config exists and CI runs it; the tests of the touched packages (red first, counts reported); migrations applied to a throwaway Postgres; accessibility checks (axe on web pages; the mobile accessibility linter and screen-reader labels); every image builds and boots (the in-image check); `git diff --stat` matches the slice's stated scope; `uv run --project services/api python scripts/events_check.py` passes (every emitted event has its row). The FULL suite runs once, at the merge gate, on a branch up to date with the default branch (label `ci:db` for the DB tests); reviewers run only targeted checks for their findings.
 
 ## Gate 5: merge
 

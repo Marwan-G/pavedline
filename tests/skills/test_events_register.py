@@ -23,9 +23,14 @@ class EventsRegister(unittest.TestCase):
 
     def test_ci_and_the_starter_run_the_check(self):
         ci = (STACK / "files/.github/workflows/ci-api.yml").read_text()
-        self.assertIn("python3 ../../scripts/events_check.py --root ../..", ci)
+        # on the API's own Python: the runner's system python3 may not parse the API's syntax
+        self.assertIn("uv run python ../../scripts/events_check.py --root ../..", ci)
+        self.assertNotIn("python3 ../../scripts/events_check.py", ci)
         self.assertIn('"scripts/events_check.py"', ci)
-        self.assertIn("step api-events-check a_events", (ROOT / "scripts/starter_check.sh").read_text())
+        starter = (ROOT / "scripts/starter_check.sh").read_text()
+        self.assertIn("step api-events-check a_events", starter)
+        self.assertIn("uv run python ../../scripts/events_check.py --root ../..", starter)
+        self.assertNotIn("python3 scripts/events_check.py", starter)
 
     def test_the_api_no_longer_logs_plain_text(self):
         main = (STACK / "files/services/api/app/main.py").read_text()
