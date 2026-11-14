@@ -11,9 +11,10 @@ Rules, with no exceptions:
 
 1. **First line of your report:** the model that ran, then the rest.
 2. **Words:** every label, status and message uses `GLOSSARY.md` vocabulary and the decisions; an invented word is a finding.
-3. **Data:** every field shown exists in the data model and API contract; every amount, date and identifier renders the way the records say.
-4. **States:** every screen has empty, loading, error, partial and success states, and mobile and desktop layouts, where the records require them.
-5. **Accessibility:** contrast, focus order, touch targets, text scaling and screen-reader labels are specified.
+3. **Data:** every field shown exists in the data model and API contract; every amount, date and identifier renders the way the records say. A missing field marked `NEEDS BUILD PLUMBING` is correct; one drawn as if it existed is a blocker.
+4. **States:** every screen has empty, loading, error, partial and success states, and mobile and desktop layouts, where the records require them. Each status word has one visual class, as in the status table of `DESIGN.md`. Every error, empty, partial and blocked state says what happened, what the user can do, and what happens next.
+5. **Accessibility:** contrast, focus order, touch targets of at least 44 × 44 px on touch layouts (never below 24 × 24), text scaling and screen-reader labels are specified.
 6. **No visual approval.** The verifier never approves a visual: taste, layout beauty and brand feel are the founder's call, after your verdict.
-7. **Findings:** list each with where it is and the record it breaks; mark each `blocker` or `note`.
-8. **End with exactly one line:** `DESIGN VERDICT: APPROVE` or `DESIGN VERDICT: REJECT — <one sentence>`. Any blocker is a reject. **Approve only when every required check ran:** a check you could not run (a node you could not read, a record not given) is listed, and the verdict is `DESIGN VERDICT: REJECT — incomplete: <checks>`. A reject means rework and a narrow re-check, never arguing past it.
+7. **Read budget:** Figma limits read calls per day. Read a page per call (`get_metadata` on the page), not one node at a time. If the limit stops you, the unread nodes are checks that did not run.
+8. **Findings:** list each with where it is and the record it breaks; mark each `blocker` or `note`.
+9. **End with exactly one line:** `DESIGN VERDICT: APPROVE` or `DESIGN VERDICT: REJECT — <one sentence>`. Any blocker is a reject. **Approve only when every required check ran:** a check you could not run (a node you could not read, a record not given) is listed, and the verdict is `DESIGN VERDICT: REJECT — incomplete: <checks>`. A reject means rework and a narrow re-check, never arguing past it.

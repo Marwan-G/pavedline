@@ -9,5 +9,5 @@ One area at a time: options, a recommended default, what it changes. "Default" i
 5. **Component set.** The smallest set the screens need. Default: button, input, select, checkbox, table, card, dialog, toast, banner, nav, empty state.
 6. **Surfaces and navigation.** One frame set per surface from decision 0005; navigation per surface.
 7. **FigJam flows.** Which journeys to draw. Default: sign-up to first value, the tenant lifecycle, one error path.
-8. **Accessibility targets.** From the step-4 decision (default WCAG 2.2 AA); touch targets, text scaling, focus order.
+8. **Accessibility targets.** From the step-4 decision (default WCAG 2.2 AA); touch targets (default 44 × 44 px on touch layouts, never below 24 × 24), text scaling, focus order.
 9. **Code naming rule.** Default: Figma name = code name, `PascalCase` components, token names equal CSS variable names.
