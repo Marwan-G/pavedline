@@ -33,7 +33,7 @@ Every step only the founder can take: logins, dashboard clicks, funds, accounts,
 
 ## Decisions
 
-One file per decision, `decisions/NNNN-title.md`, append-only. Change a decision by writing a new one that supersedes it, and list what it makes stale.
+One file per decision, `decisions/NNNN-title.md`, append-only. Change a decision by writing a new one that supersedes it, and list what it makes stale. Each decision answers the four guardrail questions and keeps `SYSTEM-GUARDRAILS.md` current (the `guardrails` skill).
 
 ## Timestamps
 

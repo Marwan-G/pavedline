@@ -14,7 +14,7 @@ digraph architecture {
   subgraph cluster_plugin {
     label="PLUGIN — plugins/pavedline"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#93C5FD"; fontcolor="#1E3A8A"; fontsize=13;
     manifest  [label="plugin.json\nname · version · dependencies"];
-    skills    [label="Skills (32)\nsteps 0–12 · integration wave · grow\ndoctor · state\nlocal-cluster · gitops …"];
+    skills    [label="Skills (33)\nsteps 0–12 · integration wave · grow\ndoctor · state · guardrails\nlocal-cluster · gitops …"];
     agents    [label="Agents (9)\nresearcher · architect · reviewer · designer\ndesign-verifier · builder · adversary · deployer · growth\nmodel generated from config/models.yaml"];
     hooks     [label="Hooks (11)\nsecrets · cluster context · git · STATE.md cap\nwarn: CLAUDE.md size · PR gates line · diagram drift\nsession start · compaction notes · records commit reminder\nbuilder report check"];
     mcp       [label="MCP server\nPlaywright (.mcp.json)"];
