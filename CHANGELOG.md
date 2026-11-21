@@ -7,6 +7,7 @@ All notable changes to Pavedline are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- Guardrails registry: the `guardrails` skill keeps `SYSTEM-GUARDRAILS.md` in your project, one entry per constraint (rule, enforcement, configuration, validation, source decision, status). Every decision answers four questions (introduces, modifies, removes, conflicts with) and updates the registry in the same commit; a status rises only with evidence; a consistency review runs before steps 8 and 12; a project started earlier is offered adoption once.
 - Step 12, go to production: `go-to-production` refuses until the plan is feature-complete and the integration wave is done, runs the infra intake, writes `INFRA.md`, `NEEDS.md`, `LAUNCH.md` and one decision record per answer, and prints every plan, apply and bootstrap for you to run; staging first, then production by pull request with `promote.py`; `launch_check.py` blocks "go live" until `LAUNCH.md` is satisfied.
 - Two infra profiles: bring your own Kubernetes (`bootstrap.sh`, proven on a second kind cluster in CI) and OCI/OKE (OpenTofu or Terraform files with a plan check that refuses destroys and replacements).
 - Database backups with the Barman Cloud plugin, a local S3 store (SeaweedFS) behind `up.sh --full`, and `restore_drill.sh`, a restore proven before step 12.
