@@ -23,3 +23,4 @@ nothing else.
 | Waves, slices and which acceptance tests each proves | `docs/plans/` |
 | What went well and badly, per wave | `docs/retros/` |
 | Gate reviews and verdicts | `docs/reviews/` |
+| Every system guardrail: rule, enforcement, validation, status (an index; each value's home is named there) | `SYSTEM-GUARDRAILS.md` |

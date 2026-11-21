@@ -14,3 +14,4 @@ block too.
 - [ ] An accessibility audit passed (automated plus one manual screen-reader pass)
 - [ ] The three alerts tested: uptime of the public endpoints, a backup failed, a scheduled job failed or is late
 - [ ] The observability decision recorded from `docs/observability/EVENTS.md` (install the observability extension, or accept the risk in an ADR); the "Alert later: yes" rows are the alert candidates
+- [ ] The guardrail consistency review run before launch, and every guardrail a launch item depends on `VERIFIED (cloud)` or accepted in a decision (`SYSTEM-GUARDRAILS.md`)
