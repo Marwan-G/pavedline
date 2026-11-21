@@ -73,7 +73,7 @@ The script never overwrites. If it exits 1 and lists `conflict:` lines, write no
 ## 5. Record the answers
 
 - Write answer 1 into `PRODUCT.md`, replacing the placeholder paragraph. One paragraph only.
-- Write exactly one decision record per question, seven in all, in `decisions/`, in the format of `decisions/0000-template.md`, numbered in question order: `0001` product statement (question 1, also in `PRODUCT.md`), `0002` multi-tenancy (question 2; the isolation model, if asked, goes in the same record), `0003` compliance (question 3; one record for yes or no, written as the `compliance` skill says), `0004` solo or team, `0005` surfaces, `0006` database, `0007` local runtime. File name: `NNNN-short-title.md`. Status `accepted`, date from `date +%F`, "Stale outputs" `none`.
+- Write exactly one decision record per question, seven in all, in `decisions/`, in the format of `decisions/0000-template.md`, numbered in question order: `0001` product statement (question 1, also in `PRODUCT.md`), `0002` multi-tenancy (question 2; the isolation model, if asked, goes in the same record), `0003` compliance (question 3; one record for yes or no, written as the `compliance` skill says), `0004` solo or team, `0005` surfaces, `0006` database, `0007` local runtime. File name: `NNNN-short-title.md`. Status `accepted`, date from `date +%F`, "Stale outputs" `none`. Answer each record's "Guardrails" section as the `guardrails` skill says; the first record that introduces a guardrail (multi-tenancy or compliance, usually) creates `SYSTEM-GUARDRAILS.md`.
 - In each Consequences section say what the answer means for later steps (see the `architecture-intake` skill).
 
 ## 6. Point STATE.md at step 1

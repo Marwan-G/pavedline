@@ -45,7 +45,7 @@ The agent prints each command and stops. It reads results the founder pastes (ne
 
 ## 6. `LAUNCH.md`, a blocking checklist
 
-Copy `templates/docs/production/LAUNCH.md` (items in `${CLAUDE_SKILL_DIR}/references/launch.md`). Tick an item only with evidence; an item may end with `exception: decisions/NNNN-<slug>.md` (an accepted ADR). `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/launch_check.py` exits 0 only when every item is ticked or excepted; items a product added later count. **"Go live" is refused unless it exits 0.**
+Copy `templates/docs/production/LAUNCH.md` (items in `${CLAUDE_SKILL_DIR}/references/launch.md`). Before ticking, run the consistency review of the `guardrails` skill. Tick an item only with evidence; an item may end with `exception: decisions/NNNN-<slug>.md` (an accepted ADR). `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/launch_check.py` exits 0 only when every item is ticked or excepted; items a product added later count. **"Go live" is refused unless it exits 0.**
 
 ## 7. The founder's "go live", and close
 

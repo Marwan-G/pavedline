@@ -130,7 +130,7 @@ class LaunchCheck(unittest.TestCase):
         text = (ROOT / "plugins/pavedline/templates/docs/production/LAUNCH.md").read_text()
         code, out = self.run_check(text)
         self.assertEqual(code, 1)
-        self.assertIn("10 problem(s) in 10", out)
+        self.assertIn("11 problem(s) in 11", out)
 
 
 if __name__ == "__main__":
